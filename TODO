@@ -1,0 +1,16 @@
+
+
+
+* F90 test file seems to contain invalid memory access
+
+* Put fortran interfaces for perf_regions into a kind of header file or module
+
+* README file
+
+* Get compilation and linking to shared object running
+
+* Test routine in C/C++
+
+* Pretty output of performance counters
+
+* Maybe replace gettimeofday call with more efficient version

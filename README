@@ -1,0 +1,10 @@
+**************************************
+* Performance regions library
+**************************************
+
+
+Measure performance of different regions
+
+Performance can be either measured via
+	- the wallclock time or
+	- the performance counters

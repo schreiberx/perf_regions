@@ -4,9 +4,13 @@
 
 
 #define COMMENT1	"Identifiers for each region. Don't forget to add a line in performance_region.c !"
-#define PERF_REGIONS_FOO		(1)
-#define PERF_REGIONS_BAR		(2)
-#define PERF_REGIONS_XYZ		(3)
+#define PERF_REGIONS_OVERHEAD_TIMINGS		(0)
+#define PERF_REGIONS_OVERHEAD_COUNTERS		(1)
+#define PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS	(2)
+
+#define PERF_REGIONS_FOO		(3)
+#define PERF_REGIONS_BAR		(4)
+#define PERF_REGIONS_XYZ		(5)
 
 
 

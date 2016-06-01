@@ -11,6 +11,8 @@ BUILD_DIR:=../build/
 CFLAGS:=-g -O3 -fPIC
 #CFLAGS:=-g -O0 -fPIC
 
+# disable DEBUG overheads in perf region library
+CFLAGS:=${CFLAGS} -DPERF_DEBUG=0
 
 
 all: ${BUILD_DIR}/libperf_regions.so

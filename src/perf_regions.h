@@ -39,6 +39,15 @@ void perf_regions_output(FILE *s);
 
 
 /**
+ * Override normalization value for given region
+ */
+void perf_region_set_normalize(
+		int i_region_id,			///< unique id of region
+		double i_normalize_denom
+);
+
+
+/**
  * DECONSTRUCTOR
  */
 void perf_regions_finalize();

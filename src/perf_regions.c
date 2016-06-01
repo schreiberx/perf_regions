@@ -18,8 +18,9 @@
 #define PERF_COUNTERS_ACTIVE		1
 #define PERF_TIMINGS_ACTIVE		1
 
-#define PERF_DEBUG		1
-
+#ifndef PERF_DEBUG
+#	define PERF_DEBUG		1
+#endif
 
 
 
@@ -41,7 +42,6 @@ struct PerfRegion
 	/*
 	 *
 	 * performance counting mode
-	 * 0: currently not in this region
 	 * PERF_TIMINGS: timings active for this region
 	 * PERF_COUNTERS: counters active for this region
 	 * or both
@@ -49,13 +49,20 @@ struct PerfRegion
 	int mode;
 
 	// region enter counter
-	int enter_counter;
+	double normalize_denom;
+
+
+#if PERF_DEBUG
+	// debug flag to assure that perf counters are not entering a region twice
+	int active;
+#endif
 };
 
 
 
 // array with all regions
 struct PerfRegion *regions = NULL;
+
 
 // number of performance counters
 int num_perf_counters;
@@ -65,7 +72,6 @@ char **perf_counter_names = NULL;
 
 // values of the performance counters
 long long *perf_counter_values = NULL;
-
 
 
 /**
@@ -80,7 +86,10 @@ void perf_regions_reset()
 
 		regions[i].wallclock_time = 0;
 		regions[i].mode = -1;
-		regions[i].enter_counter = -1;
+		regions[i].normalize_denom = 0;
+#if PERF_DEBUG
+		regions[i].active = 0;
+#endif
 	}
 }
 
@@ -114,14 +123,43 @@ void perf_regions_init()
 	 */
 	perf_regions_reset();
 
+
 	/**
-	 * TODO:
-	 * A) measure overheads of timing functionality
-	 * B) use this in perf_regions_stop() to fix performance measurements
+	 * measure overheads
+	 *
+	 * We have 3 different combinations to measure the performance and we measure all of them.
 	 */
+
+	// 100 overhead measurements
+	for (int i = 0; i < 100; i++)
+	{
+		perf_region_start(PERF_REGIONS_OVERHEAD_TIMINGS, PERF_FLAG_TIMINGS);
+		perf_region_stop(PERF_REGIONS_OVERHEAD_TIMINGS);
+	}
+
+	for (int i = 0; i < 100; i++)
+	{
+		perf_region_start(PERF_REGIONS_OVERHEAD_COUNTERS, PERF_FLAG_COUNTERS);
+		perf_region_stop(PERF_REGIONS_OVERHEAD_COUNTERS);
+	}
+
+	for (int i = 0; i < 100; i++)
+	{
+		perf_region_start(PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS, PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS);
+		perf_region_stop(PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS);
+	}
+
+	for (int region_id = 0; region_id < 3; region_id++)
+	{
+		struct PerfRegion *r = &regions[region_id];
+
+		r->wallclock_time /= (double)(r->normalize_denom);
+		for (int j = 0; j < num_perf_counters; j++)
+			r->counter_values[j] /= (double)(r->normalize_denom);
+
+		r->normalize_denom = 1.0;
+	}
 }
-
-
 
 
 
@@ -135,6 +173,9 @@ void perf_region_start(
 {
 	struct PerfRegion *r = &(regions[i_region_id]);
 
+	// denominator to normalize values
+	r->normalize_denom++;
+
 #if PERF_DEBUG
 	if (i_region_id < 0 || i_region_id >= PERF_REGIONS_MAX)
 	{
@@ -142,11 +183,13 @@ void perf_region_start(
 		exit(1);
 	}
 
-	if (r->mode > 0)
+	if (r->active > 0)
 	{
 		fprintf(stderr, "Region activated twice\n");
 		exit(1);
 	}
+
+	r->active = 1;
 #endif
 
 	r->mode = i_measure_type;
@@ -173,18 +216,24 @@ void perf_region_stop(
 	struct PerfRegion *r = &regions[i_region_id];
 
 #if PERF_DEBUG
-	if (r->mode <= 0)
+	if (r->mode <= 0 || r->active != 1)
 	{
 		printf("Region not active, but stop function called\n");
 		exit(1);
 	}
+
+	r->active = 0;
 #endif
+
 
 	if (r->mode & PERF_FLAG_COUNTERS)
 	{
 		count_stop();
 		for (int j = 0; j < num_perf_counters; j++)
+		{
+//			printf("%i %i\n", j, (int)perf_counter_values[j]);
 			r->counter_values[j] += perf_counter_values[j];
+		}
 	}
 
 #if PERF_TIMINGS_ACTIVE
@@ -194,7 +243,8 @@ void perf_region_stop(
     r->wallclock_time += (double)((int)tm2.tv_sec - (int)r->tvalue.tv_sec) + (double)((int)tm2.tv_usec - (int)r->tvalue.tv_usec)*0.000001;
 #endif
 
-	r->mode = 0;
+    // don't overwrite mode since we need this information for the overheads later
+//	r->mode = 0;
 }
 
 
@@ -266,7 +316,7 @@ void perf_regions_output(FILE *s)
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
 		struct PerfRegion *r = &(regions[i]);
-		if (r->mode > 0)
+		if (r->active != 0)
 		{
 			fprintf(stderr, "Still in region of %s\n", get_perf_region_name(i));
 			exit(-1);
@@ -275,15 +325,39 @@ void perf_regions_output(FILE *s)
 #endif
 
 
+
 	/**
 	 * TODO: Do fancy output here
 	 */
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+	for (int i = 3; i < PERF_REGIONS_MAX; i++)
 	{
 		struct PerfRegion *r = &(regions[i]);
 
 		if (regions[i].mode == -1)
 			continue;
+
+		/*
+		 * determine which overhead measurements to use for this performance region
+		 */
+		struct PerfRegion *r_overhead = NULL;
+		switch (regions[i].mode)
+		{
+		case PERF_FLAG_TIMINGS:
+			r_overhead = &regions[PERF_REGIONS_OVERHEAD_TIMINGS];
+			break;
+
+		case PERF_FLAG_COUNTERS:
+			r_overhead = &regions[PERF_REGIONS_OVERHEAD_COUNTERS];
+			break;
+
+		case (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS):
+			r_overhead = &regions[PERF_REGIONS_OVERHEAD_TIMINGS | PERF_REGIONS_OVERHEAD_COUNTERS];
+			break;
+
+		default:
+			fprintf(s, "INVALID MODE id %i!\n", regions[i].mode);
+			exit(1);
+		}
 
 		const char *perf_region_name = get_perf_region_name(i);
 		if (perf_region_name == 0)
@@ -292,14 +366,38 @@ void perf_regions_output(FILE *s)
 			exit(1);
 		}
 
+		double wallclock_time = r->wallclock_time;
+		wallclock_time -= r_overhead->wallclock_time;
+
 		fprintf(s, "%s", perf_region_name);
-		fprintf(s, "\t%f", r->wallclock_time);
+		fprintf(s, "\t%f", wallclock_time/r->normalize_denom);
+
 		for (int j = 0; j < num_perf_counters; j++)
-			fprintf(s, "\t%lld", r->counter_values[j]);
+		{
+			long long counter_value = r->counter_values[j];
+			counter_value -= r_overhead->counter_values[j];
+
+			double perf_value = counter_value/r->normalize_denom;
+			fprintf(s, "\t%f", perf_value);
+		}
 		fprintf(s, "\n");
 	}
 }
 
+
+
+/**
+ * Set scalar to multiply the output performance values with.
+ */
+void perf_region_set_normalize(
+		int i_region_id,			///< unique id of region
+		double i_normalize_denom
+)
+{
+	struct PerfRegion *r = &(regions[i_region_id]);
+
+	r->normalize_denom = i_normalize_denom;
+}
 
 
 /**

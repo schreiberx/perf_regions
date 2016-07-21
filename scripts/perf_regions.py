@@ -6,7 +6,7 @@ with perf_region_start/end calls.
 Author: Tim Graham, Martin Schreiber
 '''
 
-import glob
+from glob import glob
 import re
 import os
 
@@ -125,19 +125,21 @@ class perf_regions:
 		'''
 		Return a list of all files to be modified
 		'''
-		#TODO: Need to make this recursive
 		if not isinstance(self.list_dirs, list):
 			src_dirs=[self.list_dirs]
 
+                if self.language == 'fortran':
+			file_ext = '*[fF]90'
+
 		files = []
 		for src_dir in self.list_dirs:
-			these_files=glob.glob(src_dir+'/*90')
+                        these_files = [y for x in os.walk(src_dir) for y in glob(os.path.join(x[0], file_ext))]
 
-		if len(these_files)==0: 
-			raise UserWarning('One or more src_dirs contain no F90 files')
-		files.extend(these_files)
+			if len(these_files)==0: 
+				raise UserWarning('One or more src_dirs contain no recognised files')
+			files.extend(these_files)
 
-		if len(files)==0: raise RuntimeError('No F90 files found in '+src_dir)
+		if len(files)==0: raise RuntimeError('No recognised files found in '+src_dir.join(','))
 
 		return files
 

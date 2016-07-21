@@ -31,7 +31,7 @@ class perf_regions:
 			line = in_content[i]
 
 			# Search for exising preprocessed code
-			if line == "!PERF_REGION_ORIGINAL":
+			if line == self.original_comment:
 				print("Found original line in code")
 				# next line is the original code
 				i = i+1
@@ -41,7 +41,7 @@ class perf_regions:
 				i = i+1
 				line = in_content[i]
 
-				if line != "!PERF_REGION_CODE":
+				if line != self.new_code_comment:
 					raise UserWarning("PERF_REGION_CODE NOT DETECTED!")
 
 				# next line is instrumented code -> overwrite
@@ -59,53 +59,31 @@ class perf_regions:
 						line_processed = True
 						if p == 0:	# initialization
 							print("Found initialization statement")
-							if self.language == 'fortran':
-								out_content.append("!PERF_REGION_ORIGINAL")
-								out_content.append("!"+line)
-								out_content.append("!PERF_REGION_CODE")
-								out_content.append("CALL timing_init(...)")
+							self.append_content(out_content, line, "CALL timing_init(...)")
 							break
 
 						elif p == 1:	# shutdown
 							print("Found shutdown statement")
-							if self.language == 'fortran':
-								out_content.append("!PERF_REGION_ORIGINAL")
-								out_content.append("!"+line)
-								out_content.append("!PERF_REGION_CODE")
-								out_content.append("CALL timing_init(...)")
+							self.append_content(out_content, line, "CALL timing_init(...)")
 							break
 
 						elif p == 2:	# use/include
 							print("Found include/use statement")
-							if self.language == 'fortran':
-								out_content.append("!PERF_REGION_ORIGINAL")
-								out_content.append("!"+line)
-								out_content.append("!PERF_REGION_CODE")
-								out_content.append("USE perf_regions")
+							self.append_content(out_content, line, "USE perf_regions")
 							break
 
 						elif p == 3:	# start timing
 							name = match.group(1)
 							name = name.upper()
 							print("Found start of region "+name)
-
-							if self.language == 'fortran':
-								out_content.append("!PERF_REGION_ORIGINAL")
-								out_content.append("!"+line)
-								out_content.append("!PERF_REGION_CODE")
-								out_content.append("CALL perf_region_start(PERF_REGION_"+name+", IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS))")
+							self.append_content(out_content, line, "CALL perf_region_start(PERF_REGION_"+name+", IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS))")
 							break
 
 						elif p == 4:	# end timing
 							name = match.group(1)
 							name = name.upper()
 							print("Found end of region "+name)
-
-							if self.language == 'fortran':
-								out_content.append("!PERF_REGION_ORIGINAL")
-								out_content.append("!"+line)
-								out_content.append("!PERF_REGION_CODE")
-								out_content.append("CALL perf_region_end(PERF_REGION_"+name+"")
+							self.append_content(out_content, line, "CALL perf_region_end(PERF_REGION_"+name+")")
 							break
 						else:
 							raise UserWarning("Unknown match id")
@@ -119,6 +97,12 @@ class perf_regions:
 		open(filename, 'w').write("\n".join(out_content))
 		return
 
+
+	def append_content(self, content, old_line, new_line):
+		content.append(self.original_comment)
+		content.append(self.comment_prefix + old_line)
+		content.append(self.new_code_comment)
+		content.append(new_line)
 
 
 	def find_files(self):
@@ -165,6 +149,11 @@ class perf_regions:
 
 		if self.language != 'fortran':
 			raise UserWarning('Unsupported lanugage')
+
+                if self.language == 'fortran':
+			self.original_comment = '!PERF_REGION_ORIGINAL'
+			self.new_code_comment = '!PERF_REGION_CODE'
+			self.comment_prefix = '!'
 
 		pass
 

@@ -123,7 +123,7 @@ class perf_regions:
 				raise UserWarning('One or more src_dirs contain no recognised files')
 			files.extend(these_files)
 
-		if len(files)==0: raise RuntimeError('No recognised files found in '+src_dir.join(','))
+		if len(files)==0: raise RuntimeError('No recognised files found in '+src_dirs.join(','))
 
 		return files
 

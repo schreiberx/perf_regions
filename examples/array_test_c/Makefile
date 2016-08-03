@@ -20,3 +20,4 @@ array_test_perf_region:
 
 clean :
 	rm -f array_test array_test_perf_region
+	rm -f perf_region_list.txt

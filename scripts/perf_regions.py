@@ -47,7 +47,11 @@ class perf_regions:
 				# next line is instrumented code -> overwrite
 				i = i+1
 
-				in_content[i] = line_backup[1:]
+				if self.language == 'fortran':
+					in_content[i] = line_backup[1:]	# remove first comment symbol '#'
+				elif self.language == 'c':
+					in_content[i] = line_backup[2:]	# remove  comment symbol '//'
+
 				continue
 
 			# iterate over regular expressions
@@ -59,32 +63,54 @@ class perf_regions:
 						line_processed = True
 						if p == 0:	# initialization
 							print("Found initialization statement")
-							self.append_content(out_content, line, "CALL timing_init(...)")
+							if self.language == 'fortran':
+								self.append_content(out_content, line, "CALL perf_regions_init()")
+							elif self.language == 'c':
+								self.append_content(out_content, line, "perf_regions_init();")
 							break
 
 						elif p == 1:	# shutdown
 							print("Found shutdown statement")
-							self.append_content(out_content, line, "CALL timing_init(...)")
+							if self.language == 'fortran':
+								self.append_content(out_content, line, "CALL perf_regions_finalize(...)")
+							elif self.language == 'c':
+								self.append_content(out_content, line, "perf_regions_finalize();")
 							break
 
 						elif p == 2:	# use/include
 							print("Found include/use statement")
-							self.append_content(out_content, line, "USE perf_regions")
+							if self.language == 'fortran':
+								self.append_content(out_content, line, "USE perf_regions")
+							elif self.language == 'c':
+								self.append_content(out_content, line, "#include <perf_regions.h>")
 							break
 
 						elif p == 3:	# start timing
 							name = match.group(1)
 							name = name.upper()
+
+							if name in self.region_name_list:
+								print("WARNING: "+name+" already exists in the region name list")
+							else:
+								self.region_name_list.append(name)
+
+							id = self.region_name_list.index(name);
+
 							print("Found start of region "+name)
-							self.append_content(out_content, line, "CALL perf_region_start(PERF_REGION_"+name+", IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS))")
+							if self.language == 'fortran':
+								self.append_content(out_content, line, "CALL perf_region_start("+str(id)+", IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS)) #"+name)
+							elif self.language == 'c':
+								self.append_content(out_content, line, "perf_region_start("+str(id)+", (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS)); //"+name)
 							break
 
 						elif p == 4:	# end timing
 							name = match.group(1)
 							name = name.upper()
 							print("Found end of region "+name)
-							self.append_content(out_content, line, "CALL perf_region_end(PERF_REGION_"+name+")")
-							break
+							if self.language == 'fortran':
+								self.append_content(out_content, line, "CALL perf_region_stop("+str(id)+") #"+name)
+							elif self.language == 'c':
+								self.append_content(out_content, line, "perf_region_stop("+str(id)+"); //"+name)
 						else:
 							raise UserWarning("Unknown match id")
 
@@ -112,18 +138,21 @@ class perf_regions:
 		if not isinstance(self.list_dirs, list):
 			src_dirs=[self.list_dirs]
 
-                if self.language == 'fortran':
+		if self.language == 'fortran':
 			file_ext = '*[fF]90'
+		elif self.language == 'c':
+			file_ext = '*c'
 
 		files = []
 		for src_dir in self.list_dirs:
-                        these_files = [y for x in os.walk(src_dir) for y in glob(os.path.join(x[0], file_ext))]
+			these_files = [y for x in os.walk(src_dir) for y in glob(os.path.join(x[0], file_ext))]
 
 			if len(these_files)==0: 
 				raise UserWarning('One or more src_dirs contain no recognised files')
 			files.extend(these_files)
 
-		if len(files)==0: raise RuntimeError('No recognised files found in '+src_dirs.join(','))
+		if len(files)==0:
+			raise RuntimeError('No recognised files found in '+src_dirs.join(','))
 
 		return files
 
@@ -136,6 +165,8 @@ class perf_regions:
 		self,
 		i_list_dirs,
 		i_pattern_match_list,		# 0: init, 1: shutdown, 2: use/include, 3: start region, 4: stop region
+#		i_perfregion_root_dir,		# root directory of perf regions
+		i_header_output_file,		# output file of header
 		i_language = 'fortran',		# Fortran language
 		i_excluded_files_list = []
 	):
@@ -147,13 +178,21 @@ class perf_regions:
 		self.prog_match_list = [re.compile(p) for p in self.pattern_match_list]
 		self.language = i_language
 
-		if self.language != 'fortran':
+#		self.perfregion_root_dir = i_perfregion_root_dir
+		self.header_output_file = i_header_output_file
+
+		if self.language not in ['fortran', 'c']:
 			raise UserWarning('Unsupported lanugage')
 
-                if self.language == 'fortran':
+		if self.language == 'fortran':
 			self.original_comment = '!PERF_REGION_ORIGINAL'
 			self.new_code_comment = '!PERF_REGION_CODE'
 			self.comment_prefix = '!'
+			
+		elif self.language == 'c':
+			self.original_comment = '//PERF_REGION_ORIGINAL'
+			self.new_code_comment = '//PERF_REGION_CODE'
+			self.comment_prefix = '//'
 
 		pass
 
@@ -162,10 +201,25 @@ class perf_regions:
 		file_list = self.find_files()
 		for filename in file_list:
 			self.find_and_replace(filename, True)
-		
+
+	def write_header(self, filepath):
+		"""Simply write a text file with all the region names"""
+
+		with open(filepath, 'w') as file_handler:
+		    for item in self.region_name_list:
+			file_handler.write(item)
 
 	def preprocessor(self):
 		file_list = self.find_files()
+		print("Processing files "+str(file_list))
 		for filename in file_list:
 			self.find_and_replace(filename)
+
+		print("Region name list:")
+		print(self.region_name_list)
+
+		print("Creating header files")
+		if not os.path.exists(self.header_output_file):
+		    os.makedirs(self.header_output_file)
+		self.write_header(self.header_output_file+'/perf_region_list.txt')
 

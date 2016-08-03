@@ -119,6 +119,13 @@ void perf_regions_init()
 	regions = malloc(sizeof(struct PerfRegion)*PERF_REGIONS_MAX);
 
 	/*
+	 * Load list with perf region names
+	 */
+	perf_region_name_init();
+
+
+
+	/*
 	 * RESET
 	 */
 	perf_regions_reset();
@@ -149,7 +156,10 @@ void perf_regions_init()
 		perf_region_stop(PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS);
 	}
 
-	for (int region_id = 0; region_id < 3; region_id++)
+	for (	int region_id = PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS;
+			region_id <= PERF_REGIONS_OVERHEAD_TIMINGS;
+			region_id++
+	)
 	{
 		struct PerfRegion *r = &regions[region_id];
 
@@ -329,7 +339,7 @@ void perf_regions_output(FILE *s)
 	/**
 	 * TODO: Do fancy output here
 	 */
-	for (int i = 3; i < PERF_REGIONS_MAX; i++)
+	for (int i = 0; i < PERF_REGIONS_MAX-3; i++)
 	{
 		struct PerfRegion *r = &(regions[i]);
 
@@ -400,6 +410,7 @@ void perf_region_set_normalize(
 }
 
 
+
 /**
  * DECONSTRUCTOR
  */
@@ -425,6 +436,11 @@ void perf_regions_finalize()
 		free(regions);
 		regions = NULL;
 	}
+
+	/*
+	 * performance region names
+	 */
+	perf_region_name_shutdown();
 
 	count_finalize();
 }

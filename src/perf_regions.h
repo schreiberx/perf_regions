@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include "perf_region_defines.h"
 
 
 /**

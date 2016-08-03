@@ -2,8 +2,8 @@
 
 all:
 	make -C ./src
-	make -C ./tests
+	make -C ./examples
 
 clean:
 	make -C ./src clean
-	make -C ./tests clean
+	make -C ./examples clean

@@ -58,7 +58,7 @@ CONTAINS
    INTEGER                                   :: ji, jj, jk
    CHARACTER(len=10)                         :: env
 
-   call perf_region_start (PERF_REGIONS_FOO,  IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS))
+   IF( nn_timing == 1 )  CALL timing_start("testfoo")
 
    CALL get_environment_variable("JPI", env)
    READ ( env, '(i10)' ) jpi
@@ -280,7 +280,7 @@ CONTAINS
      DEALLOCATE(rnfmsk_z)
      DEALLOCATE(tsn)
 
-     call perf_region_stop(PERF_REGIONS_FOO)
+     IF( nn_timing == 1 )  CALL timing_stop("testfoo")
 
      end subroutine testfoo
 
@@ -300,7 +300,7 @@ CONTAINS
    INTEGER                                   :: ji, jj, jk
    CHARACTER(len=10)                         :: env
 
-   call perf_region_start (PERF_REGIONS_BAR,  IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS))
+   IF( nn_timing == 1 )  CALL timing_start("testbar")
 
    CALL get_environment_variable("JPI", env)
    READ ( env, '(i10)' ) jpi
@@ -522,7 +522,7 @@ CONTAINS
      DEALLOCATE(rnfmsk_z)
      DEALLOCATE(tsn)
 
-     call perf_region_stop(PERF_REGIONS_BAR)
+     IF( nn_timing == 1 )  CALL timing_stop("testbar")
 
      end subroutine testbar
 
@@ -541,7 +541,7 @@ CONTAINS
    INTEGER                                   :: ji, jj, jk
    CHARACTER(len=10)                         :: env
 
-   call perf_region_start (PERF_REGIONS_XYZ,  IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS))
+   IF( nn_timing == 1 )  CALL timing_start("testxyz")
 
    CALL get_environment_variable("JPI", env)
    READ ( env, '(i10)' ) jpi
@@ -763,7 +763,7 @@ CONTAINS
      DEALLOCATE(rnfmsk_z)
      DEALLOCATE(tsn)
 
-     call perf_region_stop(PERF_REGIONS_XYZ)
+     IF( nn_timing == 1 )  CALL timing_stop("testxyz")
 
      end subroutine testxyz
 

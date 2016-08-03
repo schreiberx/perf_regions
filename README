@@ -8,3 +8,11 @@ Measure performance of different regions
 Performance can be either measured via
 	- the wallclock time or
 	- the performance counters
+
+
+src/		Source code of perf regions
+examples/	Example files
+scripts/	Scripts to instrument code
+
+examples/array_test_c	Test example with C-code
+examples/nemo_test_f	Test example with Fortran code

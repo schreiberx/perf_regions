@@ -72,7 +72,7 @@ class perf_regions:
 						elif p == 1:	# shutdown
 							print("Found shutdown statement")
 							if self.language == 'fortran':
-								self.append_content(out_content, line, "CALL perf_regions_finalize(...)")
+								self.append_content(out_content, line, "CALL perf_regions_finalize()")
 							elif self.language == 'c':
 								self.append_content(out_content, line, "perf_regions_finalize();")
 							break
@@ -80,7 +80,8 @@ class perf_regions:
 						elif p == 2:	# use/include
 							print("Found include/use statement")
 							if self.language == 'fortran':
-								self.append_content(out_content, line, "USE perf_regions")
+								self.append_content(out_content, line, 'USE perf_regions_fortran ')
+								self.append_content(out_content, ' ', '#include "perf_region_defines.h"')
 							elif self.language == 'c':
 								self.append_content(out_content, line, "#include <perf_regions.h>")
 							break
@@ -98,7 +99,7 @@ class perf_regions:
 
 							print("Found start of region "+name)
 							if self.language == 'fortran':
-								self.append_content(out_content, line, "CALL perf_region_start("+str(id)+", IOR(PERF_FLAG_TIMINGS, PERF_FLAG_COUNTERS)) #"+name)
+								self.append_content(out_content, line, "CALL perf_region_start("+str(id)+", IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !"+name)
 							elif self.language == 'c':
 								self.append_content(out_content, line, "perf_region_start("+str(id)+", (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS)); //"+name)
 							break
@@ -108,7 +109,7 @@ class perf_regions:
 							name = name.upper()
 							print("Found end of region "+name)
 							if self.language == 'fortran':
-								self.append_content(out_content, line, "CALL perf_region_stop("+str(id)+") #"+name)
+								self.append_content(out_content, line, "CALL perf_region_stop("+str(id)+") !"+name)
 							elif self.language == 'c':
 								self.append_content(out_content, line, "perf_region_stop("+str(id)+"); //"+name)
 						else:

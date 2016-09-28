@@ -283,6 +283,9 @@ void perf_region_stop(
  * Output information on all performance counters
  *
  * TODO: reconstruct output from original NEMO code which looked like this:
+ * Performance counter and timing sections have been added. Missing info at this stage:
+ * 1. the section related to MPI (we are running a sequential version of the code)
+ * 2. the timing info are provided by the gettimeofday function, so we don't have elapsed and cpu time as in NEMO
 
  Total timing (sum) :
  --------------------

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include <sys/time.h>
 
 #include "perf_regions.h"
@@ -37,6 +38,7 @@ struct PerfRegion
 
 	// time value
 	struct timeval tvalue;
+
 #endif
 
 	/*
@@ -58,6 +60,14 @@ struct PerfRegion
 #endif
 };
 
+	// start and end dates
+        time_t init_time, end_time;
+#if PERF_TIMINGS_ACTIVE
+	// start and end time
+        struct timeval tm_ini, tm_end;
+	// total time in seconds
+        double wallclock_tot_time;
+#endif
 
 
 // array with all regions
@@ -79,9 +89,10 @@ long long *perf_counter_values = NULL;
  */
 void perf_regions_reset()
 {
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+    int i, j;
+	for (i = 0; i < PERF_REGIONS_MAX; i++)
 	{
-		for (int j = 0; j < num_perf_counters; j++)
+		for (j = 0; j < num_perf_counters; j++)
 			regions[i].counter_values[j] = 0;
 
 		regions[i].wallclock_time = 0;
@@ -102,6 +113,8 @@ void perf_regions_reset()
  */
 void perf_regions_init()
 {
+        int i, j, region_id;
+        int istart_count;
 	/*
 	 * CONSTRUCTOR
 	 */
@@ -138,25 +151,25 @@ void perf_regions_init()
 	 */
 
 	// 100 overhead measurements
-	for (int i = 0; i < 100; i++)
+	for (i = 0; i < 100; i++)
 	{
 		perf_region_start(PERF_REGIONS_OVERHEAD_TIMINGS, PERF_FLAG_TIMINGS);
 		perf_region_stop(PERF_REGIONS_OVERHEAD_TIMINGS);
 	}
 
-	for (int i = 0; i < 100; i++)
+	for (i = 0; i < 100; i++)
 	{
 		perf_region_start(PERF_REGIONS_OVERHEAD_COUNTERS, PERF_FLAG_COUNTERS);
 		perf_region_stop(PERF_REGIONS_OVERHEAD_COUNTERS);
 	}
 
-	for (int i = 0; i < 100; i++)
+	for (i = 0; i < 100; i++)
 	{
 		perf_region_start(PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS, PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS);
 		perf_region_stop(PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS);
 	}
 
-	for (	int region_id = PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS;
+	for (	region_id = PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS;
 			region_id <= PERF_REGIONS_OVERHEAD_TIMINGS;
 			region_id++
 	)
@@ -164,11 +177,17 @@ void perf_regions_init()
 		struct PerfRegion *r = &regions[region_id];
 
 		r->wallclock_time /= (double)(r->normalize_denom);
-		for (int j = 0; j < num_perf_counters; j++)
+		for (j = 0; j < num_perf_counters; j++)
 			r->counter_values[j] /= (double)(r->normalize_denom);
 
 		r->normalize_denom = 1.0;
 	}
+#if PERF_TIMINGS_ACTIVE
+	// start time measurement
+        gettimeofday(&tm_ini, NULL);
+#endif
+	// start date measurement
+        time(&init_time);
 }
 
 
@@ -224,6 +243,7 @@ void perf_region_stop(
 )
 {
 	struct PerfRegion *r = &regions[i_region_id];
+        int j;
 
 #if PERF_DEBUG
 	if (r->mode <= 0 || r->active != 1)
@@ -239,7 +259,7 @@ void perf_region_stop(
 	if (r->mode & PERF_FLAG_COUNTERS)
 	{
 		count_stop();
-		for (int j = 0; j < num_perf_counters; j++)
+		for (j = 0; j < num_perf_counters; j++)
 		{
 //			printf("%i %i\n", j, (int)perf_counter_values[j]);
 			r->counter_values[j] += perf_counter_values[j];
@@ -311,16 +331,26 @@ trc_adv            -0.8005814E+01   -4.81            -8.00      -4.97        1.0
  */
 void perf_regions_output(FILE *s)
 {
-#if PERF_TIMINGS_ACTIVE
-	fprintf(s, "wallclocktime");
-#endif
+        int i, j;
+	char* time_string;
+
+/* Performance counters output
+
+Performance counters profiling:
+----------------------
+Section			PAPI_L1_TCM	PAPI_L2_TCM	PAPI_L3_TCM
+FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
+
+*/
 
 #if PERF_COUNTERS_ACTIVE
-	for (int j = 0; j < num_perf_counters; j++)
+	fprintf(s, "Performance counters profiling:\n");
+	fprintf(s, "----------------------\n");
+	fprintf(s, "Section\t\t");
+	for (j = 0; j < num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_counter_names[j]);
 	fprintf(s, "\n");
 #endif
-
 
 #if PERF_DEBUG
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
@@ -334,12 +364,7 @@ void perf_regions_output(FILE *s)
 	}
 #endif
 
-
-
-	/**
-	 * TODO: Do fancy output here
-	 */
-	for (int i = 0; i < PERF_REGIONS_MAX-3; i++)
+	for (i = 0; i < PERF_REGIONS_MAX-3; i++)
 	{
 		struct PerfRegion *r = &(regions[i]);
 
@@ -376,25 +401,104 @@ void perf_regions_output(FILE *s)
 			exit(1);
 		}
 
-		double wallclock_time = r->wallclock_time;
-		wallclock_time -= r_overhead->wallclock_time;
+		r->wallclock_time -= r_overhead->wallclock_time;
 
-		fprintf(s, "%s", perf_region_name);
-		fprintf(s, "\t%f", wallclock_time/r->normalize_denom);
+#if PERF_TIMINGS_ACTIVE
+		wallclock_tot_time -= r->wallclock_time;
+#endif
+		fprintf(s, "%s\t\t", perf_region_name);
 
-		for (int j = 0; j < num_perf_counters; j++)
+		for (j = 0; j < num_perf_counters; j++)
 		{
 			long long counter_value = r->counter_values[j];
 			counter_value -= r_overhead->counter_values[j];
 
 			double perf_value = counter_value/r->normalize_denom;
-			fprintf(s, "\t%f", perf_value);
+			fprintf(s, "\t%.7e", perf_value);
 		}
 		fprintf(s, "\n");
 	}
+
+/* Timing output
+ 
+ Performance counters profiling:
+
+Total timing (sum) :
+----------------------
+Wallclock time (s)
+1.9277000e-02
+
+Timing profiling:
+----------------------
+Section		Wallclock time(sec)		Wallclock time(%)		Frequency
+FOO		1.7152000e-02			88.98				2
+
+*/
+
+#if PERF_TIMINGS_ACTIVE
+	int last_c;
+	int end_ord;
+	struct PerfRegion tmp;
+	
+
+	// TO BE TESTED ON MORE THAN ONE REGION
+	end_ord = PERF_REGIONS_MAX-4;
+	while(end_ord != 0)
+	{
+		last_c = 0;
+		for (i = 0; i < end_ord; i++)
+		{
+			j = i + 1;
+			if (regions[i].mode == -1)
+				continue;
+			if (regions[j].mode == -1)
+				j++;
+			if(regions[i].wallclock_time < regions[j].wallclock_time)
+			{
+				tmp = regions[j];
+				regions[j] = regions[i];
+				regions[i] = tmp;
+				last_c = i;
+			}
+		}
+		end_ord = last_c;
+	}
+	
+
+	fprintf(s, "\n\n");
+	fprintf(s, " Total timing (sum) :\n");
+	fprintf(s, "----------------------\n");
+	fprintf(s, "Wallclock time (s)\n");
+	fprintf(s, "%.7e\n\n", wallclock_tot_time);
+
+
+	fprintf(s, "Timing profiling:\n");
+	fprintf(s, "----------------------\n");
+	fprintf(s, "Section\t\tWallclock time(sec)\t\tWallclock time(%)\t\tFrequency\n");
+
+        for (i = 0; i < PERF_REGIONS_MAX-3; i++)
+        {
+		if (regions[i].mode == -1)
+			continue;
+
+		fprintf(s, "%s\t\t", get_perf_region_name(i));
+		fprintf(s, "%.7e\t\t\t", regions[i].wallclock_time);
+		fprintf(s, "%.2f\t\t\t\t", regions[i].wallclock_time/wallclock_tot_time*100);
+		fprintf(s, "%.0f\n", regions[i].normalize_denom);
+	}
+
+#endif
+
+/*
+Timing started on Tue Sep 27 18:50:35 2016
+Timing   ended on Tue Sep 27 18:50:35 2016
+*/
+
+	time_string = ctime(&init_time);
+	fprintf(s, "\nTiming started on %s", time_string);
+	time_string = ctime(&end_time);
+	fprintf(s, "Timing   ended on %s", time_string);
 }
-
-
 
 /**
  * Set scalar to multiply the output performance values with.
@@ -421,6 +525,14 @@ void perf_regions_finalize()
 	 */
 	FILE *s = stdout;
 
+#if PERF_TIMINGS_ACTIVE
+	// end time measurement
+	gettimeofday(&tm_end, NULL);
+
+	// total time measurement (in seconds)
+	wallclock_tot_time = (double)((int)tm_end.tv_sec - (int)tm_ini.tv_sec) + (double)((int)tm_end.tv_usec - (int)tm_ini.tv_usec)*0.000001;
+        time(&end_time);
+#endif
 
 	/*
 	 * output performance information on each region

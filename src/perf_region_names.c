@@ -43,6 +43,13 @@ void perf_region_name_init()
 				fprintf(stderr, "Number of performance regions exceeds PERF_REGIONS_MAX-3");
 				exit(1);
 			}
+
+			// remove line break
+			int len = strlen(buf_line);
+			if (len > 0)
+				if (buf_line[len-1] == '\n')
+					buf_line[len-1] = '\0';
+
 			perf_region_names[i] = strdup(buf_line);
 			i++;
 		}

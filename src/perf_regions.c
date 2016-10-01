@@ -468,16 +468,17 @@ FOO		1.7152000e-02			88.98				2
 	}
 	
 
-	fprintf(s, "\n\n");
-	fprintf(s, " Total timing (sum) :\n");
-	fprintf(s, "----------------------\n");
-	fprintf(s, "Wallclock time (s)\n");
+	fputs("\n\n", s);
+	fputs(" Total timing (sum) :\n", s);
+	fputs("----------------------\n", s);
+	fputs("Wallclock time (s)\n", s);
 	fprintf(s, "%.7e\n\n", wallclock_tot_time);
 
 
-	fprintf(s, "Timing profiling:\n");
-	fprintf(s, "----------------------\n");
-	fprintf(s, "Section\t\tWallclock time(sec)\t\tWallclock time(%)\t\tFrequency\n");
+	fputs("Timing profiling:\n", s);
+	fputs("----------------------\n", s);
+	// TODO: Rename section to Region?
+	fputs("Section\t\tWallclock time(sec)\t\tWallclock time(%)\t\tFrequency\n", s);
 
         for (i = 0; i < PERF_REGIONS_MAX-3; i++)
         {

@@ -208,7 +208,7 @@ class perf_regions:
 
 		with open(filepath, 'w') as file_handler:
 		    for item in self.region_name_list:
-			file_handler.write(item)
+			file_handler.write(item+"\n")
 
 	def preprocessor(self):
 		file_list = self.find_files()

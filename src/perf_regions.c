@@ -407,7 +407,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 		r->wallclock_time -= r_overhead->wallclock_time;
 
 #if PERF_TIMINGS_ACTIVE
-		wallclock_tot_time -= r->wallclock_time;
+		wallclock_tot_time -= r_overhead->wallclock_time;
 #endif
 		fprintf(s, "%s\t\t", perf_region_name);
 

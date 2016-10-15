@@ -1,7 +1,9 @@
-#LyX 2.1 created this file. For more info see http://www.lyx.org/
-\lyxformat 474
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
 \begin_document
 \begin_header
+\save_transient_properties true
+\origin unavailable
 \textclass article
 \begin_preamble
 \usepackage[
@@ -32,16 +34,16 @@
 \language_package default
 \inputencoding auto
 \fontencoding global
-\font_roman default
-\font_sans default
-\font_typewriter default
-\font_math auto
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
 \font_default_family default
 \use_non_tex_fonts false
 \font_sc false
 \font_osf false
-\font_sf_scale 100
-\font_tt_scale 100
+\font_sf_scale 100 100
+\font_tt_scale 100 100
 \graphics default
 \default_output_format default
 \output_sync 0
@@ -101,10 +103,11 @@ PerfRegions Documentation
 \end_layout
 
 \begin_layout Author
-Martin Schreiber et al.
+Silvia Mocavero, Martin Schreiber et al.
 \end_layout
 
 \begin_layout Verbatim
+
 (Please add yourself to the list of authors in alphabetical order if you
  contributed something to PerfRegions)
 \end_layout
@@ -116,9 +119,11 @@ Abstract
 \begin_layout Standard
 Gaining understanding in performance limitations is known to be a very challengi
 ng job.
- Even with the arise of automized tools such as Intel Amplifier, this still
- does not allow to get highly accurate statistics on the performance of
- selected areas of the codes from scientific computing area.
+ Even with the arise of automized commercial tools such as Intel Amplifier,
+ or open source tools such as HPCToolkit, this still does not allow to get
+ highly accurate statistics on the performance of selected areas of the
+ codes from scientific computing area and to guarantee portability on several
+ architectures.
  An alternative is to extend each program by hand with code which allows
  gaining insight into the performance, however this is very time consuming
  as well as error prone.
@@ -158,6 +163,14 @@ Programmability
 \begin_layout Enumerate
 
 \series bold
+Portability
+\series default
+: The only requirement is the PAPI library installed 
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
 MPI support
 \series default
 : The development should support MPI-based parallelization and accumulation
@@ -186,6 +199,30 @@ No recompilation
 Realization
 \end_layout
 
+\begin_layout Standard
+The package includes 2 main folders:
+\end_layout
+
+\begin_layout Enumerate
+the 
+\emph on
+src
+\emph default
+ folder, which contains the source code of perf regions.
+ In particular, the folder includes (i) the header files, (ii) the source
+ code for the performance measurement init and finalize, and for the region
+ measurement start and stop and (iii) the interfaces to the PAPI libraries.
+\end_layout
+
+\begin_layout Enumerate
+the 
+\emph on
+example
+\emph default
+ folder, which includes two example folders (C and Fortran examples).
+ 
+\end_layout
+
 \begin_layout Section
 Language extensions
 \end_layout
@@ -210,10 +247,12 @@ Due to the flexibility of the language extensions, we'd like to give a concrete
 \end_layout
 
 \begin_layout Verbatim
+
 #include <stdio.h>
 \end_layout
 
 \begin_layout Verbatim
+
 #include <stdlib.h> 
 \end_layout
 
@@ -222,6 +261,7 @@ Due to the flexibility of the language extensions, we'd like to give a concrete
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region include
 \end_layout
 
@@ -230,10 +270,12 @@ Due to the flexibility of the language extensions, we'd like to give a concrete
 \end_layout
 
 \begin_layout Verbatim
+
 double *a;
 \end_layout
 
 \begin_layout Verbatim
+
 int size;
 \end_layout
 
@@ -242,14 +284,17 @@ int size;
 \end_layout
 
 \begin_layout Verbatim
+
 void run_computations()
 \end_layout
 
 \begin_layout Verbatim
+
 {
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region init
 \end_layout
 
@@ -258,23 +303,28 @@ void run_computations()
 \end_layout
 
 \begin_layout Verbatim
+
   for (int k = 0; k < iters; k++)
 \end_layout
 
 \begin_layout Verbatim
+
   {
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region start foo
 \end_layout
 
 \begin_layout Verbatim
+
     [...
- run some computations here ...]
+ foo region computations ...]
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region stop foo
 \end_layout
 
@@ -283,19 +333,23 @@ void run_computations()
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region start bar
 \end_layout
 
 \begin_layout Verbatim
+
     [...
- run some computations here ...]
+ bar region computations ...]
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region stop bar
 \end_layout
 
 \begin_layout Verbatim
+
   }
 \end_layout
 
@@ -304,14 +358,17 @@ void run_computations()
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region finalize
 \end_layout
 
 \begin_layout Verbatim
+
 }
 \end_layout
 
 \begin_layout Verbatim
+
 [...]
 \end_layout
 
@@ -332,6 +389,7 @@ Using PerfRegion on C-code, the program annotation is given by
 \end_layout
 
 \begin_layout Verbatim
+
 #pragma perf_region [identifier] [name]
 \end_layout
 
@@ -342,7 +400,7 @@ The following table gives an overview of the language extensions:
 \begin_layout Standard
 \begin_inset Tabular
 <lyxtabular version="3" rows="6" columns="2">
-<features rotate="0" tabularvalignment="middle">
+<features tabularvalignment="middle">
 <column alignment="left" valignment="top">
 <column alignment="left" valignment="top" width="10cm">
 <row>
@@ -438,7 +496,7 @@ a summary of the measured performance
 \begin_inset Text
 
 \begin_layout Plain Layout
-start [name]
+start [name, perf_flag]
 \end_layout
 
 \end_inset
@@ -448,7 +506,8 @@ start [name]
 
 \begin_layout Plain Layout
 Annotation of the start of a region to run performance measurements.
- 'name' has to be a unique identifier.
+ 'name' has to be a unique identifier, 'perf_flag' is an indication of the
+ performance measurement type (timing, counters or both).
 \end_layout
 
 \end_inset
@@ -532,6 +591,7 @@ To start preprocessing the code, the script is executed with 'preprocess'
 \end_layout
 
 \begin_layout Verbatim
+
 	./perf_regions_instrumentation.py preprocess 
 \end_layout
 
@@ -554,19 +614,18 @@ To revert the PerfRegion code, call the script with 'cleanup' parameter:
 \end_layout
 
 \begin_layout Verbatim
+
 	./perf_regions_instrumentation.py cleanup
+\begin_inset Separator latexpar
+\end_inset
+
+
 \end_layout
 
-\begin_layout Verbatim
-
-\end_layout
-
-\begin_deeper
 \begin_layout Subsection
 3rd party library, compiling and linking
 \end_layout
 
-\end_deeper
 \begin_layout Standard
 PerfRegions requires the PAPI library installed.
 \end_layout
@@ -576,6 +635,7 @@ Linker flags:
 \end_layout
 
 \begin_layout Verbatim
+
 	-lpapi -L[path to perf regions] -lperf_regions
 \end_layout
 
@@ -584,21 +644,25 @@ Compile flags:
 \end_layout
 
 \begin_layout Verbatim
+
 	-I[path to perf regions]/src
+\begin_inset Separator latexpar
+\end_inset
+
+
 \end_layout
 
-\begin_deeper
 \begin_layout Subsection
 Executing performance measurements
 \end_layout
 
-\end_deeper
 \begin_layout Standard
 First of all, the environment variable LD_LIBRARY_PATH has to be set to
  the path of the PerfRegion build directory:
 \end_layout
 
 \begin_layout Verbatim
+
 	export LD_LIBRARY_PATH=../../build:$LD_LIBRARY_PATH
 \end_layout
 
@@ -608,6 +672,7 @@ Each platform might have a different set of performance counters.
 \end_layout
 
 \begin_layout Verbatim
+
 	papi_avail
 \end_layout
 
@@ -618,83 +683,834 @@ Only a limited number of performance identifiers can be specified.
 \end_layout
 
 \begin_layout Verbatim
+
 	export LIST_COUNTERS=PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM
+\begin_inset Separator latexpar
+\end_inset
+
+
 \end_layout
 
-\begin_deeper
 \begin_layout Subsection
 Example output
 \end_layout
 
-\end_deeper
-\begin_layout Verbatim
+\begin_layout Standard
+
 An example output looks as follows:
 \end_layout
 
-\begin_layout Verbatim
+\begin_layout Standard
+\begin_inset Tabular
+<lyxtabular version="3" rows="21" columns="4">
+<features tabularvalignment="middle">
+<column alignment="left" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 **************************************
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 Iterations: 2
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 Performance counters profiling:
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 ----------------------
 \end_layout
 
-\begin_layout Verbatim
-Section			PAPI_L1_TCM	PAPI_L2_TCM	PAPI_L3_TCM FOO			3.2926500e+04	4.6655000e+03	1.3
-370000e+03 BAR			6.5657000e+04	7.7765000e+03	1.3550000e+03
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Section
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PAPI_L1_TCM
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PAPI_L2_TCM
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+PAPI_L3_TCM
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+FOO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+3.2926500e+046
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+4.6655000e+03
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1.3370000e+03
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+BAR
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+6.5657000e+04
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+7.7765000e+03
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1.3550000e+03
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 Total timing (sum) :
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 ----------------------
 \end_layout
 
-\begin_layout Verbatim
-Wallclock time (s) 3.3830400e-03
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Wallclock time (s) 7.3830400e-03
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 Timing profiling:
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 ----------------------
 \end_layout
 
-\begin_layout Verbatim
-Section		Wallclock time(sec)		Wallclock time(%)		Frequency FOO		3.9739800e-03			1
-17.47				2 BAR		2.4719800e-03			73.07				2
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Section
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Wallclock time (sec)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+	Wallclock time (%)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Frequency
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+FOO
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+3.9739800e-03
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+53.82
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+BAR
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2.4719800e-03
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+33.48
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+2
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 Timing started on Sat Oct  1 12:48:13 2016
 \end_layout
 
-\begin_layout Verbatim
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell multicolumn="1" alignment="left" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
 Timing   ended on Sat Oct  1 12:48:13 2016
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Section

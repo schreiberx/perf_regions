@@ -21,6 +21,7 @@ PROGRAM main
  
  
  
+ 
 
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)

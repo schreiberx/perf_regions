@@ -1,6 +1,6 @@
 
 // "Maximum number of performance counters which may be used. Feel free to increase this number"
-#define PERF_COUNTERS_MAX		(128)
+#define PERF_COUNTERS_MAX		(256)
 
 
 int count_init();

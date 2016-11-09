@@ -39,7 +39,7 @@ int count_init()
 {
 	if (getenv("LIST_COUNTERS") == NULL)
 	{
-		printf("LIST_COUNTERS is not defined - dummy counting activated!\n");
+		fprintf(stderr, "LIST_COUNTERS is not defined - dummy counting activated!\n");
 		count_list_counters = "";
 	}
 	else
@@ -53,7 +53,7 @@ int count_init()
 		if ((retval = PAPI_library_init(PAPI_VER_CURRENT)) != PAPI_VER_CURRENT)
 		{
 			fprintf(stderr, "PAPI library init error! retval: %d\n", retval);
-			return 0;
+			exit(-1);
 		}
 	}
 

@@ -57,7 +57,7 @@ class perf_regions:
 			# iterate over regular expressions
 			line_processed = False
 			if not cleanup:
-				for p in range(0, 5):
+				for p in range(0, 6):
 					match = self.prog_match_list[p].match(line)
 					if match:
 						line_processed = True
@@ -112,6 +112,12 @@ class perf_regions:
 								self.append_content(out_content, line, "CALL perf_region_stop("+str(id)+") !"+name)
 							elif self.language == 'c':
 								self.append_content(out_content, line, "perf_region_stop("+str(id)+"); //"+name)
+						elif p == 5:   # timing_reset
+							print("Found timing_reset call")
+							if self.language == 'fortran':
+								self.append_content(out_content, line, "! No perf_region equivalent" )
+							elif self.language == 'c':
+								self.append_content(out_content, line, "// No perf_region equivalent" )
 						else:
 							raise UserWarning("Unknown match id")
 

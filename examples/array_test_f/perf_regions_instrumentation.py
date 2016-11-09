@@ -16,6 +16,7 @@ pf = perf_regions.perf_regions(
 
 			".*timing_start\(\'(.*)\'\)",	# start of timing
 			".*timing_stop\(\'(.*)\'\)",	# end of timing
+			".*timing_reset.*"		# reset of timing
 		],
 #		'../../',	# perf region root directory
 		'./',		# output directory of perf region tools

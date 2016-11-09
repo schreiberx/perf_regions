@@ -57,7 +57,7 @@ class perf_regions:
 			# iterate over regular expressions
 			line_processed = False
 			if not cleanup:
-				for p in range(0, 6):
+				for p in range(0, len(self.prog_match_list)):
 					match = self.prog_match_list[p].match(line)
 					if match:
 						line_processed = True

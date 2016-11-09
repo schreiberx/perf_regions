@@ -1,6 +1,11 @@
 PROGRAM main
 
 !pragma perf_region include
+ 
+ 
+ 
+ 
+ 
 
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)

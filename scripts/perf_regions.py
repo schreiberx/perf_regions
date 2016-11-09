@@ -80,7 +80,7 @@ class perf_regions:
 						elif p == 2:	# use/include
 							print("Found include/use statement")
 							if self.language == 'fortran':
-								self.append_content(out_content, line, 'USE perf_regions_fortran ')
+								self.append_content(out_content, line, 'USE perf_regions_fortran')
 								self.append_content(out_content, ' ', '#include "perf_region_defines.h"')
 							elif self.language == 'c':
 								self.append_content(out_content, line, "#include <perf_regions.h>")

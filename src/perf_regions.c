@@ -113,11 +113,13 @@ void perf_regions_reset()
  */
 void perf_regions_init()
 {
-        int i, j, region_id;
-        int istart_count;
+	int i, j, region_id;
+	int istart_count;
+
 	/*
 	 * CONSTRUCTOR
 	 */
+
 	count_init();
 	num_perf_counters = count_get_num();
 	perf_counter_names = count_get_event_names();

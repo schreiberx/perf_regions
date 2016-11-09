@@ -13,6 +13,25 @@ static int *count_event_code;
 static int count_num_counters;
 static char *count_list_counters;
 
+
+
+void print_access_right_problems()
+{
+	fprintf(
+			stderr, "(from perftools)\
+\
+	Consider tweaking /proc/sys/kernel/perf_event_paranoid,\
+	which controls use of the performance events system by\
+	unprivileged users (without CAP_SYS_ADMIN).\
+\
+	The current value is 3:\
+\
+	  -1: Allow use of (almost) all events by all users\
+	>= 0: Disallow raw tracepoint access by users without CAP_IOC_LOCK\
+	>= 1: Disallow CPU event access by users without CAP_SYS_ADMIN\
+	>= 2: Disallow kernel profiling by users without CAP_SYS_ADMIN\
+	");
+}
 /**
  * Initialize performance counters based on environment variables
  */
@@ -62,13 +81,21 @@ int count_init()
 	count_values = malloc(count_num_counters*sizeof(long long));
 	count_event_code = malloc(count_num_counters*sizeof(int));
 
+//	fprintf(stderr, "Setting up event codes");
 	for (int i = 0; i < count_num_counters; i++)
 	{
 		if ((retval = PAPI_event_name_to_code(count_event_list_string[i], &count_event_code[i])) != PAPI_OK)
-			printf("PAPI_event_name_to_code failed! retval: %d\n", retval);
+		{
+			fprintf(stderr, "PAPI_event_name_to_code failed! retval: %d\n", retval);
+			print_access_right_problems();
+			exit(-1);
+		}
+
 		count_values[i] = 0;
 	}
 
+//	for (int i = 0; i < count_num_counters; i++)
+//		fprintf(stderr, "%i\n", count_event_code[i]);
 	return 0;
 }
 
@@ -84,7 +111,11 @@ int count_start() {
 
 	// suppress errors if no perf counters are activated
 	if (count_num_counters != 0)
-		PAPI_perror("PAPI_start\n");
+	{
+		PAPI_perror("PAPI_start: ");
+		print_access_right_problems();
+		exit(-1);
+	}
 
 	return 0;
 
@@ -101,7 +132,11 @@ int count_stop() {
 		return 0;
 
 	if (count_num_counters != 0)
-		PAPI_perror("PAPI_stop\n");
+	{
+		PAPI_perror("PAPI_stop: ");
+		print_access_right_problems();
+		exit(-1);
+	}
 
 	return 0;
 }

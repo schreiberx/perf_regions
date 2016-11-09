@@ -19,5 +19,6 @@ array_test_perf_region:
 	${CC} -g -o array_test_perf_region array_test.c ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 clean :
+	./perf_regions_instrumentation.py cleanup
 	rm -f array_test array_test_perf_region
 	rm -f perf_region_list.txt

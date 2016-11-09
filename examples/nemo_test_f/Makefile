@@ -18,5 +18,6 @@ fortran_perfregion:
 	${FC} -g -o nemo_test nemo_test.F90 ${LINKFLAGS_PERFREGION}
 
 clean :
+	./perf_regions_instrumentation.py cleanup
 	rm -f nemo_test
 	rm -f perf_region_list.txt

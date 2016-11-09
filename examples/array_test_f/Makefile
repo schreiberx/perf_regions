@@ -22,4 +22,5 @@ perf_regions_fortran.o:
 	${FC} -c perf_regions_fortran.F90 ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 clean :
+	./perf_regions_instrumentation.py cleanup
 	rm -f array_test array_test_perf_region perf_regions_fortran.o

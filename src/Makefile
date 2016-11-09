@@ -20,7 +20,7 @@ all: ${BUILD_DIR}/libperf_regions.so
 
 
 
-${BUILD_DIR}/libperf_regions.so : ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_region_names.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_regions_fortran.mod
+${BUILD_DIR}/libperf_regions.so : ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_region_names.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_regions_fortran.o
 #	${MPICC} -I${PAPI_INC} -L${PAPI_LIB} -lpapi -c papi_counters.c -o papi_counters.o
 	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_region_names.o -o ${BUILD_DIR}/libperf_regions.so -lpapi
 
@@ -34,8 +34,9 @@ ${BUILD_DIR}/perf_regions.o: perf_regions.c
 	${MPICC} ${CFLAGS} -c -g perf_regions.c -o ${BUILD_DIR}/perf_regions.o
 
 # Generate Fortran ugly interfaces
-${BUILD_DIR}/perf_regions_fortran.mod:
-	gfortran -c perf_regions_fortran.F90 -o ${BUILD_DIR}/perf_regions_fortran.mod
+${BUILD_DIR}/perf_regions_fortran.o:
+	gfortran -c perf_regions_fortran.F90 -o ${BUILD_DIR}/perf_regions_fortran.o
+	mv perf_regions_fortran.mod "${BUILD_DIR}"
 
 
 
@@ -45,3 +46,5 @@ clean:
 	rm -f ${BUILD_DIR}/perf_region_names.o
 	rm -f ${BUILD_DIR}/perf_regions.o
 	rm -f ${BUILD_DIR}/libperf_regions.so
+	rm -f ${BUILD_DIR}/perf_regions_fortran.o
+	#rm -f ${BUILD_DIR}/perf_regions_fortran.mod

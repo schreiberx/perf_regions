@@ -126,7 +126,8 @@ int count_start() {
 /** 
  * stop performance counters and store everything to array values
  */
-int count_stop() {
+int count_stop()
+{
 	// stop the event
 	if (PAPI_stop_counters(count_values, count_num_counters) == PAPI_OK)
 		return 0;

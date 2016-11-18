@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#pragma perf_region include
+//PERF_REGION_ORIGINAL
+//#pragma perf_region include
+//PERF_REGION_CODE
+#include <perf_regions.h>
 
 double *a;
 int size;
@@ -25,7 +28,10 @@ int main(int i_argi, char **argv)
 		iters = (iters <= 0 ? 2 : iters);
 		iters = (iters > 128 ? 128 : iters);
 
-#pragma perf_region init
+//PERF_REGION_ORIGINAL
+//#pragma perf_region init
+//PERF_REGION_CODE
+perf_regions_init();
 
 		printf("\n");
 		printf("**************************************\n");
@@ -41,16 +47,28 @@ int main(int i_argi, char **argv)
 		for (int k = 0; k < iters; k++)
 		{
 
-#pragma perf_region start foo
+//PERF_REGION_ORIGINAL
+//#pragma perf_region start foo
+//PERF_REGION_CODE
+perf_region_start(0, (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS)); //FOO
 
 
 			run_computations();
-#pragma perf_region stop foo
+//PERF_REGION_ORIGINAL
+//#pragma perf_region stop foo
+//PERF_REGION_CODE
+perf_region_stop(0); //FOO
 
-#pragma perf_region start bar
+//PERF_REGION_ORIGINAL
+//#pragma perf_region start bar
+//PERF_REGION_CODE
+perf_region_start(1, (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS)); //BAR
 			run_computations();
 			run_computations();
-#pragma perf_region stop bar
+//PERF_REGION_ORIGINAL
+//#pragma perf_region stop bar
+//PERF_REGION_CODE
+perf_region_stop(1); //BAR
 
 //			double fac = (double)iters * (double)size * sizeof(double);
 			double fac = 1.0;
@@ -58,7 +76,10 @@ int main(int i_argi, char **argv)
 //			perf_region_set_normalize(PERF_REGIONS_FOO, fac);
 		}
 
-#pragma perf_region finalize
+//PERF_REGION_ORIGINAL
+//#pragma perf_region finalize
+//PERF_REGION_CODE
+perf_regions_finalize();
 
 	free(a);
 	}

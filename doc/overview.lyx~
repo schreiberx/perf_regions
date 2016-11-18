@@ -578,7 +578,7 @@ The release mode is automatically used if compiling with 'make'
 \end_layout
 
 \begin_layout Verbatim
-	$ make MODE=release
+	$ MODE=release
 \end_layout
 
 \begin_layout Subsubsection
@@ -593,7 +593,7 @@ This mode should be used to test the PerfRegions library.
 
 \begin_layout Verbatim
 
-	$ make MODE=debug
+	$ MODE=debug
 \end_layout
 
 \begin_layout Subsection

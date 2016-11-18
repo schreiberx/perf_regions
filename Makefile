@@ -1,9 +1,9 @@
 
 
 all:
-	make -C ./src
-	make -C ./examples
+	make -C ./src MODE=${MODE}
+	make -C ./examples MODE=${MODE}
 
 clean:
-	make -C ./src clean
-	make -C ./examples clean
+	make -C ./src clean MODE=${MODE}
+	make -C ./examples clean MODE=${MODE}

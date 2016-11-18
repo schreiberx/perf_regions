@@ -37,7 +37,7 @@ struct PerfRegion
 	double wallclock_time;
 
 	// time value
-	struct timeval tvalue;
+	struct timeval start_time_value;
 
 #endif
 
@@ -98,6 +98,7 @@ void perf_regions_reset()
 		regions[i].wallclock_time = 0;
 		regions[i].mode = -1;
 		regions[i].normalize_denom = 0;
+
 #if PERF_DEBUG
 		regions[i].active = 0;
 #endif
@@ -231,7 +232,7 @@ void perf_region_start(
 #endif
 
 #if PERF_TIMINGS_ACTIVE
-    gettimeofday(&(r->tvalue), NULL);
+    gettimeofday(&(r->start_time_value), NULL);
 #endif
 }
 
@@ -272,7 +273,7 @@ void perf_region_stop(
     struct timeval tm2;
     gettimeofday(&tm2, NULL);
 
-    r->wallclock_time += (double)((int)tm2.tv_sec - (int)r->tvalue.tv_sec) + (double)((int)tm2.tv_usec - (int)r->tvalue.tv_usec)*0.000001;
+    r->wallclock_time += (double)((int)tm2.tv_sec - (int)r->start_time_value.tv_sec) + (double)((int)tm2.tv_usec - (int)r->start_time_value.tv_usec)*0.000001;
 #endif
 
     // don't overwrite mode since we need this information for the overheads later

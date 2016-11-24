@@ -1,10 +1,13 @@
-#include "papi_counters.h"
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <papi.h>
+#include <string.h>
 
+#include "papi_counters.h"
 
 static long long *count_values;
 static char *count_event_list_string[PERF_COUNTERS_MAX];
@@ -32,6 +35,8 @@ void print_access_right_problems()
 	>= 2: Disallow kernel profiling by users without CAP_SYS_ADMIN\n\
 ");
 }
+
+
 /**
  * Initialize performance counters based on environment variables
  */

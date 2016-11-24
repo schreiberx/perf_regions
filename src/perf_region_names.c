@@ -1,8 +1,11 @@
-#include "perf_region_names.h"
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "perf_region_names.h"
 
 static
 const char** perf_region_names;

@@ -8,7 +8,7 @@ PAPI_LIB:=/users/home/opt/papi/papi-5.1.0/lib/
 #MPICC=mpiicc
 MPICC:=gcc
 BUILD_DIR:=../build/
-CFLAGS:=-g -O3 -fPIC
+CFLAGS:=-g -O3 -fPIC -std=c99
 #CFLAGS:=-g -O0 -fPIC
 
 mode.:=-DPERF_DEBUG=0

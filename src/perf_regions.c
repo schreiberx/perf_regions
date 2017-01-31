@@ -430,7 +430,6 @@ void perf_region_stop(
     gettimeofday(&time_val, NULL);
 
     double test = ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec) + ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;
-    printf("%i STOP\t%e\t%e\n", i_region_id, r->wallclock_time, test);
 
     r->wallclock_time +=
     			  ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec)
@@ -587,7 +586,9 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 			// DON'T NORMALIZE the performance value
 			//counter_value /= r->region_enter_counter_normalize_denom;
 
-			fprintf(s, "\t%.7e", counter_value);
+			double param_value = counter_value;
+
+			fprintf(s, "\t%.7e", param_value);
 		}
 		fprintf(s, "\n");
 	}

@@ -4,12 +4,9 @@ PAPI_INC:=/users/home/opt/papi/papi-5.1.0/include/
 PAPI_LIB:=/users/home/opt/papi/papi-5.1.0/lib/
 
 
-
-#MPICC=mpiicc
 MPICC:=gcc
 BUILD_DIR:=../build/
 CFLAGS:=-g -O3 -fPIC -std=c99
-#CFLAGS:=-g -O0 -fPIC
 
 mode.:=-DPERF_DEBUG=0
 mode.release:=-DPERF_DEBUG=0
@@ -20,12 +17,10 @@ CFLAGS:=${CFLAGS} ${mode.${MODE}}
 
 
 all: ${BUILD_DIR}/libperf_regions.so
-#	ar rcs libpm.a papi_counters.o
 
 
 
 ${BUILD_DIR}/libperf_regions.so : ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_region_names.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_regions_fortran.o
-#	${MPICC} -I${PAPI_INC} -L${PAPI_LIB} -lpapi -c papi_counters.c -o papi_counters.o
 	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_region_names.o -o ${BUILD_DIR}/libperf_regions.so -lpapi
 
 ${BUILD_DIR}/papi_counters.o: papi_counters.c papi_counters.h
@@ -51,4 +46,3 @@ clean:
 	rm -f ${BUILD_DIR}/perf_regions.o
 	rm -f ${BUILD_DIR}/libperf_regions.so
 	rm -f ${BUILD_DIR}/perf_regions_fortran.o
-	#rm -f ${BUILD_DIR}/perf_regions_fortran.mod

@@ -18,6 +18,7 @@
  */
 #define PERF_COUNTERS_ACTIVE		1
 #define PERF_TIMINGS_ACTIVE		1
+/* Use the higher-resolution POSIX clock rather than just gettimeofday() */
 #define PERF_TIMING_POSIX               1
 
 #ifndef PERF_DEBUG
@@ -193,12 +194,10 @@ void perf_regions_init()
 		r->normalize_denom = 1.0;
 	}
 #if PERF_TIMINGS_ACTIVE
-	// start time measurement
-#ifdef PERF_TIMING_POSIX
-#else
+	// start time measurement. when timing the execution of the
+	// whole code we don't bother with using the
+	// higher-resolution POSIX clock.
         gettimeofday(&tm_ini, NULL);
-#endif
-
 #endif
 	// start date measurement
         time(&init_time);

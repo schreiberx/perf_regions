@@ -17,6 +17,63 @@
  * This gets handy if perf counter PAPI is not available on certain systems.
  */
 #define PERF_COUNTERS_ACTIVE		1
+
+/*
+ * Activate support for recursive performance counters.
+ * Warning: This leads to additional overheads and
+ * might result in decreased accurate results!
+ *
+ ***********************************************
+ * Recursion not activated:
+ *
+ *  perf_region_start();
+ *    -> count_start();
+ *       (reset and start counters)
+ *
+ *  perf_region_stop();
+ *    -> count_stop();
+ *       (stop counters)
+ *    -> accumulate performance counters
+ *
+ *
+ ***********************************************
+ * Recursion activated:
+ *
+ *  perf_region_init();
+ *       (reset and start counters)
+ *
+ *  perf_region_start();
+ *    if num_nested_performance_regions == 0:
+ *        -> count_start();
+ *
+ *    else:
+ *        -> count_read_and_reset();
+ *           (read counters)
+ *           (update performance counters of outer regions)
+ *    num_nested_performance_regions++;
+ *
+ *
+ *  perf_region_stop();
+ *    num_nested_performance_regions--;
+ *
+ *    if num_nested_performance_regions == 0:
+ *       -> count_stop();
+ *          (stop counters)
+ *
+ *       -> accumulate performance counters
+ *
+ *    else:
+ *       -> count_read_and_reset();
+ *          (read counters)
+ *          (update performance counters of outer regions)
+ *
+ *       -> accumulate performance counters		/// overheads included here for recursive functions
+ */
+#define PERF_COUNTERS_RECURSIVE		1
+
+/*
+ *
+ */
 #define PERF_TIMINGS_ACTIVE		1
 /* Use the higher-resolution POSIX clock rather than just gettimeofday() */
 #define PERF_TIMING_POSIX               1
@@ -30,6 +87,11 @@
 #endif
 
 
+
+
+/**
+ * Structure for each of the performance regions
+ */
 struct PerfRegion
 {
 #if PERF_COUNTERS_ACTIVE
@@ -50,7 +112,6 @@ struct PerfRegion
 #endif
 
 	/*
-	 *
 	 * performance counting mode
 	 * PERF_TIMINGS: timings active for this region
 	 * PERF_COUNTERS: counters active for this region
@@ -58,9 +119,13 @@ struct PerfRegion
 	 */
 	int mode;
 
-	// region enter counter
-	double normalize_denom;
+	// region enter counter to normalize the performance counters
+	double region_enter_counter_normalize_denom;
 
+#if PERF_COUNTERS_RECURSIVE
+	long long count_values_read[PERF_COUNTERS_MAX];
+//	long long count_values_read_end[PERF_COUNTERS_MAX];
+#endif
 
 #if PERF_DEBUG
 	// debug flag to assure that perf counters are not entering a region twice
@@ -88,8 +153,18 @@ int num_perf_counters;
 // names of performance counters
 char **perf_counter_names = NULL;
 
-// values of the performance counters
-long long *perf_counter_values = NULL;
+
+// number of nested performance regions
+static int num_nested_performance_regions;
+
+#if PERF_COUNTERS_RECURSIVE
+	// number of maximal recursive performance regions
+	#define PERF_RECURSIVE_REGIONS_MAX 16
+
+	struct PerfRegion *nested_performance_regions[PERF_RECURSIVE_REGIONS_MAX];
+#endif
+
+long long counter_values_stop[PERF_COUNTERS_MAX];
 
 
 /**
@@ -97,15 +172,17 @@ long long *perf_counter_values = NULL;
  */
 void perf_regions_reset()
 {
-    int i, j;
-	for (i = 0; i < PERF_REGIONS_MAX; i++)
+	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
-		for (j = 0; j < num_perf_counters; j++)
+#if PERF_COUNTERS_ACTIVE
+
+		for (int j = 0; j < num_perf_counters; j++)
 			regions[i].counter_values[j] = 0;
+#endif
 
 		regions[i].wallclock_time = 0;
 		regions[i].mode = -1;
-		regions[i].normalize_denom = 0;
+		regions[i].region_enter_counter_normalize_denom = 0;
 
 #if PERF_DEBUG
 		regions[i].active = 0;
@@ -132,7 +209,6 @@ void perf_regions_init()
 	count_init();
 	num_perf_counters = count_get_num();
 	perf_counter_names = count_get_event_names();
-	perf_counter_values = count_get_valueptr();
 
 	if (regions != NULL)
 	{
@@ -140,13 +216,12 @@ void perf_regions_init()
 		exit(-1);
 	}
 
-	regions = malloc(sizeof(struct PerfRegion)*PERF_REGIONS_MAX);
+	regions = malloc(sizeof(struct PerfRegion)*(PERF_REGIONS_MAX+3));
 
 	/*
 	 * Load list with perf region names
 	 */
 	perf_region_name_init();
-
 
 
 	/*
@@ -187,20 +262,27 @@ void perf_regions_init()
 	{
 		struct PerfRegion *r = &regions[region_id];
 
-		r->wallclock_time /= (double)(r->normalize_denom);
-		for (j = 0; j < num_perf_counters; j++)
-			r->counter_values[j] /= (double)(r->normalize_denom);
+		r->wallclock_time /= (double)(r->region_enter_counter_normalize_denom);
 
-		r->normalize_denom = 1.0;
+#if PERF_COUNTERS_ACTIVE
+		for (j = 0; j < num_perf_counters; j++)
+			r->counter_values[j] /= (double)(r->region_enter_counter_normalize_denom);
+#endif
+
+		r->region_enter_counter_normalize_denom = 1.0;
 	}
+
 #if PERF_TIMINGS_ACTIVE
 	// start time measurement. when timing the execution of the
 	// whole code we don't bother with using the
 	// higher-resolution POSIX clock.
         gettimeofday(&tm_ini, NULL);
 #endif
+
 	// start date measurement
-        time(&init_time);
+	time(&init_time);
+
+	num_nested_performance_regions = 0;
 }
 
 
@@ -216,9 +298,10 @@ void perf_region_start(
 	struct PerfRegion *r = &(regions[i_region_id]);
 
 	// denominator to normalize values
-	r->normalize_denom++;
+	r->region_enter_counter_normalize_denom++;
 
 #if PERF_DEBUG
+
 	if (i_region_id < 0 || i_region_id >= PERF_REGIONS_MAX)
 	{
 		fprintf(stderr, "Region ID %i out of boundaries\n", i_region_id);
@@ -232,13 +315,46 @@ void perf_region_start(
 	}
 
 	r->active = 1;
+
 #endif
 
 	r->mode = i_measure_type;
 
 #if PERF_COUNTERS_ACTIVE
+
 	if (r->mode & PERF_FLAG_COUNTERS)
+	{
+#if PERF_COUNTERS_RECURSIVE
+
+		nested_performance_regions[num_nested_performance_regions] = r;
+
+		if (num_nested_performance_regions == 0)
+		{
+			count_start();
+		}
+		else
+		{
+			count_read_and_reset(r->count_values_read);
+
+			// add performance values to outer recursive performance regions
+			for (int i = 0; i < num_nested_performance_regions; i++)
+			{
+				// outer performance region
+				struct PerfRegion *r_outer = nested_performance_regions[i];
+
+				for (int j = 0; j < num_perf_counters; j++)
+					r_outer->counter_values[j] += r->count_values_read[j];
+			}
+		}
+
+		num_nested_performance_regions++;
+
+#else
 		count_start();
+#endif
+	}
+
+
 #endif
 
 #if PERF_TIMINGS_ACTIVE
@@ -260,7 +376,6 @@ void perf_region_stop(
 )
 {
 	struct PerfRegion *r = &regions[i_region_id];
-        int j;
 
 #if PERF_DEBUG
 	if (r->mode <= 0 || r->active != 1)
@@ -273,15 +388,47 @@ void perf_region_stop(
 #endif
 
 
+#if PERF_COUNTERS_ACTIVE
 	if (r->mode & PERF_FLAG_COUNTERS)
 	{
-		count_stop();
-		for (j = 0; j < num_perf_counters; j++)
+
+#if PERF_COUNTERS_RECURSIVE
+
+		num_nested_performance_regions--;
+
+		if (num_nested_performance_regions == 0)
 		{
-//			printf("%i %i\n", j, (int)perf_counter_values[j]);
-			r->counter_values[j] += perf_counter_values[j];
+			count_stop(counter_values_stop);
+
+			for (int j = 0; j < num_perf_counters; j++)
+				r->counter_values[j] += counter_values_stop[j];
 		}
+		else
+		{
+			count_read_and_reset(r->count_values_read);
+
+			// add performance values to outer recursive AND CURRENT performance region
+			for (int i = 0; i <= num_nested_performance_regions; i++)
+			{
+				// outer performance region
+				struct PerfRegion *r_outer = nested_performance_regions[i];
+
+				for (int j = 0; j < num_perf_counters; j++)
+					r_outer->counter_values[j] += r->count_values_read[j];
+			}
+		}
+
+#else
+
+		count_stop(counter_values_stop);
+
+		for (int j = 0; j < num_perf_counters; j++)
+			r->counter_values[j] += counter_values_stop[j];
+
+#endif
+
 	}
+#endif
 
 #if PERF_TIMINGS_ACTIVE
 #ifdef PERF_TIMING_POSIX
@@ -352,26 +499,28 @@ trc_adv            -0.8005814E+01   -4.81            -8.00      -4.97        1.0
 
  Timing started on 19/05/2016 at 13:55:48 MET +00:00 from GMT
  Timing   ended on 19/05/2016 at 13:58:34 MET +00:00 from GMT
- */
+*/
 void perf_regions_output(FILE *s)
 {
-        int i, j;
 	char* time_string;
 
-/* Performance counters output
+
+#if PERF_COUNTERS_ACTIVE
+
+/*
+ * Performance counters output
 
 Performance counters profiling:
 ----------------------
 Section			PAPI_L1_TCM	PAPI_L2_TCM	PAPI_L3_TCM
 FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
-
 */
 
 #if PERF_COUNTERS_ACTIVE
 	fprintf(s, "Performance counters profiling:\n");
 	fprintf(s, "----------------------\n");
 	fprintf(s, "Section\t\t");
-	for (j = 0; j < num_perf_counters; j++)
+	for (int j = 0; j < num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_counter_names[j]);
 	fprintf(s, "\n");
 #endif
@@ -388,7 +537,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 	}
 #endif
 
-	for (i = 0; i < PERF_REGIONS_MAX-3; i++)
+	for (int i = 0; i < PERF_REGIONS_MAX-3; i++)
 	{
 		struct PerfRegion *r = &(regions[i]);
 
@@ -410,7 +559,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 			break;
 
 		case (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS):
-			r_overhead = &regions[PERF_REGIONS_OVERHEAD_TIMINGS | PERF_REGIONS_OVERHEAD_COUNTERS];
+			r_overhead = &regions[PERF_REGIONS_OVERHEAD_TIMINGS_COUNTERS];
 			break;
 
 		default:
@@ -430,18 +579,24 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 #if PERF_TIMINGS_ACTIVE
 		wallclock_tot_time -= r_overhead->wallclock_time;
 #endif
+
 		fprintf(s, "%s\t\t", perf_region_name);
 
-		for (j = 0; j < num_perf_counters; j++)
+		for (int j = 0; j < num_perf_counters; j++)
 		{
 			long long counter_value = r->counter_values[j];
 			counter_value -= r_overhead->counter_values[j];
 
-			double perf_value = counter_value/r->normalize_denom;
+			double perf_value = counter_value;
+
+			// DON'T NORMALIZE the performance value
+			//perf_value /= r->region_enter_counter_normalize_denom;
+
 			fprintf(s, "\t%.7e", perf_value);
 		}
 		fprintf(s, "\n");
 	}
+#endif
 
 /* Timing output
  
@@ -463,21 +618,23 @@ FOO		1.7152000e-02			88.98				2
 	int last_c;
 	int end_ord;
 	struct PerfRegion tmp;
-	
 
+
+#if 0
+	// MaS: NO CLUE WHAT THIS IS FOR!
 	// TO BE TESTED ON MORE THAN ONE REGION
-	end_ord = PERF_REGIONS_MAX-4;
-	while(end_ord != 0)
+	end_ord = PERF_REGIONS_MAX-3;
+	while (end_ord != 0)
 	{
 		last_c = 0;
-		for (i = 0; i < end_ord; i++)
+		for (int i = 0; i < end_ord; i++)
 		{
-			j = i + 1;
+			int j = i + 1;
 			if (regions[i].mode == -1)
 				continue;
 			if (regions[j].mode == -1)
 				j++;
-			if(regions[i].wallclock_time < regions[j].wallclock_time)
+			if (regions[i].wallclock_time < regions[j].wallclock_time)
 			{
 				tmp = regions[j];
 				regions[j] = regions[i];
@@ -487,7 +644,8 @@ FOO		1.7152000e-02			88.98				2
 		}
 		end_ord = last_c;
 	}
-	
+#endif
+
 
 	fputs("\n\n", s);
 	fputs(" Total timing (sum) :\n", s);
@@ -498,18 +656,19 @@ FOO		1.7152000e-02			88.98				2
 
 	fputs("Timing profiling:\n", s);
 	fputs("----------------------\n", s);
+
 	// TODO: Rename section to Region?
 	fputs("Section\t\tWallclock time(sec)\t\tWallclock time(%)\t\tFrequency\n", s);
 
-        for (i = 0; i < PERF_REGIONS_MAX-3; i++)
-        {
+	for (int i = 0; i < PERF_REGIONS_MAX-3; i++)
+    {
 		if (regions[i].mode == -1)
 			continue;
 
 		fprintf(s, "%s\t\t", get_perf_region_name(i));
 		fprintf(s, "%.7e\t\t\t", regions[i].wallclock_time);
 		fprintf(s, "%.2f\t\t\t\t", regions[i].wallclock_time/wallclock_tot_time*100);
-		fprintf(s, "%.0f\n", regions[i].normalize_denom);
+		fprintf(s, "%.0f\n", regions[i].region_enter_counter_normalize_denom);
 	}
 
 #endif
@@ -535,7 +694,7 @@ void perf_region_set_normalize(
 {
 	struct PerfRegion *r = &(regions[i_region_id]);
 
-	r->normalize_denom = i_normalize_denom;
+	r->region_enter_counter_normalize_denom = i_normalize_denom;
 }
 
 
@@ -556,7 +715,8 @@ void perf_regions_finalize()
 
 	// total time measurement (in seconds)
 	wallclock_tot_time = (double)((int)tm_end.tv_sec - (int)tm_ini.tv_sec) + (double)((int)tm_end.tv_usec - (int)tm_ini.tv_usec)*0.000001;
-        time(&end_time);
+
+	time(&end_time);
 #endif
 
 	/*
@@ -580,4 +740,10 @@ void perf_regions_finalize()
 	perf_region_name_shutdown();
 
 	count_finalize();
+
+	if (num_nested_performance_regions != 0)
+	{
+		fprintf(stderr, "num_nested_performance_regions != 0");
+		exit(-1);
+	}
 }

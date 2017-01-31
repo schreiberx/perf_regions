@@ -3,15 +3,19 @@
 #define PERF_COUNTERS_MAX		(256)
 
 
-int count_init();
+void count_init();
 
-int count_start();
+void count_start();
 
-int count_stop();
 
-int count_finalize();
+void count_accum(long long *io_count_values_accum);
 
-long long *count_get_valueptr();
+void count_stop(long long *o_count_values_stop);
+
+void count_read_and_reset(long long *o_count_values_read);
+
+
+void count_finalize();
 
 char **count_get_event_names();
 

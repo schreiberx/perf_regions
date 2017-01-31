@@ -1,24 +1,7 @@
 PROGRAM main
-
 !pragma perf_region include
  
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
 CALL timing_init()
-
 call test1
 !call test2
 
@@ -26,47 +9,30 @@ CALL timing_finalize()
  
 END PROGRAM main
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 SUBROUTINE test1
 
 !pragma perf_region include
  
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-
-CALL timing_start('FOO');
-CALL timing_start('FOO2');
+CALL timing_start('FOOa');
+CALL timing_start('FOOb');
        call test2
-CALL timing_stop('FOO2');
-CALL timing_stop('FOO');
+CALL timing_stop('FOOb');
+CALL timing_stop('FOOa');
 
 end SUBROUTINE test1
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 SUBROUTINE test2
 !pragma perf_region include
+#include "perf_region_defines.h"
  
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)
        REAL*8 :: fac
@@ -74,7 +40,7 @@ SUBROUTINE test2
        WRITE(*,*) 'test',1024*1024*128
 
 
-       DO WHILE(array_size < 1024*1024*128/8)
+       DO WHILE(array_size < 1024*1024*128/4)
               allocate(a(array_size))
               iters = (1024*128)/array_size
               IF(iters <= 0) iters=2
@@ -96,15 +62,17 @@ SUBROUTINE test2
 
               DO k=1,iters
               
-CALL timing_start('BAR');
-CALL timing_start('BAR2');
+CALL timing_start('BARa');
+
+CALL timing_start('BARb');
 
                      DO i=1, array_size 
                           a(i) = a(i) + a(i)*a(i)
                      ENDDO
 
-CALL timing_stop('BAR2');
-CALL timing_stop('BAR');
+CALL timing_stop('BARb');
+
+CALL timing_stop('BARa');
 
                      fac = 1.0;
 

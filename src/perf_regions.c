@@ -125,13 +125,14 @@ struct PerfRegion
 #endif
 };
 
-	// start and end dates
-        time_t init_time, end_time;
 #if PERF_TIMINGS_ACTIVE
+	// start and end dates
+	time_t wallclock_pretty_init_time, wallclock_pretty_end_time;
+
 	// start and end time
-        struct timeval tm_ini, tm_end;
+	struct timeval wallclock_init_time, tm_end;
 	// total time in seconds
-        double wallclock_tot_time;
+	double wallclock_tot_time;
 #endif
 
 
@@ -172,7 +173,10 @@ void perf_regions_reset()
 			regions[i].counter_values[j] = 0;
 #endif
 
+#if PERF_TIMINGS_ACTIVE
 		regions[i].wallclock_time = 0;
+#endif
+
 		regions[i].mode = -1;
 		regions[i].region_enter_counter_normalize_denom = 0;
 
@@ -254,7 +258,12 @@ void perf_regions_init()
 	{
 		struct PerfRegion *r = &regions[region_id];
 
+		/*
+		 * Normalize everything
+		 */
+#if PERF_TIMINGS_ACTIVE
 		r->wallclock_time /= (double)(r->region_enter_counter_normalize_denom);
+#endif
 
 #if PERF_COUNTERS_ACTIVE
 		for (j = 0; j < num_perf_counters; j++)
@@ -266,11 +275,11 @@ void perf_regions_init()
 
 #if PERF_TIMINGS_ACTIVE
 	// start time measurement
-	gettimeofday(&tm_ini, NULL);
+	gettimeofday(&wallclock_init_time, NULL);
 #endif
 
 	// start date measurement
-	time(&init_time);
+	time(&wallclock_pretty_init_time);
 
 	num_nested_performance_regions = 0;
 }
@@ -417,10 +426,15 @@ void perf_region_stop(
 #endif
 
 #if PERF_TIMINGS_ACTIVE
-    struct timeval tm2;
-    gettimeofday(&tm2, NULL);
+    struct timeval time_val;
+    gettimeofday(&time_val, NULL);
 
-    r->wallclock_time += (double)((int)tm2.tv_sec - (int)r->start_time_value.tv_sec) + (double)((int)tm2.tv_usec - (int)r->start_time_value.tv_usec)*0.000001;
+    double test = ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec) + ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;
+    printf("%i STOP\t%e\t%e\n", i_region_id, r->wallclock_time, test);
+
+    r->wallclock_time +=
+    			  ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec)
+				+ ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;
 #endif
 
     // don't overwrite mode since we need this information for the overheads later
@@ -556,10 +570,11 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 			exit(1);
 		}
 
-		r->wallclock_time -= r_overhead->wallclock_time;
-
 #if PERF_TIMINGS_ACTIVE
-		wallclock_tot_time -= r_overhead->wallclock_time;
+		// decrease by n-times overheads
+//		r->wallclock_time -= r_overhead->wallclock_time*r->region_enter_counter_normalize_denom;
+
+//		wallclock_tot_time -= r_overhead->wallclock_time*r->region_enter_counter_normalize_denom;
 #endif
 
 		fprintf(s, "%s\t\t", perf_region_name);
@@ -567,14 +582,12 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 		for (int j = 0; j < num_perf_counters; j++)
 		{
 			long long counter_value = r->counter_values[j];
-			counter_value -= r_overhead->counter_values[j];
-
-			double perf_value = counter_value;
+			counter_value -= r_overhead->counter_values[j]*r->region_enter_counter_normalize_denom;
 
 			// DON'T NORMALIZE the performance value
-			//perf_value /= r->region_enter_counter_normalize_denom;
+			//counter_value /= r->region_enter_counter_normalize_denom;
 
-			fprintf(s, "\t%.7e", perf_value);
+			fprintf(s, "\t%.7e", counter_value);
 		}
 		fprintf(s, "\n");
 	}
@@ -603,7 +616,8 @@ FOO		1.7152000e-02			88.98				2
 
 
 #if 0
-	// MaS: NO CLUE WHAT THIS IS FOR!
+	// MaS: Commented, is this a sorting operation?
+	//
 	// TO BE TESTED ON MORE THAN ONE REGION
 	end_ord = PERF_REGIONS_MAX-3;
 	while (end_ord != 0)
@@ -614,8 +628,10 @@ FOO		1.7152000e-02			88.98				2
 			int j = i + 1;
 			if (regions[i].mode == -1)
 				continue;
+
 			if (regions[j].mode == -1)
 				j++;
+
 			if (regions[i].wallclock_time < regions[j].wallclock_time)
 			{
 				tmp = regions[j];
@@ -660,9 +676,9 @@ Timing started on Tue Sep 27 18:50:35 2016
 Timing   ended on Tue Sep 27 18:50:35 2016
 */
 
-	time_string = ctime(&init_time);
+	time_string = ctime(&wallclock_pretty_init_time);
 	fprintf(s, "\nTiming started on %s", time_string);
-	time_string = ctime(&end_time);
+	time_string = ctime(&wallclock_pretty_end_time);
 	fprintf(s, "Timing   ended on %s", time_string);
 }
 
@@ -696,9 +712,11 @@ void perf_regions_finalize()
 	gettimeofday(&tm_end, NULL);
 
 	// total time measurement (in seconds)
-	wallclock_tot_time = (double)((int)tm_end.tv_sec - (int)tm_ini.tv_sec) + (double)((int)tm_end.tv_usec - (int)tm_ini.tv_usec)*0.000001;
+	wallclock_tot_time =
+    			  ((double)tm_end.tv_sec - (double)wallclock_init_time.tv_sec)
+				+ ((double)tm_end.tv_usec - (double)wallclock_init_time.tv_usec)*0.000001;
 
-	time(&end_time);
+	time(&wallclock_pretty_end_time);
 #endif
 
 	/*

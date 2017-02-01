@@ -75,11 +75,16 @@
  *
  */
 #define PERF_TIMINGS_ACTIVE		1
+/* Use the higher-resolution POSIX clock rather than just gettimeofday() */
+#define PERF_TIMING_POSIX               1
 
 #ifndef PERF_DEBUG
 #	define PERF_DEBUG		1
 #endif
 
+#ifdef PERF_TIMING_POSIX
+#include "posix_clock.h"
+#endif
 
 
 
@@ -97,10 +102,13 @@ struct PerfRegion
 #if PERF_TIMINGS_ACTIVE
 	// standard timings in seconds
 	double wallclock_time;
-
+#ifdef PERF_TIMING_POSIX
+        // Start time value (seconds)
+        double start_time;
+#else
 	// time value
 	struct timeval start_time_value;
-
+#endif
 #endif
 
 	/*
@@ -274,7 +282,9 @@ void perf_regions_init()
 	}
 
 #if PERF_TIMINGS_ACTIVE
-	// start time measurement
+	// start time measurement. when timing the execution of the
+	// whole code we don't bother with using the
+	// higher-resolution POSIX clock.
 	gettimeofday(&wallclock_init_time, NULL);
 #endif
 
@@ -357,7 +367,11 @@ void perf_region_start(
 #endif
 
 #if PERF_TIMINGS_ACTIVE
+#ifdef PERF_TIMING_POSIX
+    r->start_time = posix_clock();
+#else
     gettimeofday(&(r->start_time_value), NULL);
+#endif
 #endif
 }
 
@@ -426,14 +440,16 @@ void perf_region_stop(
 #endif
 
 #if PERF_TIMINGS_ACTIVE
-    struct timeval time_val;
-    gettimeofday(&time_val, NULL);
-
-    double test = ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec) + ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;
+#ifdef PERF_TIMING_POSIX
+    r->wallclock_time += posix_clock() - r->start_time;
+#else
+    struct timeval tm2;
+    gettimeofday(&tm2, NULL);
 
     r->wallclock_time +=
     			  ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec)
 				+ ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;
+#endif
 #endif
 
     // don't overwrite mode since we need this information for the overheads later

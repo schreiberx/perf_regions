@@ -20,17 +20,15 @@ all: ${BUILD_DIR}/libperf_regions.so
 
 
 
-${BUILD_DIR}/libperf_regions.so : ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_region_names.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_regions_fortran.o
-	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_region_names.o -o ${BUILD_DIR}/libperf_regions.so -lpapi
+${BUILD_DIR}/libperf_regions.so : ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_region_names.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_regions_fortran.o ${BUILD_DIR}/posix_clock.o
+#	${MPICC} -I${PAPI_INC} -L${PAPI_LIB} -lpapi -c papi_counters.c -o papi_counters.o
+	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_region_names.o ${BUILD_DIR}/posix_clock.o -o ${BUILD_DIR}/libperf_regions.so -lpapi
 
 ${BUILD_DIR}/papi_counters.o: papi_counters.c papi_counters.h
 	${MPICC} ${CFLAGS} -c -g -I${PAPI_INC} -L${PAPI_LIB} -c papi_counters.c -o ${BUILD_DIR}/papi_counters.o  -lpapi
-	
-${BUILD_DIR}/perf_region_names.o: perf_region_names.c perf_region_names.h
-	${MPICC} ${CFLAGS} -c -g perf_region_names.c -o ${BUILD_DIR}/perf_region_names.o
 
-${BUILD_DIR}/perf_regions.o: perf_regions.c
-	${MPICC} ${CFLAGS} -c -g perf_regions.c -o ${BUILD_DIR}/perf_regions.o
+${BUILD_DIR}/%.o: %.c %.h
+	${MPICC} ${CFLAGS} -c -g $< -o $@
 
 # Generate Fortran ugly interfaces
 ${BUILD_DIR}/perf_regions_fortran.o:

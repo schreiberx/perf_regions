@@ -24,18 +24,20 @@ class perf_regions:
 		in_content = open(filename).read().splitlines()
 		out_content = []
 
-		length = len(in_content)
+		num_lines = len(in_content)
 
 		i = 0
-		while i < length:
+		while i < num_lines:
 			line = in_content[i]
+			#print("SOURCE: "+line)
 
 			# Search for exising preprocessed code
 			if line == self.original_comment:
-				print("Found original line in code")
+				print("Found original line in code ("+line+")")
 				# next line is the original code
 				i = i+1
 				line_backup = in_content[i]
+				print("         original code ("+line_backup+")")
 
 				# next line is instrumented code tag
 				i = i+1
@@ -44,10 +46,17 @@ class perf_regions:
 				if line != self.new_code_comment:
 					raise UserWarning("PERF_REGION_CODE NOT DETECTED!")
 
+				print("         found new code line ("+line+")")
+				print("         new code ("+in_content[1]+")")
+
 				# next line is instrumented code -> overwrite
 				i = i+1
 
 				if self.language == 'fortran':
+					print line_backup[1:]
+					if line_backup[1:] == '[PERF_REGION_DUMMY]':
+						i = i+1
+						continue
 					in_content[i] = line_backup[1:]	# remove first comment symbol '#'
 				elif self.language == 'c':
 					in_content[i] = line_backup[2:]	# remove  comment symbol '//'
@@ -81,7 +90,7 @@ class perf_regions:
 							print("Found include/use statement")
 							if self.language == 'fortran':
 								self.append_content(out_content, line, 'USE perf_regions_fortran')
-								self.append_content(out_content, ' ', '#include "perf_region_defines.h"')
+								self.append_content(out_content, '[PERF_REGION_DUMMY]', '#include "perf_region_defines.h"')
 							elif self.language == 'c':
 								self.append_content(out_content, line, "#include <perf_regions.h>")
 							break
@@ -108,6 +117,8 @@ class perf_regions:
 							name = match.group(1)
 							name = name.upper()
 							print("Found end of region "+name)
+
+							id = self.region_name_list.index(name);
 							if self.language == 'fortran':
 								self.append_content(out_content, line, "CALL perf_region_stop("+str(id)+") !"+name)
 							elif self.language == 'c':
@@ -133,7 +144,8 @@ class perf_regions:
 
 	def append_content(self, content, old_line, new_line):
 		content.append(self.original_comment)
-		content.append(self.comment_prefix + old_line)
+		if old_line != '':
+			content.append(self.comment_prefix + old_line)
 		content.append(self.new_code_comment)
 		content.append(new_line)
 
@@ -200,7 +212,6 @@ class perf_regions:
 			self.original_comment = '//PERF_REGION_ORIGINAL'
 			self.new_code_comment = '//PERF_REGION_CODE'
 			self.comment_prefix = '//'
-
 		pass
 
 

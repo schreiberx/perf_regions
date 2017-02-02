@@ -220,12 +220,11 @@ class perf_regions:
 		for filename in file_list:
 			self.find_and_replace(filename, True)
 
-	def write_header(self, filepath):
-		"""Simply write a text file with all the region names"""
+		print
+		print("*"*80)
+		print("* FINISHED WITHOUT ERRORS")
+		print("*"*80)
 
-		with open(filepath, 'w') as file_handler:
-		    for item in self.region_name_list:
-			file_handler.write(item+"\n")
 
 	def preprocessor(self):
 		file_list = self.find_files()
@@ -233,11 +232,30 @@ class perf_regions:
 		for filename in file_list:
 			self.find_and_replace(filename)
 
+		print
+		print("*"*80)
 		print("Region name list:")
+		print("*"*80)
 		print(self.region_name_list)
 
+		print
+		print("*"*80)
 		print("Creating header files")
+		print("*"*80)
+
 		if not os.path.exists(self.header_output_file):
 		    os.makedirs(self.header_output_file)
-		self.write_header(self.header_output_file+'/perf_region_list.txt')
+		self.p_write_header(self.header_output_file+'/perf_region_list.txt')
 
+		print
+		print("*"*80)
+		print("* FINISHED WITHOUT ERRORS")
+		print("*"*80)
+
+
+	def p_write_header(self, filepath):
+		"""Simply write a text file with all the region names"""
+
+		with open(filepath, 'w') as file_handler:
+		    for item in self.region_name_list:
+			file_handler.write(item+"\n")

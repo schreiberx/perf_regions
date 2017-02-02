@@ -1,11 +1,24 @@
 PROGRAM main
-!pragma perf_region include
+!PERF_REGION_ORIGINAL
+!!pragma perf_region include
+!PERF_REGION_CODE
+USE perf_regions_fortran
+!PERF_REGION_ORIGINAL
+![PERF_REGION_DUMMY]
+!PERF_REGION_CODE
+#include "perf_region_defines.h"
  
-CALL timing_init()
+!PERF_REGION_ORIGINAL
+!CALL timing_init()
+!PERF_REGION_CODE
+CALL perf_regions_init()
 call test1
 !call test2
 
-CALL timing_finalize()
+!PERF_REGION_ORIGINAL
+!CALL timing_finalize()
+!PERF_REGION_CODE
+CALL perf_regions_finalize()
  
 END PROGRAM main
 
@@ -15,13 +28,32 @@ END PROGRAM main
 
 SUBROUTINE test1
 
-!pragma perf_region include
+!PERF_REGION_ORIGINAL
+!!pragma perf_region include
+!PERF_REGION_CODE
+USE perf_regions_fortran
+!PERF_REGION_ORIGINAL
+![PERF_REGION_DUMMY]
+!PERF_REGION_CODE
+#include "perf_region_defines.h"
  
-CALL timing_start('FOOa');
-CALL timing_start('FOOb');
+!PERF_REGION_ORIGINAL
+!CALL timing_start('FOOa');
+!PERF_REGION_CODE
+CALL perf_region_start(0, IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !FOOA
+!PERF_REGION_ORIGINAL
+!CALL timing_start('FOOb');
+!PERF_REGION_CODE
+CALL perf_region_start(1, IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !FOOB
        call test2
-CALL timing_stop('FOOb');
-CALL timing_stop('FOOa');
+!PERF_REGION_ORIGINAL
+!CALL timing_stop('FOOb');
+!PERF_REGION_CODE
+CALL perf_region_stop(1) !FOOB
+!PERF_REGION_ORIGINAL
+!CALL timing_stop('FOOa');
+!PERF_REGION_CODE
+CALL perf_region_stop(0) !FOOA
 
 end SUBROUTINE test1
 
@@ -30,7 +62,14 @@ end SUBROUTINE test1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 SUBROUTINE test2
-!pragma perf_region include
+!PERF_REGION_ORIGINAL
+!!pragma perf_region include
+!PERF_REGION_CODE
+USE perf_regions_fortran
+!PERF_REGION_ORIGINAL
+![PERF_REGION_DUMMY]
+!PERF_REGION_CODE
+#include "perf_region_defines.h"
 #include "perf_region_defines.h"
  
        integer :: array_size, i
@@ -62,17 +101,29 @@ SUBROUTINE test2
 
               DO k=1,iters
               
-CALL timing_start('BARa');
+!PERF_REGION_ORIGINAL
+!CALL timing_start('BARa');
+!PERF_REGION_CODE
+CALL perf_region_start(2, IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !BARA
 
-CALL timing_start('BARb');
+!PERF_REGION_ORIGINAL
+!CALL timing_start('BARb');
+!PERF_REGION_CODE
+CALL perf_region_start(3, IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !BARB
 
                      DO i=1, array_size 
                           a(i) = a(i) + a(i)*a(i)
                      ENDDO
 
-CALL timing_stop('BARb');
+!PERF_REGION_ORIGINAL
+!CALL timing_stop('BARb');
+!PERF_REGION_CODE
+CALL perf_region_stop(3) !BARB
 
-CALL timing_stop('BARa');
+!PERF_REGION_ORIGINAL
+!CALL timing_stop('BARa');
+!PERF_REGION_CODE
+CALL perf_region_stop(2) !BARA
 
                      fac = 1.0;
 

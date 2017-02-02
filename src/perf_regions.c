@@ -19,7 +19,7 @@
 #define PERF_COUNTERS_ACTIVE		1
 
 /*
- * Activate support for recursive performance counters.
+ * Activate support for nested performance counters.
  * Warning: This leads to additional overheads and
  * might result in decreased accurate results!
  *
@@ -67,16 +67,20 @@
  *          (read counters)
  *          (update performance counters of outer regions)
  *
- *       -> accumulate performance counters		/// overheads included here for recursive functions
+ *       -> accumulate performance counters		/// overheads included here for nested functions
  */
-#define PERF_COUNTERS_RECURSIVE		1
+#define PERF_COUNTERS_NESTED		1
 
 /*
- *
+ * Timings active or not
  */
 #define PERF_TIMINGS_ACTIVE		1
-/* Use the higher-resolution POSIX clock rather than just gettimeofday() */
+
+/*
+ * Use the higher-resolution POSIX clock rather than just gettimeofday()
+ */
 #define PERF_TIMING_POSIX               1
+
 
 #ifndef PERF_DEBUG
 #	define PERF_DEBUG		1
@@ -122,9 +126,11 @@ struct PerfRegion
 	// region enter counter to normalize the performance counters
 	double region_enter_counter_normalize_denom;
 
-#if PERF_COUNTERS_RECURSIVE
+#if PERF_COUNTERS_NESTED
 	long long count_values_read[PERF_COUNTERS_MAX];
-//	long long count_values_read_end[PERF_COUNTERS_MAX];
+
+	// Set to true if performance counters could be spoiled due to nested
+	int spoiled;
 #endif
 
 #if PERF_DEBUG
@@ -158,11 +164,12 @@ char **perf_counter_names = NULL;
 // number of nested performance regions
 static int num_nested_performance_regions;
 
-#if PERF_COUNTERS_RECURSIVE
-	// number of maximal recursive performance regions
-	#define PERF_RECURSIVE_REGIONS_MAX 16
 
-	struct PerfRegion *nested_performance_regions[PERF_RECURSIVE_REGIONS_MAX];
+#if PERF_COUNTERS_NESTED
+	// number of maximal nested performance regions
+	#define PERF_NESTED_REGIONS_MAX 16
+
+	struct PerfRegion *nested_performance_regions[PERF_NESTED_REGIONS_MAX];
 #endif
 
 long long counter_values_stop[PERF_COUNTERS_MAX];
@@ -183,6 +190,10 @@ void perf_regions_reset()
 
 #if PERF_TIMINGS_ACTIVE
 		regions[i].wallclock_time = 0;
+#endif
+
+#if PERF_COUNTERS_NESTED
+		regions[i].spoiled = 0;
 #endif
 
 		regions[i].mode = -1;
@@ -333,7 +344,7 @@ void perf_region_start(
 
 	if (r->mode & PERF_FLAG_COUNTERS)
 	{
-#if PERF_COUNTERS_RECURSIVE
+#if PERF_COUNTERS_NESTED
 
 		nested_performance_regions[num_nested_performance_regions] = r;
 
@@ -345,7 +356,7 @@ void perf_region_start(
 		{
 			count_read_and_reset(r->count_values_read);
 
-			// add performance values to outer recursive performance regions
+			// add performance values to outer nested performance regions
 			for (int i = 0; i < num_nested_performance_regions; i++)
 			{
 				// outer performance region
@@ -401,7 +412,7 @@ void perf_region_stop(
 	if (r->mode & PERF_FLAG_COUNTERS)
 	{
 
-#if PERF_COUNTERS_RECURSIVE
+#if PERF_COUNTERS_NESTED
 
 		num_nested_performance_regions--;
 
@@ -416,7 +427,7 @@ void perf_region_stop(
 		{
 			count_read_and_reset(r->count_values_read);
 
-			// add performance values to outer recursive AND CURRENT performance region
+			// add performance values to outer nested AND CURRENT performance region
 			for (int i = 0; i <= num_nested_performance_regions; i++)
 			{
 				// outer performance region
@@ -424,6 +435,9 @@ void perf_region_stop(
 
 				for (int j = 0; j < num_perf_counters; j++)
 					r_outer->counter_values[j] += r->count_values_read[j];
+
+				if (i < num_nested_performance_regions)
+					r_outer->spoiled = 1;
 			}
 		}
 
@@ -533,7 +547,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 	fprintf(s, "Section\t\t");
 	for (int j = 0; j < num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_counter_names[j]);
-	fprintf(s, "\n");
+	fprintf(s, "\tSPOILED\n");
 #endif
 
 #if PERF_DEBUG
@@ -606,6 +620,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 
 			fprintf(s, "\t%.7e", param_value);
 		}
+		fprintf(s, "\t%i", r->spoiled);
 		fprintf(s, "\n");
 	}
 #endif

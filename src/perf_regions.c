@@ -544,7 +544,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 #if PERF_COUNTERS_ACTIVE
 	fprintf(s, "Performance counters profiling:\n");
 	fprintf(s, "----------------------\n");
-	fprintf(s, "Section\t\t");
+	fprintf(s, "Section");
 	for (int j = 0; j < num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_counter_names[j]);
 	fprintf(s, "\tSPOILED\n");
@@ -606,7 +606,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 //		wallclock_tot_time -= r_overhead->wallclock_time*r->region_enter_counter_normalize_denom;
 #endif
 
-		fprintf(s, "%s\t\t", perf_region_name);
+		fprintf(s, "%s", perf_region_name);
 
 		for (int j = 0; j < num_perf_counters; j++)
 		{
@@ -695,9 +695,10 @@ FOO		1.7152000e-02			88.98				2
 		if (regions[i].mode == -1)
 			continue;
 
-		fprintf(s, "%s\t\t", get_perf_region_name(i));
-		fprintf(s, "%.7e\t\t\t", regions[i].wallclock_time);
-		fprintf(s, "%.2f\t\t\t\t", regions[i].wallclock_time/wallclock_tot_time*100);
+		// IMPORTANT: Leave the single-tab separation here!
+		fprintf(s, "%s\t", get_perf_region_name(i));
+		fprintf(s, "%.7e\t", regions[i].wallclock_time);
+		fprintf(s, "%.2f\t", regions[i].wallclock_time/wallclock_tot_time*100);
 		fprintf(s, "%.0f\n", regions[i].region_enter_counter_normalize_denom);
 	}
 

@@ -1,6 +1,10 @@
+
+
+#CC = icc
 CC = gcc
 CFLAGS = -O2
 
+#FF = ifort
 FF = gfortran
 FFLAGS = -O2
 

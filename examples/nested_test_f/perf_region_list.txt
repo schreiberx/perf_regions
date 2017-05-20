@@ -1,4 +1,0 @@
-FOOA
-FOOB
-BARA
-BARB

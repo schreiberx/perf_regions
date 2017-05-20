@@ -1,5 +1,6 @@
 PROGRAM main
-!pragma perf_region include
+
+!pragma perf_regions include
  
 CALL timing_init()
 call test1
@@ -15,7 +16,7 @@ END PROGRAM main
 
 SUBROUTINE test1
 
-!pragma perf_region include
+!pragma perf_regions include
  
 CALL timing_start('FOOa');
 CALL timing_start('FOOb');
@@ -30,9 +31,9 @@ end SUBROUTINE test1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 SUBROUTINE test2
-!pragma perf_region include
-#include "perf_region_defines.h"
- 
+
+!pragma perf_regions include
+
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)
        REAL*8 :: fac

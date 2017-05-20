@@ -9,13 +9,13 @@ import perf_regions
 pf = perf_regions.perf_regions(
 		["./"],	# list with source directories
 		[
-			".*#pragma perf_region init.*",		# initialization of timing
-			".*#pragma perf_region finalize.*",	# shutdown of timing
+			".*#pragma perf_regions init.*",		# initialization of timing
+			".*#pragma perf_regions finalize.*",	# shutdown of timing
 
-			".*#pragma perf_region include.*",	# include part
+			".*#pragma perf_regions include.*",	# include part
 
-			".*#pragma perf_region start (.*).*",	# start of timing
-			".*#pragma perf_region stop (.*).*",	# end of timing
+			".*#pragma perf_regions start (.*).*",	# start of timing
+			".*#pragma perf_regions stop (.*).*",	# end of timing
 		],
 		'./',		# output directory of perf region tools
 		'c'

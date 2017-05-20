@@ -1,43 +1,6 @@
 PROGRAM main
 
-!PERF_REGION_ORIGINAL
-!!pragma perf_region include
-!PERF_REGION_CODE
-USE perf_regions_fortran
-!PERF_REGION_ORIGINAL
-! 
-!PERF_REGION_CODE
-#include "perf_region_defines.h"
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
+!pragma perf_regions include
 
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)
@@ -45,10 +8,7 @@ USE perf_regions_fortran
        array_size=1
        WRITE(*,*) 'test',1024*1024*128
 
-!PERF_REGION_ORIGINAL
-!!             CALL timing_init();
-!PERF_REGION_CODE
-CALL perf_regions_init()
+!             CALL timing_init();
 
        DO WHILE(array_size < 1024*1024*128/8)
               allocate(a(array_size))
@@ -72,19 +32,13 @@ CALL perf_regions_init()
 
               DO k=1,iters
               
-!PERF_REGION_ORIGINAL
-!!                     CALL timing_start('FOO');
-!PERF_REGION_CODE
-CALL perf_region_start(0, IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !FOO
+!                     CALL timing_start('FOO');
 
                      DO i=1, array_size 
                           a(i) = a(i) + a(i)*a(i)
                      ENDDO
 
-!PERF_REGION_ORIGINAL
-!!                     CALL timing_stop('FOO');
-!PERF_REGION_CODE
-CALL perf_region_stop(0) !FOO
+!                     CALL timing_stop('FOO');
 
                      fac = 1.0;
 
@@ -93,9 +47,6 @@ CALL perf_region_stop(0) !FOO
               deallocate(a)
               array_size = array_size*2
       ENDDO
-!PERF_REGION_ORIGINAL
-!!             timing_finalize();
-!PERF_REGION_CODE
-CALL perf_regions_finalize()
+!             timing_finalize();
 
 END PROGRAM main

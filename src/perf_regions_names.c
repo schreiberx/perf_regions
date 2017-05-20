@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "perf_region_names.h"
+#include "perf_regions_names.h"
 
 static
 const char** perf_region_names;

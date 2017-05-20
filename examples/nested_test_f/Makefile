@@ -8,7 +8,8 @@ PERFREGION_LIB:=-L../../build -lperf_regions -I../../build
 CFLAGS_PERFREGION:=-I../../src -O0 -g
 LINKFLAGS_PERFREGION:=${PAPI_LIB} ${PERFREGION_LIB}
 
-all:	nested_test nested_test_perf_region
+#all:	nested_test nested_test_perf_region
+all:	nested_test_perf_region
 
 nested_test:
 	./perf_regions_instrumentation.py cleanup
@@ -21,3 +22,4 @@ nested_test_perf_region: nested_test.F90
 clean :
 	./perf_regions_instrumentation.py cleanup
 	rm -f nested_test nested_test_perf_region perf_regions_fortran.o
+	rm -f perf_region_list.txt

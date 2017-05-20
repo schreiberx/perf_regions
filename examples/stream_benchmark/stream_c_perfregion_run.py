@@ -1,8 +1,8 @@
 #! /usr/bin/env python2
 
 # cputype (see './sde64 -help')
-cputype='hsw'
-#cputype='skx'
+#cputype='hsw'
+cputype='skx'
 #cputype='skl'
 
 ##############################################
@@ -21,17 +21,9 @@ if cputype == 'hsw':
 	#counters=['PAPI_L3_TCM', 'perf::LLC-LOAD-MISSES', 'perf::LLC-PREFETCH-MISSES']
 	counters=[
 		'PAPI_L3_TCM',
+		'OFFCORE_RESPONSE_0:L3_MISS_LOCAL',
 		'OFFCORE_RESPONSE_0:DMND_DATA_RD',
 		'OFFCORE_REQUESTS:ALL_DATA_RD',
-#		'MEM_LOAD_UOPS_L3_MISS_RETIRED:LOCAL_DRAM',
-		'perf::LLC-STORE-MISSES',
-		]
-	counters=[
-#		'PAPI_L3_TCM',
-#		'PAPI_DP_OPS',
-#		'PAPI_VEC_DP',
-#		'PAPI_SP_OPS',
-#		'PAPI_VEC_SP',
 		]
 
 elif cputype in ['skx', 'skl']:
@@ -42,18 +34,20 @@ elif cputype in ['skx', 'skl']:
 		'MEM_LOAD_UOPS_L3_MISS_RETIRED:LOCAL_DRAM',
 		'PAPI_PRF_DM'
 		]
-	counters=[
-		'PAPI_L3_TCM',
-#		'PAPI_DP_OPS',
-#		'PAPI_VEC_DP',
-#		'PAPI_SP_OPS',
-#		'PAPI_VEC_SP',
-		]
 #	counters=['PAPI_L3_TCM', 'PAPI_PRF_DM', 'perf::LLC-LOAD-MISSES']
 #	counters=['PAPI_L3_TCM', 'PAPI_PRF_DM', 'perf::LLC-STORE-MISSES', 'perf::LLC-LOAD-MISSES']
 	#counters=['PAPI_L3_TCM', 'PAPI_PRF_DM', 'perf::LLC-LOAD-MISSES', 'perf::LLC-PREFETCH-MISSES']
 
 #perf::PERF_COUNT_HW_CACHE_LL:MISS
+
+# TODO: look at
+# papi_native_avail
+#counters=['ix86arch::UNHALTED_CORE_CYCLES']
+
+#	counters.append('PAPI_SP_OPS')
+#	counters.append('PAPI_DP_OPS')
+
+#print(counters)
 
 
 #
@@ -69,26 +63,17 @@ else:
 d['LIST_COUNTERS']=','.join(counters)
 
 
-#
-# SDE executable
-#
-sde=d['HOME']+"/software/sde-external-7.58.0-2017-01-23-lin/sde64 -"+cputype+" --"
-
 
 def execprog(prog, env):
 	print("EXEC: "+prog)
 	process=subprocess.Popen(prog.split(' '), env=d, stdout=subprocess.PIPE)
 	return process.communicate()
 
-out, err = execprog(sde+' papi_avail', d)
+out, err = execprog('papi_avail', d)
 print(out)
 print(err)
 
-out, err = execprog(sde+' papi_native_avail', d)
-print(out)
-print(err)
-
-out, err = execprog(sde+' ./stream_c_perfregions.exe', d)
+out, err = execprog('./stream_c_perfregions.exe', d)
 print(out)
 print(err)
 
@@ -165,6 +150,8 @@ for t in tags:
 	if cputype in ['skx', 'skl']:
 		pc_prf_dm = float(p['pc']['PAPI_PRF_DM'])
 		total_cache_blocks += pc_prf_dm
+
+	total_cache_blocks = float(p['pc']['OFFCORE_REQUESTS:ALL_DATA_RD'])
 
 
 	bandwidth = total_cache_blocks*cacheblock_size/(time*1024.0*1024.0)

@@ -23,3 +23,4 @@ array_test_perf_region: array_test.F90
 clean :
 	./perf_regions_instrumentation.py cleanup
 	rm -f array_test array_test_perf_region perf_regions_fortran.o
+	rm -f perf_region_list.txt

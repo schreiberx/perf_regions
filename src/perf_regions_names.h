@@ -1,5 +1,5 @@
 
-#include "perf_region_defines.h"
+#include "perf_regions_defines.h"
 
 
 void perf_region_name_init();

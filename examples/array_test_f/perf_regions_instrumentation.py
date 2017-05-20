@@ -12,7 +12,7 @@ pf = perf_regions.perf_regions(
 			".*timing_init.*",		# initialization of timing
 			".*timing_finalize.*",	# shutdown of timing
 
-			".*!pragma perf_region include.*",	# include part
+			".*!pragma perf_regions include.*",	# include part
 
 			".*timing_start\(\'(.*)\'\)",	# start of timing
 			".*timing_stop\(\'(.*)\'\)",	# end of timing

@@ -1,0 +1,80 @@
+Available components and hardware information.
+--------------------------------------------------------------------------------
+PAPI Version             : 5.3.2.0
+Vendor string and code   : GenuineIntel (1)
+Model string and code    : Intel(R) Xeon(R) CPU E5-2698 v3 @ 2.30GHz (63)
+CPU Revision             : 2.000000
+CPUID Info               : Family: 6  Model: 63  Stepping: 2
+CPU Max Megahertz        : 2301
+CPU Min Megahertz        : 1200
+Hdw Threads per core     : 2
+Cores per Socket         : 16
+Sockets                  : 2
+NUMA Nodes               : 2
+CPUs per Node            : 32
+Total CPUs               : 64
+Running in a VM          : no
+Number Hardware Counters : 11
+Max Multiplex Counters   : 64
+--------------------------------------------------------------------------------
+
+Compiled-in components:
+Name:   perf_event              Linux perf_event CPU counters
+Name:   cray_rapl               Cray RAPL energy measurements
+   \-> Disabled: Can not access '/sys/devices/system/cpu/cpu0/msr/cbi' file
+Name:   cray_pm                 Cray Power Management counters
+Name:   cray_nb                 Cray AMD Interlagos NorthBridge performance counters
+   \-> Disabled: Not an AMD processor
+Name:   cray_npu                Cray network interconnect performance counters
+Name:   cuda                    CuPTI provides the API for monitoring NVIDIA GPU hardware events
+   \-> Disabled: Call to detectDevice failed.
+
+Active components:
+Name:   perf_event              Linux perf_event CPU counters
+                                Native: 182, Preset: 54, Counters: 11
+
+Name:   cray_pm                 Cray Power Management counters
+                                Native: 10, Preset: 0, Counters: 10
+
+Name:   cray_npu                Cray network interconnect performance counters
+                                Native: 3601, Preset: 0, Counters: 3601
+
+
+--------------------------------------------------------------------------------
+component.c                             PASSED
+Linux serial1 3.0.101-0.46.1_1.0502.8871-cray_ari_s #1 SMP Sat Oct 22 15:41:06 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+============================= PBS epilogue =============================
+
+End of Job Report
+Run at 2017-03-03 13:12:37 for job 2688560.xcm00
+Submitted              : 2017-03-03 13:12:36
+Queued                 : 2017-03-03 13:12:36
+Started                : 2017-03-03 13:12:36
+Completed              : 2017-03-03 13:12:37
+Queued Time            : 0:00:00 (0 seconds)
+Elapsed Time           : 0:00:01 (1 second, 3% of limit)
+Walltime Limit         : 0:01:00 (60 seconds)
+Node Time Limit        : 0:00:01 (1 second)
+Node Time              : 0:00:00 (0 seconds, 3% of limit)
+Job Name               : PAPI_component_avail
+Queue                  : shared
+Owner                  : tigrah
+Group                  : users
+Project                : jomp
+Subproject             : 
+Funding                : 
+STDOUT                 : 10.168.7.21:/home/tigrah/CPU_info/PAPI_component_avail.o2688560
+STDERR                 : 10.168.7.21:/home/tigrah/CPU_info/PAPI_component_avail.e2688560
+Job Directory          : /scratch/jtmp/pbs.2688560.xcm00.x8z
+Job Arch               : linux
+CPU Core Type          : 
+Total Nodes            : 1
+Total Tasks            : 1
+Parent Node            : serial1
+Parent Node Memory     : 
+Parent Node CPU Time   : 
+Compute Nodes          : 
+Electrical Groups      : 
+Run Version            : 1
+
+For more information see documentation

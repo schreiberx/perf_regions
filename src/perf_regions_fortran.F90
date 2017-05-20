@@ -1,6 +1,6 @@
 MODULE perf_regions_fortran
 
-# include "perf_region_defines.h"
+# include "perf_regions_defines.h"
 
      interface
         subroutine perf_regions_init ( ) bind ( C,       &

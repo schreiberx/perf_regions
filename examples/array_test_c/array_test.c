@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#pragma perf_region include
+#pragma perf_regions include
 
 double *a;
 int size;
@@ -25,7 +25,7 @@ int main(int i_argi, char **argv)
 		iters = (iters <= 0 ? 2 : iters);
 		iters = (iters > 128 ? 128 : iters);
 
-#pragma perf_region init
+#pragma perf_regions init
 
 		printf("\n");
 		printf("**************************************\n");
@@ -41,16 +41,16 @@ int main(int i_argi, char **argv)
 		for (int k = 0; k < iters; k++)
 		{
 
-#pragma perf_region start foo
+#pragma perf_regions start foo
 
 
 			run_computations();
-#pragma perf_region stop foo
+#pragma perf_regions stop foo
 
-#pragma perf_region start bar
+#pragma perf_regions start bar
 			run_computations();
 			run_computations();
-#pragma perf_region stop bar
+#pragma perf_regions stop bar
 
 //			double fac = (double)iters * (double)size * sizeof(double);
 			double fac = 1.0;
@@ -58,7 +58,7 @@ int main(int i_argi, char **argv)
 //			perf_region_set_normalize(PERF_REGIONS_FOO, fac);
 		}
 
-#pragma perf_region finalize
+#pragma perf_regions finalize
 
 	free(a);
 	}

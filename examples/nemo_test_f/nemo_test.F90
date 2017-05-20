@@ -1,4 +1,4 @@
-#include "../src/perf_region_defines.h"
+#include "../../src/perf_regions_defines.h"
 
 PROGRAM nemo
 

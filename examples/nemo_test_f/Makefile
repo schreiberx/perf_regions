@@ -15,7 +15,7 @@ fortran:
 
 fortran_perfregion:
 	./perf_regions_instrumentation.py preprocess
-	${FC} -g -o nemo_test nemo_test.F90 ${LINKFLAGS_PERFREGION}
+	${FC} -g -o nemo_test nemo_test.F90 ${LINKFLAGS_PERFREGION} ${PAPI_LIB}
 
 clean :
 	./perf_regions_instrumentation.py cleanup

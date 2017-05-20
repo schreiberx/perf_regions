@@ -6,8 +6,8 @@
 #include "perf_regions.h"
 #include "papi_counters.h"
 
-#include "perf_region_defines.h"
-#include "perf_region_names.h"
+#include "perf_regions_defines.h"
+#include "perf_regions_names.h"
 
 
 
@@ -595,7 +595,7 @@ FOO			2.6235250e+05	1.5653000e+04	2.5350000e+02
 		const char *perf_region_name = get_perf_region_name(i);
 		if (perf_region_name == 0)
 		{
-			fprintf(stderr, "String for performance region %i in perf_region_names.c not set!\n", i);
+			fprintf(stderr, "String for performance region %i in perf_regions_names.c not set!\n", i);
 			exit(1);
 		}
 

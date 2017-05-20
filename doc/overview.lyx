@@ -107,7 +107,6 @@ Silvia Mocavero, Martin Schreiber et al.
 \end_layout
 
 \begin_layout Verbatim
-
 (Please add yourself to the list of authors in alphabetical order if you
  contributed something to PerfRegions)
 \end_layout
@@ -247,12 +246,10 @@ Due to the flexibility of the language extensions, we'd like to give a concrete
 \end_layout
 
 \begin_layout Verbatim
-
 #include <stdio.h>
 \end_layout
 
 \begin_layout Verbatim
-
 #include <stdlib.h> 
 \end_layout
 
@@ -261,8 +258,7 @@ Due to the flexibility of the language extensions, we'd like to give a concrete
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region include
+#pragma perf_regions include
 \end_layout
 
 \begin_layout Verbatim
@@ -270,12 +266,10 @@ Due to the flexibility of the language extensions, we'd like to give a concrete
 \end_layout
 
 \begin_layout Verbatim
-
 double *a;
 \end_layout
 
 \begin_layout Verbatim
-
 int size;
 \end_layout
 
@@ -284,37 +278,30 @@ int size;
 \end_layout
 
 \begin_layout Verbatim
-
 int main()
 \end_layout
 
 \begin_layout Verbatim
-
 {
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region init
+#pragma perf_regions init
 \end_layout
 
 \begin_layout Verbatim
-
 	run_computations();
 \end_layout
 
 \begin_layout Verbatim
-
 	return 0;
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region finalize
+#pragma perf_regions finalize
 \end_layout
 
 \begin_layout Verbatim
-
 }
 \end_layout
 
@@ -323,33 +310,27 @@ int main()
 \end_layout
 
 \begin_layout Verbatim
-
 void nested_region()
 \end_layout
 
 \begin_layout Verbatim
-
 {
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region start rec
+#pragma perf_regions start rec
 \end_layout
 
 \begin_layout Verbatim
-
     [...
- foo region computations ...]
+ foo regions computations ...]
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region stop rec
+#pragma perf_regions stop rec
 \end_layout
 
 \begin_layout Verbatim
-
 }
 \end_layout
 
@@ -358,49 +339,40 @@ void nested_region()
 \end_layout
 
 \begin_layout Verbatim
-
 void run_computations()
 \end_layout
 
 \begin_layout Verbatim
-
 {
 \end_layout
 
 \begin_layout Verbatim
-
   for (int k = 0; k < iters; k++)
 \end_layout
 
 \begin_layout Verbatim
-
   {
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region start foo
+#pragma perf_regions start foo
 \end_layout
 
 \begin_layout Verbatim
-
     [...
  foo region computations ...]
 \end_layout
 
 \begin_layout Verbatim
-
     nested_region();
 \end_layout
 
 \begin_layout Verbatim
-
     nested_region();
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region stop foo
+#pragma perf_regions stop foo
 \end_layout
 
 \begin_layout Verbatim
@@ -408,33 +380,27 @@ void run_computations()
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region start bar
+#pragma perf_regions start bar
 \end_layout
 
 \begin_layout Verbatim
-
     [...
  bar region computations ...]
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region stop bar
+#pragma perf_regions stop bar
 \end_layout
 
 \begin_layout Verbatim
-
   }
 \end_layout
 
 \begin_layout Verbatim
-
 }
 \end_layout
 
 \begin_layout Verbatim
-
 [...]
 \end_layout
 
@@ -455,8 +421,7 @@ Using PerfRegion on C-code, the program annotation is given by
 \end_layout
 
 \begin_layout Verbatim
-
-#pragma perf_region [identifier] [name]
+#pragma perf_regions [identifier] [name]
 \end_layout
 
 \begin_layout Standard
@@ -620,37 +585,30 @@ The Fortran support currently only supports replacing the timing constructs
 \end_layout
 
 \begin_layout Verbatim
-
 [...]
 \end_layout
 
 \begin_layout Verbatim
-
 PROGRAM main
 \end_layout
 
 \begin_layout Verbatim
-
-    !pragma perf_region include
+    !pragma perf_regions include
 \end_layout
 
 \begin_layout Verbatim
-
     CALL timing_init()
 \end_layout
 
 \begin_layout Verbatim
-
     call test1
 \end_layout
 
 \begin_layout Verbatim
-
     CALL timing_finalize()
 \end_layout
 
 \begin_layout Verbatim
-
 END PROGRAM main
 \end_layout
 
@@ -659,47 +617,38 @@ END PROGRAM main
 \end_layout
 
 \begin_layout Verbatim
-
 SUBROUTINE test1
 \end_layout
 
 \begin_layout Verbatim
-
-    !pragma perf_region include
+    !pragma perf_regions include
 \end_layout
 
 \begin_layout Verbatim
-
     CALL timing_start('FOOa')
 \end_layout
 
 \begin_layout Verbatim
-
     CALL timing_start('FOOb')
 \end_layout
 
 \begin_layout Verbatim
-
     CALL test2
 \end_layout
 
 \begin_layout Verbatim
-
     CALL timing_stop('FOOb');
 \end_layout
 
 \begin_layout Verbatim
-
     CALL timing_stop('FOOa');
 \end_layout
 
 \begin_layout Verbatim
-
 end SUBROUTINE test1
 \end_layout
 
 \begin_layout Verbatim
-
 [...]
 \end_layout
 
@@ -724,7 +673,6 @@ The release mode is automatically used if compiling with 'make'
 \end_layout
 
 \begin_layout Verbatim
-
 	$ make MODE=release
 \end_layout
 
@@ -739,7 +687,6 @@ This mode should be used to test the PerfRegions library.
 \end_layout
 
 \begin_layout Verbatim
-
 	$ make MODE=debug
 \end_layout
 
@@ -765,7 +712,6 @@ To start preprocessing the code, the script is executed with 'preprocess'
 \end_layout
 
 \begin_layout Verbatim
-
 	./perf_regions_instrumentation.py preprocess 
 \end_layout
 
@@ -788,7 +734,6 @@ To revert the PerfRegion code, call the script with 'cleanup' parameter:
 \end_layout
 
 \begin_layout Verbatim
-
 	$ ./perf_regions_instrumentation.py cleanup
 \begin_inset Separator latexpar
 \end_inset
@@ -809,7 +754,6 @@ Linker flags:
 \end_layout
 
 \begin_layout Verbatim
-
 	-lpapi -L[path to perf regions]/build -lperf_regions
 \end_layout
 
@@ -818,7 +762,6 @@ Compile flags:
 \end_layout
 
 \begin_layout Verbatim
-
 	-I[path to perf regions]/src
 \begin_inset Separator latexpar
 \end_inset
@@ -836,7 +779,6 @@ First of all, the environment variable LD_LIBRARY_PATH has to be set to
 \end_layout
 
 \begin_layout Verbatim
-
 	export LD_LIBRARY_PATH=[path to perf regions]/build:$LD_LIBRARY_PATH
 \end_layout
 
@@ -846,7 +788,6 @@ Each platform might have a different set of performance counters.
 \end_layout
 
 \begin_layout Verbatim
-
 	papi_avail
 \end_layout
 
@@ -857,7 +798,6 @@ Only a limited number of performance identifiers can be specified.
 \end_layout
 
 \begin_layout Verbatim
-
 	export LIST_COUNTERS=PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM
 \begin_inset Separator latexpar
 \end_inset

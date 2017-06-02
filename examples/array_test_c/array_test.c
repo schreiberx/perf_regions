@@ -26,6 +26,7 @@ int main(int i_argi, char **argv)
 		iters = (iters > 128 ? 128 : iters);
 
 #pragma perf_regions init
+#pragma perf_regions start outer
 
 		printf("\n");
 		printf("**************************************\n");
@@ -58,6 +59,7 @@ int main(int i_argi, char **argv)
 //			perf_region_set_normalize(PERF_REGIONS_FOO, fac);
 		}
 
+#pragma perf_regions stop outer
 #pragma perf_regions finalize
 
 	free(a);

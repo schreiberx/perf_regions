@@ -5,6 +5,10 @@
 
 Measure performance of different regions
 
+To compile in debug mode, use:
+	make MODE=debug
+Always test your implementation first with the debug mode!
+
 Performance can be either measured via
 	- the wallclock time or
 	- the performance counters

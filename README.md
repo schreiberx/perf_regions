@@ -2,6 +2,24 @@
 * Performance regions library
 **************************************
 
+* PAPI
+
+Check for availability of events:
+
+```
+$ papi_avail
+```
+
+In case that performance events are not available, add the line
+
+```
+kernel.perf_event_paranoid = -1
+```
+
+in ```/etc/sysctl.conf```
+
+
+* How to use perf_regions
 
 Measure performance of different regions
 

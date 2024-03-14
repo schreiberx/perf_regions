@@ -1,5 +1,3 @@
 build
-.settings
-.project
-.cproject
-.pydevproject
+.vscode
+**/__pycache__

@@ -6,7 +6,7 @@ PAPI_LIB:=/users/home/opt/papi/papi-5.1.0/lib/
 
 MPICC:=gcc
 BUILD_DIR:=../build/
-CFLAGS:=-g -O3 -fPIC -std=c99
+CFLAGS:=-g -O3 -fPIC -Wall
 
 mode.:=-DPERF_DEBUG=0
 mode.release:=-DPERF_DEBUG=0

@@ -220,9 +220,9 @@ void perf_regions_init()
 	 */
 	const char *perf_counter_list;
 	{
-		if (getenv("PERF_COUNTERS_LIST") == NULL)
+		if (getenv("PERF_REGIONS_COUNTERS") == NULL)
 		{
-			fprintf(stderr, "PERF_COUNTERS_LIST is not defined, using no performance counters\n");
+			fprintf(stderr, "PERF_REGIONS_COUNTERS is not defined, using no performance counters\n");
 			perf_counter_list = "";
 
 			// activating only wallclock time measurements per default
@@ -230,10 +230,10 @@ void perf_regions_init()
 		}
 		else
 		{
-			perf_counter_list = getenv("PERF_COUNTERS_LIST");
+			perf_counter_list = getenv("PERF_REGIONS_COUNTERS");
 
 			// disabling wallclock time measurements per default.
-			// Can be activated by adding "WALLCLOCKTIME" to PERF_COUNTERS_LIST
+			// Can be activated by adding "WALLCLOCKTIME" to PERF_REGIONS_COUNTERS
 			perf_regions.use_wallclock_time = 0;
 		}
 	}

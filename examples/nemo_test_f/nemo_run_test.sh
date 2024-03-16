@@ -11,8 +11,8 @@ for i in 1 2 4 8 16 32 64 128; do
 	# Use papi_avail command to check available performance counters
 	# These are part of papi-tools package
 	#
-	export LIST_COUNTERS=FP_COMP_OPS_EXE,PAPI_L3_TCM
-	export LIST_COUNTERS=PAPI_L3_TCM
+	export PERF_REGIONS_COUNTERS=FP_COMP_OPS_EXE,PAPI_L3_TCM
+	export PERF_REGIONS_COUNTERS=PAPI_L3_TCM
 
 	echo "***********************************"
 	echo "SIZE: $i"

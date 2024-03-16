@@ -108,12 +108,12 @@ class perf_regions:
 
                             print("Found start of region "+name)
                             if self.language == 'fortran':
-                                self.append_content(out_content, line, "CALL perf_region_start("+str(id)+", IOR(INT(PERF_FLAG_TIMINGS), INT(PERF_FLAG_COUNTERS))) !"+name)
+                                self.append_content(out_content, line, f"""CALL perf_region_start({id}, "{name}")""")
                             elif self.language == 'c':
-                                self.append_content(out_content, line, "perf_region_start("+str(id)+", (PERF_FLAG_TIMINGS | PERF_FLAG_COUNTERS)); //"+name)
+                                self.append_content(out_content, line, f"""perf_region_start({id}, "{name}");""")
                             break
 
-                        elif p == 4:    # end timing
+                        elif p == 4:
                             name = match.group(1)
                             name = name.upper()
                             print("Found end of region "+name)

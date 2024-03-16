@@ -9,17 +9,15 @@ MODULE perf_regions_fortran
         end subroutine perf_regions_init
 
 
-        subroutine perf_regions_finalize ( ) bind ( C,       &
-     & name ="perf_regions_finalize" )
+        subroutine perf_regions_finalize ( ) bind ( C, name ="perf_regions_finalize" )
                 use iso_c_binding
         end subroutine perf_regions_finalize
 
 
-        subroutine perf_region_start (id, measure_type) bind ( C,       &
-     & name ="perf_region_start" )
-                use iso_c_binding
+        subroutine perf_region_start (id, region_name) bind ( C, name ="perf_region_start" )
+                use, intrinsic :: iso_c_binding, only: C_CHAR
                 INTEGER, VALUE, INTENT(IN) ::id
-                INTEGER, VALUE, INTENT(IN) ::measure_type
+                CHARACTER(C_CHAR), INTENT(IN) ::region_name(C_CHAR)
         end subroutine perf_region_start
 
         subroutine perf_region_stop (id) bind ( C,        &

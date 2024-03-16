@@ -18,7 +18,7 @@ void perf_regions_init();
  */
 void perf_region_start(
 	int i_region_id,	///< id of region
-	int i_measure_type	///< type of measurements
+	const char* i_region_name	///< type of measurements
 );
 
 
@@ -35,17 +35,13 @@ void perf_region_stop(
 /**
  * Output information on all performance counters
  */
-void perf_regions_output(FILE *s);
-
-
+void perf_regions_output_human_readable_text();
 
 /**
- * Override normalization value for given region
+ * Output csv file with information about each performance region
  */
-void perf_region_set_normalize(
-		int i_region_id,			///< unique id of region
-		double i_normalize_denom
-);
+void perf_regions_output_csv();
+
 
 
 /**

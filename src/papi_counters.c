@@ -1,6 +1,3 @@
-//#define _GNU_SOURCE
-//#define _POSIX_C_SOURCE 200809L
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,29 +7,39 @@
 #include "papi_counters.h"
 
 
+/**
+ * Struct to gather all variables
+ */
 struct PapiCounters {
 
-	// PAPI event set
+	/*
+	 * PAPI event set
+	 */
 	int event_set;
 
-	// Number of used performance counters
-	long long int num_counters;
+	/*
+	 * Number of used performance counters
+	 */
+	long long int event_list_len;
 
-	// String which is used to break down the comma-separated list
-	// This is referenced to by the count_event_list_string[]
+	/*
+	 * String which is used to break down the comma-separated list.
+	 * This is referenced to by the count_event_list_string[]
+	 */
 	char *event_string_buffer;
 
-	// Array of strings for performance counters
-	char *envent_string_counter_names;
-	char *event_list_string[PERF_COUNTERS_MAX];
+	/*
+	 * Array of strings for performance counters
+	 */
+	const char * const*event_list;
 };
 
 static struct PapiCounters papi_counters;
 
 
-
-
-
+/**
+ * Some hopefully useful information if someone encounters problems.
+ */
 void print_access_right_problems()
 {
 	fprintf(
@@ -69,17 +76,10 @@ void handle_error(const char *i_error_msg, int retval)
  *
  * The initialization is based on the environment variable LIST_COUNTERS
  */
-void papi_counters_init()
+void papi_counters_init(const char * const* list_counters, int i_num_counters)
 {
-	if (getenv("LIST_COUNTERS") == NULL)
-	{
-		fprintf(stderr, "LIST_COUNTERS is not defined - dummy counting activated!\n");
-		papi_counters.envent_string_counter_names = "";
-	}
-	else
-	{
-		papi_counters.envent_string_counter_names = getenv("LIST_COUNTERS");
-	}
+	papi_counters.event_list_len = i_num_counters;
+	papi_counters.event_list = list_counters;
 
 	int retval;
 
@@ -94,40 +94,15 @@ void papi_counters_init()
 	if (retval == PAPI_NOT_INITED)
 		handle_error("PAPI library not initialized", retval);
 
-
 	papi_counters.event_set = PAPI_NULL;
 	retval = PAPI_create_eventset(&papi_counters.event_set);
 	if (retval != PAPI_OK)
 		handle_error("PAPI: Creation of eventset failed", retval);
 
-	// Duplicate string to apply tokenizer on it
-	papi_counters.event_string_buffer = strdup(papi_counters.envent_string_counter_names);
-
-	if (papi_counters.event_string_buffer == NULL)
-		handle_error("PAPI: Insufficient memory", retval);
-
-	// Get comma-separated events
-	char *events = strtok(papi_counters.event_string_buffer, ",");
-
-	papi_counters.num_counters = 0;
-	while (events != NULL)
+	for (int i = 0; i < papi_counters.event_list_len; i++)
 	{
-		if (papi_counters.num_counters >= PERF_COUNTERS_MAX)
-		{
-			printf("Maximum number of performance counters (%i) reached\n", PERF_COUNTERS_MAX);
-			exit(1);
-		}
-
-		papi_counters.event_list_string[papi_counters.num_counters] = events;
-		papi_counters.num_counters++;
-
-		events = strtok(NULL, ",");
-	}
-
-	for (int i = 0; i < papi_counters.num_counters; i++)
-	{
-		fprintf(stderr, "Setting up event code for '%s'\n", papi_counters.event_list_string[i]);
-		if ((retval = PAPI_add_named_event(papi_counters.event_set, papi_counters.event_list_string[i])) != PAPI_OK)
+		fprintf(stderr, "Setting up event code for '%s'\n", papi_counters.event_list[i]);
+		if ((retval = PAPI_add_named_event(papi_counters.event_set, papi_counters.event_list[i])) != PAPI_OK)
 		{
 			fprintf(stderr, "PAPI_event_name_to_code failed! retval: %d\n", retval);
 			print_access_right_problems();
@@ -135,7 +110,6 @@ void papi_counters_init()
 		}
 	}
 }
-
 
 
 /**
@@ -148,14 +122,13 @@ void papi_counters_start()
 		return;
 
 	// suppress errors if no perf counters are activated
-	if (papi_counters.num_counters != 0)
+	if (papi_counters.event_list_len != 0)
 	{
 		PAPI_perror("PAPI_start_counters");
 		print_access_right_problems();
 		exit(-1);
 	}
 }
-
 
 
 /**
@@ -168,14 +141,13 @@ void papi_counters_stop_and_accum(
 	if (PAPI_accum(papi_counters.event_set, o_count_values_accum) == PAPI_OK)
 		return;
 
-	if (papi_counters.num_counters != 0)
+	if (papi_counters.event_list_len != 0)
 	{
 		PAPI_perror("PAPI_accum_counters: ");
 		print_access_right_problems();
 		exit(-1);
 	}
 }
-
 
 
 /**
@@ -188,14 +160,13 @@ void papi_counters_stop(
 	if (PAPI_stop(papi_counters.event_set, o_count_values_stop) == PAPI_OK)
 		return;
 
-	if (papi_counters.num_counters != 0)
+	if (papi_counters.event_list_len != 0)
 	{
 		PAPI_perror("PAPI_stop_counters: ");
 		print_access_right_problems();
 		exit(-1);
 	}
 }
-
 
 
 /**
@@ -208,7 +179,7 @@ void papi_counters_read_and_reset(
 	if (PAPI_read(papi_counters.event_set, o_count_values_read) == PAPI_OK)
 		return;
 
-	if (papi_counters.num_counters != 0)
+	if (papi_counters.event_list_len != 0)
 	{
 		PAPI_perror("PAPI_read_counters: ");
 		print_access_right_problems();
@@ -223,22 +194,4 @@ void papi_counters_read_and_reset(
 void papi_counters_finalize()
 {
 	free(papi_counters.event_string_buffer);
-}
-
-
-
-/**
- * return pointer to array of event names
- */
-char **papi_counters_get_event_names()
-{
-	return papi_counters.event_list_string;
-}
-
-/**
- * return number of performance counters
- */
-int papi_counters_get_num_active_counters()
-{
-	return papi_counters.num_counters;
 }

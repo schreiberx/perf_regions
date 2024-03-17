@@ -8,7 +8,17 @@ PERFREGION_LIB:=-L../../build -lperf_regions
 CFLAGS_PERFREGION:=-I../../src
 LINKFLAGS_PERFREGION:=${PAPI_LIB} ${PERFREGION_LIB}
 
-all:	array_test array_test_perf_region
+all:	build
+
+build:
+	make  -C ../../src
+	make tests
+	#make run_tests
+
+run_tests: all
+	./run_tests.sh
+
+tests: array_test array_test_perf_region
 
 array_test:
 	./perf_regions_instrumentation.py cleanup

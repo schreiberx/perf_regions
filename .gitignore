@@ -4,3 +4,4 @@ build
 **/*.pyc
 **/output_*
 **/*.swp
+**/Makefile.deps

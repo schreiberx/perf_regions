@@ -3,7 +3,7 @@
 #define PERF_COUNTERS_MAX		(256)
 
 
-void papi_counters_init();
+void papi_counters_init(char *const list_counters[], int i_num_counters, int i_verbosity);
 void papi_counters_finalize();
 
 

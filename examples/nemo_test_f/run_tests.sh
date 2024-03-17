@@ -17,6 +17,6 @@ for i in 1 2 4 8 16 32 64 128; do
 	echo "***********************************"
 	echo "SIZE: $i"
 	echo "***********************************"
-	taskset -c 0 ./nemo_test
+	taskset -c 0 ./nemo_test_perf_regions
 	echo "***********************************"
 done

@@ -108,7 +108,7 @@ class perf_regions:
 
                             print("Found start of region "+name)
                             if self.language == 'fortran':
-                                self.append_content(out_content, line, f"""CALL perf_region_start({id}, "{name}")""")
+                                self.append_content(out_content, line, f"""CALL perf_region_start({id}, "{name}"//achar(0))""")
                             elif self.language == 'c':
                                 self.append_content(out_content, line, f"""perf_region_start({id}, "{name}");""")
                             break
@@ -120,9 +120,9 @@ class perf_regions:
 
                             id = self.region_name_list.index(name);
                             if self.language == 'fortran':
-                                self.append_content(out_content, line, "CALL perf_region_stop("+str(id)+") !"+name)
+                                self.append_content(out_content, line, f"CALL perf_region_stop({id}) !"+name)
                             elif self.language == 'c':
-                                self.append_content(out_content, line, "perf_region_stop("+str(id)+"); //"+name)
+                                self.append_content(out_content, line, f"perf_region_stop({id}); //"+name)
                         elif p == 5:   # timing_reset
                             print("Found timing_reset call")
                             if self.language == 'fortran':
@@ -240,22 +240,6 @@ class perf_regions:
 
         print
         print("*"*80)
-        print("Creating header files")
-        print("*"*80)
-
-        if not os.path.exists(self.header_output_file):
-            os.makedirs(self.header_output_file)
-        self.p_write_header(self.header_output_file+'/perf_region_list.txt')
-
-        print
-        print("*"*80)
         print("* FINISHED WITHOUT ERRORS")
         print("*"*80)
 
-
-    def p_write_header(self, filepath):
-        """Simply write a text file with all the region names"""
-
-        with open(filepath, 'w') as file_handler:
-            for item in self.region_name_list:
-                file_handler.write(item+"\n")

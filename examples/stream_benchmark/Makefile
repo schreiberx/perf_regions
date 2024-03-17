@@ -2,15 +2,23 @@
 
 #CC = icc
 CC = gcc
-CFLAGS = -O2
+CFLAGS = -O2 -fopenmp
 
 #FF = ifort
 FF = gfortran
-FFLAGS = -O2
+FFLAGS = -O2 -fopenmp
 
 PERF_REGIONS_DIR=../../
 
-all: stream_f.exe stream_c.exe stream_c_perfregion.exe
+#all: stream_f.exe stream_c.exe stream_c_perfregion.exe
+all: build
+
+build:
+	make -C ../../src
+	make stream_c_perfregion.exe
+
+run_tests: build
+	./run_tests.sh
 
 stream_f.exe: stream.f mysecond.o
 	$(CC) $(CFLAGS) -c mysecond.c

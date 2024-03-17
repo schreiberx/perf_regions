@@ -1,7 +1,8 @@
 
+PAPI_INC:=
+PAPI_LIB:=
 
-PAPI_INC:=/users/home/opt/papi/papi-5.1.0/include/
-PAPI_LIB:=/users/home/opt/papi/papi-5.1.0/lib/
+F90=gfortran
 
 
 MPICC:=gcc
@@ -12,18 +13,23 @@ mode.:=-DPERF_DEBUG=0
 mode.release:=-DPERF_DEBUG=0
 mode.debug:=-DPERF_DEBUG=1
 
-# disable DEBUG overheads in perf region library
+# Disable DEBUG overheads in perf region library
 CFLAGS:=${CFLAGS} ${mode.${MODE}}
+F90FLAGS:=${F90FLAGS} ${mode.${MODE}}
+
+SRCS_C:=$(wildcard *.c)
+SRCS_F90:=$(wildcard *.F90)
+OBJS:=$(patsubst %.c,${BUILD_DIR}/%.o,$(SRCS_C)) $(patsubst %.F90,${BUILD_DIR}/%.o,$(SRCS_F90))
+MODS:=$(patsubst %.F90,${BUILD_DIR}/%.mod,$(SRCS_F90))
+TARGET_LIB:=${BUILD_DIR}/libperf_regions.so
+
+all:
+	make Makefile.deps
+	make ${TARGET_LIB}
 
 
-all: ${BUILD_DIR}/libperf_regions.so
-
-
-
-${BUILD_DIR}/libperf_regions.so : ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/perf_regions_fortran.o ${BUILD_DIR}/posix_clock.o
-	mkdir -p ${BUILD_DIR}
-#	${MPICC} -I${PAPI_INC} -L${PAPI_LIB} -lpapi -c papi_counters.c -o papi_counters.o
-	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${BUILD_DIR}/papi_counters.o ${BUILD_DIR}/perf_regions.o ${BUILD_DIR}/posix_clock.o -o ${BUILD_DIR}/libperf_regions.so -lpapi
+${BUILD_DIR}/libperf_regions.so: ${OBJS}
+	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${OBJS} -o ${TARGET_LIB} -lpapi
 
 ${BUILD_DIR}/papi_counters.o: papi_counters.c papi_counters.h
 	mkdir -p ${BUILD_DIR}
@@ -34,17 +40,19 @@ ${BUILD_DIR}/%.o: %.c %.h
 	${MPICC} ${CFLAGS} -c -g $< -o $@
 
 # Generate Fortran ugly interfaces
-${BUILD_DIR}/perf_regions_fortran.o:
+${BUILD_DIR}/perf_regions_fortran.o: perf_regions_fortran.F90
 	mkdir -p ${BUILD_DIR}
-	gfortran -cpp -c perf_regions_fortran.F90 -o ${BUILD_DIR}/perf_regions_fortran.o
+	${F90} -cpp -c perf_regions_fortran.F90 -o ${BUILD_DIR}/perf_regions_fortran.o
 	mv -f perf_regions_fortran.mod "${BUILD_DIR}"
 
+-include Makefile.deps
+
+Makefile.deps:
+	$(CC) $(CFLAGS) -MM *.c > $@
+	$(F90) $(F90FLAGS) -MM *.F90 >> $@
 
 
 clean:
-	rm -f ${BUILD_DIR}/perf_regions.so
-	rm -f ${BUILD_DIR}/papi_counters.o
-	rm -f ${BUILD_DIR}/perf_regions_names.o
-	rm -f ${BUILD_DIR}/perf_regions.o
-	rm -f ${BUILD_DIR}/libperf_regions.so
-	rm -f ${BUILD_DIR}/perf_regions_fortran.o
+	rm -f ${TARGET_LIB}
+	rm -f ${OBJS}
+	rm -f ${MODS}

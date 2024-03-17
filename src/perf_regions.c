@@ -12,6 +12,7 @@
 //#include "perf_regions_names.h"
 
 
+#define PRINT_PREFIX "[perf_regions.c] "
 
 /*
  * precompiler directives to avoid compiling with timing or perf counters
@@ -135,12 +136,15 @@ struct PerfRegion
 #endif
 
 	// Region name
-	const char* region_name;
+	char* region_name;
 };
 
 
 struct PerfRegions
 {
+	// verbosity level
+	int verbosity;
+
 	// array with all regions
 	struct PerfRegion *perf_regions_list;
 
@@ -154,7 +158,7 @@ struct PerfRegions
 	int num_perf_counters;
 
 	// names of performance counters
-	char **perf_counter_names;
+	char *perf_counter_names[PERF_COUNTERS_MAX];
 
 
 #if PERF_COUNTERS_NESTED
@@ -178,22 +182,29 @@ void perf_regions_reset()
 {
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
-#if PERF_REGIONS_USE_PAPI
+		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
 
+		r->region_name = 0;
+
+#if PERF_REGIONS_USE_PAPI
 		for (int j = 0; j < perf_regions.num_perf_counters; j++)
-			perf_regions.perf_regions_list[i].counter_values[j] = 0;
+			r->counter_values[j] = 0;
 #endif
 
-		perf_regions.perf_regions_list[i].counter_wallclock_time = 0;
+		r->counter_wallclock_time = 0;
 
 #if PERF_COUNTERS_NESTED
-		perf_regions.perf_regions_list[i].spoiled = 0;
+		r->spoiled = 0;
 #endif
 
 #if PERF_DEBUG
 		perf_regions.perf_regions_list[i].active = 0;
 #endif
 	}
+
+#if PERF_COUNTERS_NESTED
+	perf_regions.num_nested_performance_regions = 0;
+#endif
 }
 
 
@@ -205,6 +216,16 @@ void perf_regions_reset()
  */
 void perf_regions_init()
 {
+	if (getenv("PERF_REGIONS_VERBOSITY") == NULL) {
+		perf_regions.verbosity = 0;
+	} else {
+		perf_regions.verbosity = atoi(getenv("PERF_REGIONS_VERBOSITY"));
+	}
+
+	if (perf_regions.verbosity > 0) {
+		printf(PRINT_PREFIX"Verbosity level: %i\n", perf_regions.verbosity);
+	}
+
 	perf_regions.perf_regions_list = 0;
 
 	perf_regions.use_wallclock_time = 1;
@@ -232,6 +253,8 @@ void perf_regions_init()
 		{
 			perf_counter_list = getenv("PERF_REGIONS_COUNTERS");
 
+			if (perf_regions.verbosity > 0)
+				printf(PRINT_PREFIX"PERF_REGIONS_COUNTERS environment variable: '%s'\n", perf_counter_list);
 			// disabling wallclock time measurements per default.
 			// Can be activated by adding "WALLCLOCKTIME" to PERF_REGIONS_COUNTERS
 			perf_regions.use_wallclock_time = 0;
@@ -239,29 +262,31 @@ void perf_regions_init()
 	}
 
 	/*
-	 * Tokenize list
+	 * Duplicate string for tokenization of list
 	 */
 	char *perf_counter_list_tokens = strdup(perf_counter_list);
+	perf_regions.num_perf_counters = 0;
 
 	// Get comma-separated events
 	char *event = strtok(perf_counter_list_tokens, ",");
 	while (event != NULL)
 	{
-		if (strcmp("WALLCLOCK", event) == 0)
+		if (strcmp("WALLCLOCKTIME", event) == 0)
 		{
 			perf_regions.use_wallclock_time = 1;
-			continue;
 		}
+		else
+		{
+			perf_regions.perf_counter_names[perf_regions.num_perf_counters] = strdup(event);
+			perf_regions.num_perf_counters++;
 
-		perf_regions.perf_counter_names[perf_regions.num_perf_counters] = strdup(event);
-		perf_regions.num_perf_counters++;
-
-		perf_regions.use_papi = 1;
+			perf_regions.use_papi = 1;
+		}
 
 		event = strtok(NULL, ",");
 	}
 
-	papi_counters_init(perf_regions.perf_counter_names, perf_regions.num_perf_counters);
+	papi_counters_init(perf_regions.perf_counter_names, perf_regions.num_perf_counters, perf_regions.verbosity);
 
 	free(perf_counter_list_tokens);
 
@@ -271,17 +296,13 @@ void perf_regions_init()
 		exit(-1);
 	}
 
-	perf_regions.perf_regions_list = malloc(sizeof(struct PerfRegion)*(PERF_REGIONS_MAX+3));
+	perf_regions.perf_regions_list = malloc(sizeof(struct PerfRegion)*(PERF_REGIONS_MAX));
 
 
 	/*
 	 * RESET
 	 */
 	perf_regions_reset();
-
-#if PERF_COUNTERS_NESTED
-	perf_regions.num_nested_performance_regions = 0;
-#endif
 }
 
 
@@ -298,7 +319,11 @@ void perf_region_start(
 
 	// denominator to normalize values
 	r->region_enter_counter++;
-	r->region_name = i_region_name;
+
+	// Initialize only once
+	// There's a small overhead, but we hope that this is negligible since we also do this before starting performance counting
+	if (r->region_name == 0)
+		r->region_name = strdup(i_region_name);
 
 #if PERF_DEBUG
 
@@ -541,8 +566,12 @@ void perf_regions_finalize()
 	/*
 	 * DECONSTRUCTUR
 	 */
-	if (perf_regions.perf_regions_list != NULL)
-	{
+	if (perf_regions.perf_regions_list != NULL)	{
+		for (int i = 0; i < PERF_REGIONS_MAX; i++) {
+			if (perf_regions.perf_regions_list[i].region_name != 0)
+				free(perf_regions.perf_regions_list[i].region_name);
+		}
+
 		free(perf_regions.perf_regions_list);
 		perf_regions.perf_regions_list = NULL;
 	}

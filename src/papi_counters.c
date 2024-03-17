@@ -7,10 +7,18 @@
 #include "papi_counters.h"
 
 
+#define PRINT_PREFIX "[papi_counters.c] "
+
+
 /**
  * Struct to gather all variables
  */
 struct PapiCounters {
+
+	/*
+	 * Verbosity level (0=no verbosity)
+	 */
+	int verbosity;
 
 	/*
 	 * PAPI event set
@@ -23,15 +31,9 @@ struct PapiCounters {
 	long long int event_list_len;
 
 	/*
-	 * String which is used to break down the comma-separated list.
-	 * This is referenced to by the count_event_list_string[]
-	 */
-	char *event_string_buffer;
-
-	/*
 	 * Array of strings for performance counters
 	 */
-	const char * const*event_list;
+	char *const * event_list;
 };
 
 static struct PapiCounters papi_counters;
@@ -42,20 +44,19 @@ static struct PapiCounters papi_counters;
  */
 void print_access_right_problems()
 {
-	fprintf(
-			stderr, "\
-Error occurred, maybe that's a problem of missing access rights?\n\
+	fprintf(stderr, "\
+Error occurred. Maybe that's a problem of missing access rights?\n\
 \n\
-(from perftools)\n\
+Note, that the following recommendations can lead to SECURITY issues on multi-user systems!\n\
 \n\
-	Consider tweaking /proc/sys/kernel/perf_event_paranoid,\n\
-	which controls use of the performance events system by\n\
-	unprivileged users (without CAP_SYS_ADMIN).\n\
+Activate perf counters for all users:\n\
+$ sudo bash -c 'echo \"-1\" > /proc/sys/kernel/perf_event_paranoid'\n\
 \n\
-	  -1: Allow use of (almost) all events by all users\n\
-	>= 0: Disallow raw tracepoint access by users without CAP_IOC_LOCK\n\
-	>= 1: Disallow CPU event access by users without CAP_SYS_ADMIN\n\
-	>= 2: Disallow kernel profiling by users without CAP_SYS_ADMIN\n\
+You can also set this permanently by adding the line\n\
+    kernel.perf_event_paranoid = -1\n\
+to\n\
+    /etc/sysctl.conf\n\
+\n\
 ");
 	assert(0);
 }
@@ -64,7 +65,7 @@ Error occurred, maybe that's a problem of missing access rights?\n\
 
 void handle_error(const char *i_error_msg, int retval)
 {
-	fprintf(stderr, "%s", i_error_msg);
+	fprintf(stderr, PRINT_PREFIX"%s", i_error_msg);
 	fprintf(stderr, ": retval=%i", retval);
 	exit(EXIT_FAILURE);
 }
@@ -72,12 +73,15 @@ void handle_error(const char *i_error_msg, int retval)
 
 
 /**
- * Initialize performance counters
- *
- * The initialization is based on the environment variable LIST_COUNTERS
+ * Initialize performance counters *
  */
-void papi_counters_init(const char * const* list_counters, int i_num_counters)
+void papi_counters_init(
+	char *const list_counters[],
+	int i_num_counters,
+	int i_verbosity
+)
 {
+	papi_counters.verbosity = i_verbosity;
 	papi_counters.event_list_len = i_num_counters;
 	papi_counters.event_list = list_counters;
 
@@ -85,7 +89,7 @@ void papi_counters_init(const char * const* list_counters, int i_num_counters)
 
 	retval = PAPI_library_init(PAPI_VER_CURRENT);
 	if (retval != PAPI_VER_CURRENT && retval > 0)
-		handle_error("PAPI library version mismatch", retval);
+		handle_error(PRINT_PREFIX"library version mismatch", retval);
 
 	if (retval < 0)
 		handle_error("PAPI library init error", retval);
@@ -101,10 +105,12 @@ void papi_counters_init(const char * const* list_counters, int i_num_counters)
 
 	for (int i = 0; i < papi_counters.event_list_len; i++)
 	{
-		fprintf(stderr, "Setting up event code for '%s'\n", papi_counters.event_list[i]);
+		if (papi_counters.verbosity > 0)
+			printf(PRINT_PREFIX"Adding event '%s'\n", papi_counters.event_list[i]);
+			
 		if ((retval = PAPI_add_named_event(papi_counters.event_set, papi_counters.event_list[i])) != PAPI_OK)
 		{
-			fprintf(stderr, "PAPI_event_name_to_code failed! retval: %d\n", retval);
+			fprintf(stderr, PRINT_PREFIX"PAPI_add_named_event failed for '%s'! retval: %d\n", papi_counters.event_list[i], retval);
 			print_access_right_problems();
 			exit(-1);
 		}
@@ -112,8 +118,40 @@ void papi_counters_init(const char * const* list_counters, int i_num_counters)
 }
 
 
+
 /**
- * start performance counting. Existing performance counters are overwritten! (TODO: Check this)
+ * Shutdown performance counters
+ * 
+ * We undo everything inclulding shutting down the PAPI library
+ */
+void papi_counters_finalize()
+{
+	int retval;
+	for (int i = 0; i < papi_counters.event_list_len; i++)
+	{
+		if (papi_counters.verbosity > 0)
+			printf(PRINT_PREFIX"Removing event '%s'\n", papi_counters.event_list[i]);
+
+		if ((retval = PAPI_remove_named_event(papi_counters.event_set, papi_counters.event_list[i])) != PAPI_OK)
+		{
+			fprintf(stderr, PRINT_PREFIX"PAPI_remove_named_event failed for '%s'! retval: %d\n", papi_counters.event_list[i], retval);
+			print_access_right_problems();
+			exit(-1);
+		}
+	}
+
+	retval = PAPI_destroy_eventset(&papi_counters.event_set);
+	if (retval != PAPI_OK)
+		handle_error(PRINT_PREFIX"Creation of eventset failed", retval);
+
+	papi_counters.event_set = 0;
+
+	PAPI_shutdown();
+}
+
+
+/**
+ * start performance counting. Existing performance counters are overwritten!
  */
 void papi_counters_start()
 {
@@ -188,10 +226,3 @@ void papi_counters_read_and_reset(
 }
 
 
-/**
- * shutdown performance counters
- */
-void papi_counters_finalize()
-{
-	free(papi_counters.event_string_buffer);
-}

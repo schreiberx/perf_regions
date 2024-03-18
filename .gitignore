@@ -5,3 +5,4 @@ build
 **/output_*
 **/*.swp
 **/Makefile.deps
+**/*.lyx~

@@ -1152,7 +1152,7 @@ First of all, the environment variable LD_LIBRARY_PATH has to be set to
  the path of the PerfRegion build directory:
 \end_layout
 
-\begin_layout Verbatim
+\begin_layout Standard
 
 \begin_inset Box Doublebox
 position "t"
@@ -1198,7 +1198,7 @@ Each platform might have a different set of performance counters.
  The available performance counters identifiers can be determined via
 \end_layout
 
-\begin_layout Verbatim
+\begin_layout Standard
 
 \begin_inset Box Doublebox
 position "t"
@@ -1245,7 +1245,7 @@ Only a limited number of performance identifiers can be specified.
  via the environment variable such as
 \end_layout
 
-\begin_layout Verbatim
+\begin_layout Standard
 
 \begin_inset Box Doublebox
 position "t"

@@ -501,7 +501,6 @@ Using PerfRegion on C-code, the program annotation is given by
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -644,7 +643,7 @@ a summary of the measured performance
 \begin_inset Text
 
 \begin_layout Plain Layout
-start [name, perf_flag]
+start [name]
 \end_layout
 
 \end_inset
@@ -654,8 +653,7 @@ start [name, perf_flag]
 
 \begin_layout Plain Layout
 Annotation of the start of a region to run performance measurements.
- 'name' has to be a unique identifier, 'perf_flag' is an indication of the
- performance measurement type (timing, counters or both).
+ 'name' has to be a unique identifier.
 \end_layout
 
 \end_inset
@@ -702,7 +700,6 @@ The Fortran support currently only supports replacing the timing constructs
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -841,8 +838,7 @@ Release mode
 The release mode is automatically used if compiling with 'make'
 \end_layout
 
-\begin_layout Verbatim
-
+\begin_layout Standard
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -893,7 +889,6 @@ This mode should be used to test the PerfRegions library.
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -950,12 +945,18 @@ Preprocess
 \end_layout
 
 \begin_layout Standard
-To start preprocessing the code, the script is executed with 'preprocess'
+To start preprocessing the code, the script is executed with 
+\begin_inset Quotes eld
+\end_inset
+
+preprocess
+\begin_inset Quotes erd
+\end_inset
+
  as parameter:
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -996,16 +997,23 @@ $ ./perf_regions_instrumentation.py preprocess
 \end_layout
 
 \begin_layout Subsubsection
-Reverting to original code
+Reverting to original code (if required)
 \end_layout
 
 \begin_layout Standard
 The preprocessing generates code which can be reverted to its original one.
- To revert the PerfRegion code, call the script with 'cleanup' parameter:
+ To revert the PerfRegion code, call the script with 
+\begin_inset Quotes eld
+\end_inset
+
+cleanup
+\begin_inset Quotes erd
+\end_inset
+
+ parameter:
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -1058,7 +1066,6 @@ Linker flags:
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -1103,7 +1110,6 @@ Compile flags:
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -1153,7 +1159,6 @@ First of all, the environment variable LD_LIBRARY_PATH has to be set to
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -1195,11 +1200,10 @@ $ export LD_LIBRARY_PATH=[path to perf regions]/build:$LD_LIBRARY_PATH
 
 \begin_layout Standard
 Each platform might have a different set of performance counters.
- The available performance counters identifiers can be determined via
+ The available performance counters identifiers can be determined via:
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -1242,11 +1246,10 @@ $ papi_avail
 \begin_layout Standard
 Only a limited number of performance identifiers can be specified.
  PerfRegions allows to specify a list of performance counter identifiers
- via the environment variable such as
+ via the environment variable such as:
 \end_layout
 
 \begin_layout Standard
-
 \begin_inset Box Doublebox
 position "t"
 hor_pos "c"
@@ -1273,7 +1276,65 @@ status open
 
 \begin_layout Plain Layout
 
-$ export LIST_COUNTERS=PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM 
+$ export PERF_REGIONS_COUNTERS=PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Also the wallclock time can be measured by adding 
+\begin_inset Quotes eld
+\end_inset
+
+
+\series bold
+WALLCLOCKTIME
+\series default
+
+\begin_inset Quotes erd
+\end_inset
+
+ to this list which would add a separate column in the output for the wallclock
+ time:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Box Doublebox
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\begin_inset listings
+lstparams "language={[90]Fortran}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+$ export PERF_REGIONS_COUNTERS=PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM,WALLCLOCKTIME
+ 
 \end_layout
 
 \end_inset

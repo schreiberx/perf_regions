@@ -66,7 +66,7 @@ if 'LD_LIBRARY_PATH' in d:
 else:
     d['LD_LIBRARY_PATH']='../../build'
 
-d['LIST_COUNTERS']=','.join(counters)
+d['PERF_REGIONS_COUNTERS']=','.join(counters)
 
 
 #

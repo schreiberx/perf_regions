@@ -4,5 +4,6 @@ build
 **/*.pyc
 **/output_*
 **/*.swp
+**/*.mod
 **/Makefile.deps
 **/*.lyx~

@@ -43,6 +43,7 @@ void perf_regions_output_human_readable_text();
 void perf_regions_output_csv();
 
 
+void perf_regions_reduce(int communicator);
 
 /**
  * DECONSTRUCTOR

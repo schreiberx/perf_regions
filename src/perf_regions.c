@@ -5,6 +5,9 @@
 #include <sys/time.h>
 #include <string.h>
 
+//TODO ifdef
+#include <mpi.h>
+
 
 #include "perf_regions.h"
 #include "papi_counters.h"
@@ -219,7 +222,7 @@ void perf_regions_reset()
 
 
 /**
- * CONSTRUCTUR:
+ * CONSTRUCTOR:
  *
  * Initialize the performance regions, e.g. allocate the data structures
  */
@@ -573,24 +576,86 @@ void perf_regions_output_csv_file()
 
 }
 
+// TODO change in prinstumentation, header, sth for fortran
+void perf_regions_reduce(int communicator) {
+	MPI_Comm comm = MPI_Comm_f2c((MPI_Fint)communicator);
 
-/**
- * DECONSTRUCTOR
- */
-void perf_regions_finalize()
-{
-	/*
-	 * output performance information on each region to console
-	 */
-	perf_regions_output_human_readable_text();
+	int rank, size;
+	MPI_Comm_rank(comm, &rank);
+	MPI_Comm_size(comm, &size);
+
+	#if PERF_REGIONS_USE_PAPI
+	
+	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+	{
+		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
+
+		if (r->region_name == 0)
+			continue;
+
+		for (int j = 0; j < perf_regions.num_perf_counters; j++)
+		{
+			long long counter_value = r->counter_values[j];
+
+			double param_value = counter_value;
+			// TODO what to do with these?
+			//fprintf(s, "\t%.7e", param_value);
+		}
+		if (perf_regions.use_wallclock_time) {
+			double send_data[4] = {
+			r->counter_wallclock_time,
+			r->min_wallclock_time,
+			r->max_wallclock_time,
+			r->variance_wallclock_time / r->region_enter_counter
+			};
+			double recv_data[3][4]= {0};
+		// TODO do I want enter? (It is int)
+
+			const int ROOT_RANK = 0;
+			const MPI_Datatype DATATYPE = MPI_DOUBLE;
+			const int DATA_COUNT = 4;
+
+			// MIN, MAX, MEAN, VAR - min, max, sum, ?
+
+			const MPI_Op REDUCTION_OPS[3] = {MPI_MIN, MPI_MAX, MPI_SUM};
+    		const char* OP_NAMES[3] = {"MIN", "MAX", "AVG"};
+
+			if(rank==ROOT_RANK) {
+				FILE *s = stdout;
+				fprintf(s, "\t\tWALLCLOCKTIME\tMIN\t\t\tMAX\t\t\tVAR\n");
+			}
 
 
-	/*
-	 * Output .csv file
-	 */
-	perf_regions_output_csv_file();
+			for (int o = 0; o < 3; o++) {
+			MPI_Reduce(send_data, recv_data[o], DATA_COUNT, 
+					DATATYPE, REDUCTION_OPS[o], ROOT_RANK, comm);
 
+				if(rank==ROOT_RANK) {
+					// make sum to avg
+					if(o==2) {
+						double n = 1.0*size;
+						recv_data[o][0] /= n;
+						recv_data[o][1] /= n;
+						recv_data[o][2] /= n;
+						recv_data[o][3] /= n;
+					}
+					FILE *s = stdout;
+					fprintf(s, "%s(rank)\t%.7e\t%.7e\t%.7e\t%.7e\n", OP_NAMES[o], recv_data[o][0], recv_data[o][1], recv_data[o][2], recv_data[o][3]);
+				}
 
+			}
+			
+		}
+		
+	}
+	if (rank==0)
+		perf_regions_output_human_readable_text();
+	perf_regions_shutdown();
+#endif	
+
+}
+
+void perf_regions_shutdown() {
 	/*
 	 * DECONSTRUCTUR
 	 */
@@ -616,4 +681,24 @@ void perf_regions_finalize()
 
 	for (int i = 0; i < perf_regions.num_perf_counters; i++)
 		free(perf_regions.perf_counter_names[i]);
+
+}
+
+/**
+ * DECONSTRUCTOR
+ */
+void perf_regions_finalize()
+{
+	/*
+	 * output performance information on each region to console
+	 */
+	perf_regions_output_human_readable_text();
+
+	/*
+	 * Output .csv file
+	 */
+	perf_regions_output_csv_file();
+
+	perf_regions_shutdown();
+	
 }

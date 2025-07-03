@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <float.h>
 #include <sys/time.h>
 #include <string.h>
 
@@ -109,8 +110,12 @@ struct PerfRegion
 	long long counter_values[PERF_COUNTERS_MAX];
 #endif
 
-	// accumulator to get total wallclock time spent in this region
+	// accumulator to get total wallclock time spent in this region and its variance (over time)
 	double counter_wallclock_time;
+	double variance_wallclock_time;
+	double min_wallclock_time;
+	double max_wallclock_time;
+	double running_mean;
 
 #ifdef PERF_TIMING_POSIX
 	// Start time value (seconds)
@@ -192,6 +197,10 @@ void perf_regions_reset()
 #endif
 
 		r->counter_wallclock_time = 0;
+		r->max_wallclock_time = 0;
+		r->min_wallclock_time = DBL_MAX;
+		r->variance_wallclock_time = 0;
+		r->running_mean = 0;
 
 #if PERF_COUNTERS_NESTED
 		r->spoiled = 0;
@@ -457,15 +466,22 @@ void perf_region_stop(
 	if (perf_regions.use_wallclock_time)
 	{
 	#ifdef PERF_TIMING_POSIX
-		r->counter_wallclock_time += posix_clock() - r->region_enter_time_posix;
+		double last_wallclock_time_measurement = posix_clock() - r->region_enter_time_posix; 
 	#else
 		struct timeval tm2;
 		gettimeofday(&tm2, NULL);
-
-		r->wallclock_time +=
-					((double)time_val.tv_sec - (double)r->start_time_value.tv_sec)
-					+ ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;
+		double last_wallclock_time_measurement = ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec)
+					+ ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;					
 	#endif
+
+		r->counter_wallclock_time += last_wallclock_time_measurement;
+		r->max_wallclock_time = r->max_wallclock_time > last_wallclock_time_measurement?r->max_wallclock_time:last_wallclock_time_measurement;
+		r->min_wallclock_time = r->min_wallclock_time < last_wallclock_time_measurement?r->min_wallclock_time:last_wallclock_time_measurement;
+		// Variance with Welford's online algorithm
+		double delta = last_wallclock_time_measurement - r->running_mean;
+		r->running_mean += delta / r->region_enter_counter;
+		r->variance_wallclock_time += delta * (last_wallclock_time_measurement - r->running_mean);
+
 	}
 }
 
@@ -485,10 +501,14 @@ void perf_regions_output_human_readable_text()
 #if PERF_COUNTERS_NESTED
 	fprintf(s, "\tSPOILED");
 #endif
-
-	if (perf_regions.use_wallclock_time)
+//TODO format
+	if (perf_regions.use_wallclock_time) {
 		fprintf(s, "\tWALLCLOCKTIME");
-
+		fprintf(s, "\tMIN");
+		fprintf(s, "\t\t\tMAX");
+		fprintf(s, "\t\t\tMEAN");
+		fprintf(s, "\t\t\tVAR");
+	}
 	fprintf(s, "\tCOUNTER");
 	fprintf(s, "\n");
 
@@ -529,13 +549,17 @@ void perf_regions_output_human_readable_text()
 			fprintf(s, "\t%.7e", param_value);
 		}
 #if PERF_COUNTERS_NESTED
-		fprintf(s, "\t%i", r->spoiled);
+		fprintf(s, "\t\t%i\t", r->spoiled);
 #endif
-
-		if (perf_regions.use_wallclock_time)
+		if (perf_regions.use_wallclock_time) {
 			fprintf(s, "\t%.7e", r->counter_wallclock_time);
+			fprintf(s, "\t%.7e", r->min_wallclock_time);
+			fprintf(s, "\t%.7e", r->max_wallclock_time);
+			fprintf(s, "\t%.7e", r->running_mean);
+			fprintf(s, "\t%.7e", r->variance_wallclock_time / r->region_enter_counter);
+		}
 
-		fprintf(s, "\t%.0f", r->region_enter_counter);
+		fprintf(s, "\t\t\t%.0f", r->region_enter_counter);
 
 		fprintf(s, "\n");
 	}

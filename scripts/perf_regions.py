@@ -70,7 +70,7 @@ class perf_regions:
                     match = self.prog_match_list[p].match(line)
                     if match:
                         line_processed = True
-                        if p == 0:    # initialization
+                        if p == 0:    # initialization without mpi
                             print("Found initialization statement")
                             if self.language == 'fortran':
                                 self.append_content(out_content, line, "CALL perf_regions_init()")
@@ -78,7 +78,16 @@ class perf_regions:
                                 self.append_content(out_content, line, "perf_regions_init();")
                             break
 
-                        elif p == 1:    # shutdown
+                        if p == 1:    # initialization with mpi
+                            communicator = match.group(1)
+                            print(f"Found initialization statement for communicator {communicator}")
+                            if self.language == "fortran":
+                                self.append_content(out_content, line, f"CALL perf_regions_init_mpi_fortran({communicator})")
+                            elif self.language == "c":
+                                self.append_content(out_content, line, f"perf_regions_init_mpi({communicator});")
+                            break
+
+                        elif p == 2:    # shutdown
                             print("Found shutdown statement")
                             if self.language == 'fortran':
                                 self.append_content(out_content, line, "CALL perf_regions_finalize()")
@@ -86,7 +95,7 @@ class perf_regions:
                                 self.append_content(out_content, line, "perf_regions_finalize();")
                             break
 
-                        elif p == 2:    # use/include
+                        elif p == 3:    # use/include
                             print("Found include/use statement")
                             if self.language == 'fortran':
                                 self.append_content(out_content, line, 'USE perf_regions_fortran')
@@ -95,7 +104,7 @@ class perf_regions:
                                 self.append_content(out_content, line, "#include <perf_regions.h>")
                             break
 
-                        elif p == 3:    # start timing
+                        elif p == 4:    # start timing
                             name = match.group(1)
                             name = name.upper()
 
@@ -113,7 +122,7 @@ class perf_regions:
                                 self.append_content(out_content, line, f"""perf_region_start({id}, "{name}");""")
                             break
 
-                        elif p == 4:
+                        elif p == 5:
                             name = match.group(1)
                             name = name.upper()
                             print("Found end of region "+name)
@@ -123,7 +132,7 @@ class perf_regions:
                                 self.append_content(out_content, line, f"CALL perf_region_stop({id}) !"+name)
                             elif self.language == 'c':
                                 self.append_content(out_content, line, f"perf_region_stop({id}); //"+name)
-                        elif p == 5:   # timing_reset
+                        elif p == 6:   # timing_reset
                             print("Found timing_reset call")
                             if self.language == 'fortran':
                                 self.append_content(out_content, line, "! No perf_region equivalent" )

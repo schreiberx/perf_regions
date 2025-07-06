@@ -13,6 +13,19 @@ void perf_regions_init();
 
 
 
+#if USE_MPI
+#include <mpi.h>
+/**
+ * Call this from C code
+ */
+void perf_regions_init_mpi(MPI_Comm communicator);
+/**
+ * Call this from Fortran code
+ */
+void perf_regions_init_mpi_fortran(int communicator);
+#endif
+
+
 /**
  * start measuring the performance for region given by the ID.
  */
@@ -41,9 +54,6 @@ void perf_regions_output_human_readable_text();
  * Output csv file with information about each performance region
  */
 void perf_regions_output_csv();
-
-
-void perf_regions_reduce(int communicator);
 
 /**
  * DECONSTRUCTOR

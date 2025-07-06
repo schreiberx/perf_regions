@@ -5,16 +5,11 @@
 #include <sys/time.h>
 #include <string.h>
 
-//TODO ifdef
-#include <mpi.h>
-
-
 #include "perf_regions.h"
 #include "papi_counters.h"
 
 #include "perf_regions_defines.h"
-//#include "perf_regions_names.h"
-
+// #include "perf_regions_names.h"
 
 #define PRINT_PREFIX "[perf_regions.c] "
 
@@ -24,9 +19,8 @@
  * This gets handy if perf counter PAPI is not available on certain systems.
  */
 #ifndef PERF_REGIONS_USE_PAPI
-#	define PERF_REGIONS_USE_PAPI		1
+#define PERF_REGIONS_USE_PAPI 1
 #endif
-
 
 /***********************************************
  * Activate support for nested performance counters.
@@ -80,28 +74,31 @@
  *       -> accumulate performance counters		/// overheads included here for nested functions
  */
 #ifndef PERF_COUNTERS_NESTED
-#define PERF_COUNTERS_NESTED		1
+#define PERF_COUNTERS_NESTED 1
 #endif
-
 
 /*
  * Use the higher-resolution POSIX clock rather than just gettimeofday()
  */
 #ifndef PERF_TIMING_POSIX
-#define PERF_TIMING_POSIX               1
+#define PERF_TIMING_POSIX 1
 #endif
-
 
 #ifndef PERF_DEBUG
-#	define PERF_DEBUG		1
+#define PERF_DEBUG 1
 #endif
-
 
 #ifdef PERF_TIMING_POSIX
 #include "posix_clock.h"
 #endif
 
+#ifndef USE_MPI
+#define USE_MPI 1
+#endif
 
+#if USE_MPI
+#include <mpi.h>
+#endif
 
 /**
  * Structure for each of the performance regions
@@ -115,7 +112,7 @@ struct PerfRegion
 
 	// accumulator to get total wallclock time spent in this region and its variance (over time)
 	double counter_wallclock_time;
-	double variance_wallclock_time;
+	double squared_dist_wallclock_time;
 	double min_wallclock_time;
 	double max_wallclock_time;
 	double running_mean;
@@ -144,9 +141,8 @@ struct PerfRegion
 #endif
 
 	// Region name
-	char* region_name;
+	char *region_name;
 };
-
 
 struct PerfRegions
 {
@@ -168,20 +164,23 @@ struct PerfRegions
 	// names of performance counters
 	char *perf_counter_names[PERF_COUNTERS_MAX];
 
-
 #if PERF_COUNTERS_NESTED
 	// number of nested performance regions
 	int num_nested_performance_regions;
 
-	// number of maximal nested performance regions
-	#define PERF_NESTED_REGIONS_MAX 16
+// number of maximal nested performance regions
+#define PERF_NESTED_REGIONS_MAX 16
 
 	struct PerfRegion *nested_performance_regions[PERF_NESTED_REGIONS_MAX];
 #endif
-
+	// the application uses MPI / perf_regions will be called for MPI processes
+	// we want to do reduction at the end for the result
+	int use_mpi;
+#if USE_MPI
+	MPI_Comm comm;
+#endif
 
 } perf_regions;
-
 
 /**
  * reset the values in the performance regions
@@ -202,7 +201,7 @@ void perf_regions_reset()
 		r->counter_wallclock_time = 0;
 		r->max_wallclock_time = 0;
 		r->min_wallclock_time = DBL_MAX;
-		r->variance_wallclock_time = 0;
+		r->squared_dist_wallclock_time = 0;
 		r->running_mean = 0;
 
 #if PERF_COUNTERS_NESTED
@@ -242,6 +241,7 @@ void perf_regions_init()
 
 	perf_regions.use_wallclock_time = 1;
 	perf_regions.use_papi = 0;
+	perf_regions.use_mpi = 0;
 
 #if PERF_COUNTERS_NESTED
 	perf_regions.num_nested_performance_regions = 0;
@@ -317,8 +317,21 @@ void perf_regions_init()
 	perf_regions_reset();
 }
 
+#if USE_MPI
+void perf_regions_init_mpi(MPI_Comm communicator)
+{
+	perf_regions_init();
+	perf_regions.use_mpi = 1;
+	perf_regions.comm = communicator;
+}
 
+void perf_regions_init_mpi_fortran(int communicator)
+{
+	// Convert Fortran MPI communicator to C MPI communicator
+	perf_regions_init_mpi(MPI_Comm_f2c((MPI_Fint)communicator));
+}
 
+#endif
 /**
  * start measuring the performance for region given by the ID.
  */
@@ -468,23 +481,21 @@ void perf_region_stop(
 
 	if (perf_regions.use_wallclock_time)
 	{
-	#ifdef PERF_TIMING_POSIX
-		double last_wallclock_time_measurement = posix_clock() - r->region_enter_time_posix; 
-	#else
+#ifdef PERF_TIMING_POSIX
+		double last_wallclock_time_measurement = posix_clock() - r->region_enter_time_posix;
+#else
 		struct timeval tm2;
 		gettimeofday(&tm2, NULL);
-		double last_wallclock_time_measurement = ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec)
-					+ ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec)*0.000001;					
-	#endif
+		double last_wallclock_time_measurement = ((double)time_val.tv_sec - (double)r->start_time_value.tv_sec) + ((double)time_val.tv_usec - (double)r->start_time_value.tv_usec) * 0.000001;
+#endif
 
 		r->counter_wallclock_time += last_wallclock_time_measurement;
-		r->max_wallclock_time = r->max_wallclock_time > last_wallclock_time_measurement?r->max_wallclock_time:last_wallclock_time_measurement;
-		r->min_wallclock_time = r->min_wallclock_time < last_wallclock_time_measurement?r->min_wallclock_time:last_wallclock_time_measurement;
+		r->max_wallclock_time = r->max_wallclock_time > last_wallclock_time_measurement ? r->max_wallclock_time : last_wallclock_time_measurement;
+		r->min_wallclock_time = r->min_wallclock_time < last_wallclock_time_measurement ? r->min_wallclock_time : last_wallclock_time_measurement;
 		// Variance with Welford's online algorithm
 		double delta = last_wallclock_time_measurement - r->running_mean;
 		r->running_mean += delta / r->region_enter_counter;
-		r->variance_wallclock_time += delta * (last_wallclock_time_measurement - r->running_mean);
-
+		r->squared_dist_wallclock_time += delta * (last_wallclock_time_measurement - r->running_mean);
 	}
 }
 
@@ -504,8 +515,8 @@ void perf_regions_output_human_readable_text()
 #if PERF_COUNTERS_NESTED
 	fprintf(s, "\tSPOILED");
 #endif
-//TODO format
-	if (perf_regions.use_wallclock_time) {
+	if (perf_regions.use_wallclock_time)
+	{
 		fprintf(s, "\tWALLCLOCKTIME");
 		fprintf(s, "\tMIN");
 		fprintf(s, "\t\t\tMAX");
@@ -559,7 +570,7 @@ void perf_regions_output_human_readable_text()
 			fprintf(s, "\t%.7e", r->min_wallclock_time);
 			fprintf(s, "\t%.7e", r->max_wallclock_time);
 			fprintf(s, "\t%.7e", r->running_mean);
-			fprintf(s, "\t%.7e", r->variance_wallclock_time / r->region_enter_counter);
+			fprintf(s, "\t%.7e", r->squared_dist_wallclock_time / r->region_enter_counter);
 		}
 
 		fprintf(s, "\t\t\t%.0f", r->region_enter_counter);
@@ -567,7 +578,6 @@ void perf_regions_output_human_readable_text()
 		fprintf(s, "\n");
 	}
 #endif
-
 }
 
 
@@ -576,91 +586,130 @@ void perf_regions_output_csv_file()
 
 }
 
-// TODO change in prinstumentation, header, sth for fortran
-void perf_regions_reduce(int communicator) {
-	MPI_Comm comm = MPI_Comm_f2c((MPI_Fint)communicator);
-
+void reduce_and_output_human_readable_text()
+{
+	/* Reduces and aggregates performance region statistics across MPI processes.
+	 * This function performs MPI reductions (min, max, sum/average) on wallclock time and performance counters
+	 * for all regions, and outputs the results on the root process.
+	 */
+	if (!perf_regions.use_wallclock_time)
+		return;
+#if USE_MPI
 	int rank, size;
-	MPI_Comm_rank(comm, &rank);
-	MPI_Comm_size(comm, &size);
+	MPI_Comm_rank(perf_regions.comm, &rank);
+	MPI_Comm_size(perf_regions.comm, &size);
 
-	#if PERF_REGIONS_USE_PAPI
-	
+#if PERF_REGIONS_USE_PAPI
+
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
-
 		if (r->region_name == 0)
 			continue;
 
-		for (int j = 0; j < perf_regions.num_perf_counters; j++)
+		double *recv_buf = NULL;
+		if (rank == 0)
 		{
-			long long counter_value = r->counter_values[j];
-
-			double param_value = counter_value;
-			// TODO what to do with these?
-			//fprintf(s, "\t%.7e", param_value);
-		}
-		if (perf_regions.use_wallclock_time) {
-			double send_data[4] = {
-			r->counter_wallclock_time,
-			r->min_wallclock_time,
-			r->max_wallclock_time,
-			r->variance_wallclock_time / r->region_enter_counter
-			};
-			double recv_data[3][4]= {0};
-		// TODO do I want enter? (It is int)
-
-			const int ROOT_RANK = 0;
-			const MPI_Datatype DATATYPE = MPI_DOUBLE;
-			const int DATA_COUNT = 4;
-
-			// MIN, MAX, MEAN, VAR - min, max, sum, ?
-
-			const MPI_Op REDUCTION_OPS[3] = {MPI_MIN, MPI_MAX, MPI_SUM};
-    		const char* OP_NAMES[3] = {"MIN", "MAX", "AVG"};
-
-			if(rank==ROOT_RANK) {
-				FILE *s = stdout;
-				fprintf(s, "\t\tWALLCLOCKTIME\tMIN\t\t\tMAX\t\t\tVAR\n");
+			// we might have a large number of processes
+			recv_buf = (double *)malloc(size * 3 * sizeof(double));
+			if (!recv_buf)
+			{
+				fprintf(stderr, "Failed to allocate recv_buf\n");
+				exit(-1);
 			}
-
-
-			for (int o = 0; o < 3; o++) {
-			MPI_Reduce(send_data, recv_data[o], DATA_COUNT, 
-					DATATYPE, REDUCTION_OPS[o], ROOT_RANK, comm);
-
-				if(rank==ROOT_RANK) {
-					// make sum to avg
-					if(o==2) {
-						double n = 1.0*size;
-						recv_data[o][0] /= n;
-						recv_data[o][1] /= n;
-						recv_data[o][2] /= n;
-						recv_data[o][3] /= n;
-					}
-					FILE *s = stdout;
-					fprintf(s, "%s(rank)\t%.7e\t%.7e\t%.7e\t%.7e\n", OP_NAMES[o], recv_data[o][0], recv_data[o][1], recv_data[o][2], recv_data[o][3]);
-				}
-
-			}
-			
 		}
-		
+		double send_buf[3] = {r->region_enter_counter, r->running_mean, r->squared_dist_wallclock_time};
+		MPI_Gather(send_buf, 3, MPI_DOUBLE, recv_buf, 3, MPI_DOUBLE, 0, perf_regions.comm);
+
+		// Calculate mean and variance of wallclock time across all processes
+		// use the Welford/Chan parallel algorithm so it's numerically stable
+		if (rank == 0)
+		{
+			double n = 0.0;
+			double na, nb;
+			double delta = 0.0;
+			double M2 = 0.0;
+			double M2_b;
+			double avg = 0.0, avg_a, avg_b;
+			double min_wallclock_time = -1;
+			double max_wallclock_time = -1;
+			for (int j = 0; j < size; j++)
+			{
+				if (nb <= 0)
+					continue;
+				na = n;
+				nb = recv_buf[j * 3 + 0];
+				n = na + nb;
+				avg_a = avg;
+				avg_b = recv_buf[j * 3 + 1];
+				delta = avg_b - avg_a;
+				M2_b = recv_buf[j * 3 + 2];
+				M2 += M2_b + delta * delta * na * nb / n;
+				avg = (na * avg_a + nb * avg_b) / n;
+			}
+			double variance_wallclock_time = (n > 1) ? (M2 / (n - 1)) : -1.0;
+
+			// Get total minimum and maximum wallclock time
+			MPI_Reduce(&r->min_wallclock_time, &min_wallclock_time, 1, MPI_DOUBLE, MPI_MIN, 0, perf_regions.comm);
+			MPI_Reduce(&r->max_wallclock_time, &max_wallclock_time, 1, MPI_DOUBLE, MPI_MAX, 0, perf_regions.comm);
+
+			FILE *s = stdout;
+			fprintf(s, "[PERF_REGIONS] section name: %s\n", r->region_name);
+			fprintf(s, "[PERF_REGIONS] [%s].total_samples: %.0f\n", r->region_name, n);
+			fprintf(s, "[PERF_REGIONS] [%s].min_wallclock_time: %.7e\n", r->region_name, min_wallclock_time);
+			fprintf(s, "[PERF_REGIONS] [%s].max_wallclock_time: %.7e\n", r->region_name, max_wallclock_time);
+			fprintf(s, "[PERF_REGIONS] [%s].mean_wallclock_time: %.7e\n", r->region_name, avg);
+			fprintf(s, "[PERF_REGIONS] [%s].variance_wallclock_time: %.7e\n", r->region_name, variance_wallclock_time);
+
+			free(recv_buf);
+		}
+		// Not root process? No mean calculation ot printing, just send the min and max wallclock time
+		else
+		{
+			MPI_Reduce(&r->min_wallclock_time, NULL, 1, MPI_DOUBLE, MPI_MIN, 0, perf_regions.comm);
+			MPI_Reduce(&r->max_wallclock_time, NULL, 1, MPI_DOUBLE, MPI_MAX, 0, perf_regions.comm);
+		}
 	}
-	if (rank==0)
+	// Also print results of other performance counters but just for rank 0
+	if (rank == 0)
+	{
+		fprintf(stdout, "Perf_regions, results for rank %d:\n", rank);
 		perf_regions_output_human_readable_text();
-	perf_regions_shutdown();
-#endif	
-
+	}
+#endif
+#endif
 }
 
-void perf_regions_shutdown() {
+/**
+ * DECONSTRUCTOR
+ */
+void perf_regions_finalize()
+{
+#if USE_MPI
+	// Use MPI to generate statistics and output these and the result for rank 0
+	if (perf_regions.use_mpi)
+	{
+		reduce_and_output_human_readable_text();
+	}
+	else 
+	{
+		perf_regions_output_human_readable_text();
+	}
+#else
+
+/* output performance information on each region to console */
+		perf_regions_output_human_readable_text();
+#endif
+
 	/*
-	 * DECONSTRUCTUR
+	 * Output .csv file
 	 */
-	if (perf_regions.perf_regions_list != NULL)	{
-		for (int i = 0; i < PERF_REGIONS_MAX; i++) {
+	perf_regions_output_csv_file();
+
+	if (perf_regions.perf_regions_list != NULL)
+	{
+		for (int i = 0; i < PERF_REGIONS_MAX; i++)
+		{
 			if (perf_regions.perf_regions_list[i].region_name != 0)
 				free(perf_regions.perf_regions_list[i].region_name);
 		}
@@ -681,24 +730,4 @@ void perf_regions_shutdown() {
 
 	for (int i = 0; i < perf_regions.num_perf_counters; i++)
 		free(perf_regions.perf_counter_names[i]);
-
-}
-
-/**
- * DECONSTRUCTOR
- */
-void perf_regions_finalize()
-{
-	/*
-	 * output performance information on each region to console
-	 */
-	perf_regions_output_human_readable_text();
-
-	/*
-	 * Output .csv file
-	 */
-	perf_regions_output_csv_file();
-
-	perf_regions_shutdown();
-	
 }

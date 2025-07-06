@@ -7,15 +7,14 @@ MODULE perf_regions_fortran
                 use iso_c_binding
         end subroutine perf_regions_init
 
+        subroutine perf_regions_init_mpi_fortran(communicator) bind(C, name ="perf_regions_init_mpi_fortran")
+                use iso_c_binding, only: C_INT
+                INTEGER(kind=C_INT), VALUE, INTENT(IN) :: communicator
+        end subroutine perf_regions_init_mpi_fortran
 
         subroutine perf_regions_finalize() bind(C, name ="perf_regions_finalize")
                 use iso_c_binding
         end subroutine perf_regions_finalize
-
-        subroutine perf_regions_reduce(communicator) bind(C, name ="perf_regions_reduce")
-                use iso_c_binding, only: C_INT
-                INTEGER(kind=C_INT), VALUE, INTENT(IN) :: communicator
-        end subroutine perf_regions_reduce
 
         subroutine perf_region_start(region_id, region_name) bind(C, name ="perf_region_start")
                 use, intrinsic :: iso_c_binding, only: C_CHAR, C_INT

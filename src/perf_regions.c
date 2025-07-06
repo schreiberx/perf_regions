@@ -337,7 +337,16 @@ void perf_regions_init_mpi(MPI_Comm communicator)
 void perf_regions_init_mpi_fortran(int communicator)
 {
 	// Convert Fortran MPI communicator to C MPI communicator
-	perf_regions_init_mpi(MPI_Comm_f2c((MPI_Fint)communicator));
+	MPI_Comm comm = MPI_Comm_f2c((MPI_Fint)communicator);
+	if(comm == MPI_COMM_NULL) {
+		fprintf(stderr, "Invalid MPI communicator passed to perf_regions_init_mpi_fortran\n");
+		exit(EXIT_FAILURE);
+	}
+	if(perf_regions.verbosity > 0) {
+		printf(PRINT_PREFIX"Using MPI communicator %d for performance regions\n", communicator);
+	}
+	// Initialize performance regions with the MPI communicator	
+	perf_regions_init_mpi(comm);
 }
 
 #endif
@@ -644,10 +653,10 @@ void reduce_and_output_human_readable_text()
 			double max_wallclock_time = -1;
 			for (int j = 0; j < size; j++)
 			{
-				if (nb <= 0)
-					continue;
 				na = n;
 				nb = recv_buf[j * 3 + 0];
+				if (nb <= 0)
+					continue;
 				n = na + nb;
 				avg_a = avg;
 				avg_b = recv_buf[j * 3 + 1];

@@ -4,6 +4,7 @@
 #include <float.h>
 #include <sys/time.h>
 #include <string.h>
+ 
 
 #include "perf_regions.h"
 #include "papi_counters.h"
@@ -19,8 +20,9 @@
  * This gets handy if perf counter PAPI is not available on certain systems.
  */
 #ifndef PERF_REGIONS_USE_PAPI
-#define PERF_REGIONS_USE_PAPI 1
+#	define PERF_REGIONS_USE_PAPI		1
 #endif
+
 
 /***********************************************
  * Activate support for nested performance counters.
@@ -74,19 +76,22 @@
  *       -> accumulate performance counters		/// overheads included here for nested functions
  */
 #ifndef PERF_COUNTERS_NESTED
-#define PERF_COUNTERS_NESTED 1
+#define PERF_COUNTERS_NESTED		1
 #endif
+
 
 /*
  * Use the higher-resolution POSIX clock rather than just gettimeofday()
  */
 #ifndef PERF_TIMING_POSIX
-#define PERF_TIMING_POSIX 1
+#define PERF_TIMING_POSIX               1
 #endif
 
+
 #ifndef PERF_DEBUG
-#define PERF_DEBUG 1
+#	define PERF_DEBUG		1
 #endif
+
 
 #ifdef PERF_TIMING_POSIX
 #include "posix_clock.h"
@@ -141,8 +146,9 @@ struct PerfRegion
 #endif
 
 	// Region name
-	char *region_name;
+	char* region_name;
 };
+
 
 struct PerfRegions
 {
@@ -164,15 +170,17 @@ struct PerfRegions
 	// names of performance counters
 	char *perf_counter_names[PERF_COUNTERS_MAX];
 
+
 #if PERF_COUNTERS_NESTED
 	// number of nested performance regions
 	int num_nested_performance_regions;
 
-// number of maximal nested performance regions
-#define PERF_NESTED_REGIONS_MAX 16
+	// number of maximal nested performance regions
+	#define PERF_NESTED_REGIONS_MAX 16
 
 	struct PerfRegion *nested_performance_regions[PERF_NESTED_REGIONS_MAX];
 #endif
+
 	// the application uses MPI / perf_regions will be called for MPI processes
 	// we want to do reduction at the end for the result
 	int use_mpi;
@@ -181,6 +189,7 @@ struct PerfRegions
 #endif
 
 } perf_regions;
+
 
 /**
  * reset the values in the performance regions
@@ -693,6 +702,7 @@ void perf_regions_finalize()
 	}
 	else 
 	{
+		/* output performance information on each region to console */
 		perf_regions_output_human_readable_text();
 	}
 #else
@@ -706,10 +716,12 @@ void perf_regions_finalize()
 	 */
 	perf_regions_output_csv_file();
 
-	if (perf_regions.perf_regions_list != NULL)
-	{
-		for (int i = 0; i < PERF_REGIONS_MAX; i++)
-		{
+
+	/*
+	 * DECONSTRUCTUR
+	 */
+	if (perf_regions.perf_regions_list != NULL)	{
+		for (int i = 0; i < PERF_REGIONS_MAX; i++) {
 			if (perf_regions.perf_regions_list[i].region_name != 0)
 				free(perf_regions.perf_regions_list[i].region_name);
 		}

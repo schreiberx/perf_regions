@@ -345,7 +345,6 @@ void perf_regions_init_mpi_fortran(int communicator)
 	if(perf_regions.verbosity > 0) {
 		printf(PRINT_PREFIX"Using MPI communicator %d for performance regions\n", communicator);
 	}
-	// Initialize performance regions with the MPI communicator	
 	perf_regions_init_mpi(comm);
 }
 
@@ -389,7 +388,7 @@ void perf_region_start(
 #if PERF_REGIONS_USE_PAPI
 	if (perf_regions.use_papi)
 	{
-#if PERF_COUNTERS_NESTED
+#  if PERF_COUNTERS_NESTED
 
 		perf_regions.nested_performance_regions[perf_regions.num_nested_performance_regions] = r;
 
@@ -414,9 +413,9 @@ void perf_region_start(
 
 		perf_regions.num_nested_performance_regions++;
 
-#else
+#  else
 		papi_counters_start();
-#endif
+#  endif
 	}
 
 
@@ -455,7 +454,7 @@ void perf_region_stop(
 #if PERF_REGIONS_USE_PAPI
 	if (perf_regions.use_papi)
 	{
-#if PERF_COUNTERS_NESTED
+#  if PERF_COUNTERS_NESTED
 
 		perf_regions.num_nested_performance_regions--;
 
@@ -485,7 +484,7 @@ void perf_region_stop(
 			}
 		}
 
-#else
+#  else
 
 		long long counter_values_stop[PERF_COUNTERS_MAX];
 		papi_counters_stop(counter_values_stop);
@@ -493,7 +492,7 @@ void perf_region_stop(
 		for (int j = 0; j < perf_regions.num_perf_counters; j++)
 			r->counter_values[j] += counter_values_stop[j];
 
-#endif
+#  endif
 	}
 #endif
 
@@ -530,9 +529,9 @@ void perf_regions_output_human_readable_text()
 	fprintf(s, "Section");
 	for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_regions.perf_counter_names[j]);
-#if PERF_COUNTERS_NESTED
+#  if PERF_COUNTERS_NESTED
 	fprintf(s, "\tSPOILED");
-#endif
+#  endif
 	if (perf_regions.use_wallclock_time)
 	{
 		fprintf(s, "\tWALLCLOCKTIME");
@@ -544,7 +543,7 @@ void perf_regions_output_human_readable_text()
 	fprintf(s, "\tCOUNTER");
 	fprintf(s, "\n");
 
-#if PERF_DEBUG
+#  if PERF_DEBUG
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
@@ -558,7 +557,7 @@ void perf_regions_output_human_readable_text()
 			exit(-1);
 		}
 	}
-#endif
+#  endif
 
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
@@ -580,9 +579,9 @@ void perf_regions_output_human_readable_text()
 
 			fprintf(s, "\t%.7e", param_value);
 		}
-#if PERF_COUNTERS_NESTED
+#  if PERF_COUNTERS_NESTED
 		fprintf(s, "\t\t%i\t", r->spoiled);
-#endif
+#  endif
 		if (perf_regions.use_wallclock_time) {
 			fprintf(s, "\t%.7e", r->counter_wallclock_time);
 			fprintf(s, "\t%.7e", r->min_wallclock_time);
@@ -617,7 +616,7 @@ void reduce_and_output_human_readable_text()
 	MPI_Comm_rank(perf_regions.comm, &rank);
 	MPI_Comm_size(perf_regions.comm, &size);
 
-#if PERF_REGIONS_USE_PAPI
+#  if PERF_REGIONS_USE_PAPI
 
 	for (int i = 0; i < PERF_REGIONS_MAX; i++)
 	{
@@ -694,7 +693,7 @@ void reduce_and_output_human_readable_text()
 		fprintf(stdout, "Perf_regions, results for rank %d:\n", rank);
 		perf_regions_output_human_readable_text();
 	}
-#endif
+#  endif
 #endif
 }
 

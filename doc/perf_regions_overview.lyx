@@ -109,7 +109,7 @@ PerfRegions Documentation
 \end_layout
 
 \begin_layout Author
-Silvia Mocavero, Andrew Porter, Martin Schreiber
+Anna Mittermair, Silvia Mocavero, Andrew Porter, Martin Schreiber
 \end_layout
 
 \begin_layout Verbatim
@@ -546,7 +546,7 @@ The following table gives an overview of the language extensions:
 
 \begin_layout Standard
 \begin_inset Tabular
-<lyxtabular version="3" rows="6" columns="2">
+<lyxtabular version="3" rows="7" columns="2">
 <features tabularvalignment="middle">
 <column alignment="left" valignment="top">
 <column alignment="left" valignment="top" width="10cm">
@@ -604,11 +604,36 @@ init
 
 \end_inset
 </cell>
-<cell alignment="left" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+<cell alignment="left" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
 \begin_inset Text
 
 \begin_layout Plain Layout
 Initialize the PerfRegion library
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+init_mpi [communicator]
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Initialize the PerfRegion library, and set the MPI communicator.
+\end_layout
+
+\begin_layout Plain Layout
+This means results will be accumulated over all the communicator's ranks
+ at finalize.
 \end_layout
 
 \end_inset
@@ -742,6 +767,11 @@ PROGRAM main
 \begin_layout Plain Layout
 
     CALL timing_init()
+\end_layout
+
+\begin_layout Plain Layout
+
+	! or alternatively: CALL timing_init_mpi(MPI_COMM_WORLD)	
 \end_layout
 
 \begin_layout Plain Layout
@@ -916,6 +946,56 @@ status open
 \begin_layout Plain Layout
 
 $ make MODE=debug
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection
+MPI support
+\end_layout
+
+\begin_layout Standard
+When using MPI you can track the wallclocktime for every MPI process individuall
+y and in the end accumulate the results for all ranks.
+ To be able to do this, you need to switch it on in the following way:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Box Doublebox
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\begin_inset listings
+lstparams "language={[90]Fortran}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+$ make USE_MPI=1
 \end_layout
 
 \end_inset
@@ -1424,6 +1504,133 @@ BARB	6.2486545e+07	4.7860065e+07	2.2210664e+07	2.1407764e+10	0	1549
 \end_inset
 
 
+\end_layout
+
+\begin_layout Subsection
+Accumulation of results for multiple MPI processes
+\end_layout
+
+\begin_layout Standard
+When using MPI you can track the wallclocktime etc for every MPI process
+ individually and then in the end accumulate the results for all ranks.
+ This is activated by using the 
+\emph on
+init_mpi
+\emph default
+ annotation instead of 
+\emph on
+init
+\emph default
+.
+ The results give the total mean, minimum, maximum and variance over all
+ wallclocktime measurements of a given section for all ranks and additionally
+ all the results for rank 0.
+\end_layout
+
+\begin_layout Standard
+An example output looks as follows:
+\end_layout
+
+\begin_layout Standard
+\noindent
+\begin_inset Box Doublebox
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "100col%"
+special "none"
+height "1in"
+height_special "totalheight"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+\begin_inset listings
+lstparams "language={[90]Fortran},basicstyle={\scriptsize}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+[PERF_REGIONS] section name: STEP 
+\end_layout
+
+\begin_layout Plain Layout
+
+[PERF_REGIONS] [STEP].total_samples: 44 
+\end_layout
+
+\begin_layout Plain Layout
+
+[PERF_REGIONS] [STEP].min_wallclock_time: 1.6641617e-04 
+\end_layout
+
+\begin_layout Plain Layout
+
+[PERF_REGIONS] [STEP].max_wallclock_time: 9.1576576e-04 
+\end_layout
+
+\begin_layout Plain Layout
+
+[PERF_REGIONS] [STEP].mean_wallclock_time: 3.0701811e-04 
+\end_layout
+
+\begin_layout Plain Layout
+
+[PERF_REGIONS] [STEP].variance_wallclock_time: 6.0474020e-08 
+\end_layout
+
+\begin_layout Plain Layout
+
+Perf_regions, results for rank 0: 
+\end_layout
+
+\begin_layout Plain Layout
+
+Performance counters profiling: 
+\end_layout
+
+\begin_layout Plain Layout
+
+----------------------
+\end_layout
+
+\begin_layout Plain Layout
+
+Section  PAPI_L1_TCM  SPOILED  WALLCLOCKTIME  MIN           MAX        
+   MEAN         VAR     COUNTER 
+\end_layout
+
+\begin_layout Plain Layout
+
+STEP  1.6625300e+05   0        3.3783913e-03  1.6784668e-04 9.1433525e-04 3.0712648e-
+04 5.9292986e-08 11
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\noindent
+When just using 
+\emph on
+init
+\emph default
+, normal non-accumulated results are given for all MPI processes.
 \end_layout
 
 \begin_layout Section

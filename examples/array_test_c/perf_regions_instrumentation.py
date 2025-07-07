@@ -9,7 +9,8 @@ import perf_regions
 pf = perf_regions.perf_regions(
         ["./"],    # list with source directories
         [
-            ".*#pragma perf_regions init.*",        # initialization of timing
+            ".*#pragma perf_regions init[^_]*",        # initialization of timing
+            ".*#pragma perf_regions init_mpi (.*).*",  # initialization of timing when using mpi
             ".*#pragma perf_regions finalize.*",    # shutdown of timing
 
             ".*#pragma perf_regions include.*",    # include part

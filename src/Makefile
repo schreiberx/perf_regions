@@ -17,6 +17,15 @@ mode.debug:=-DPERF_DEBUG=1
 CFLAGS:=${CFLAGS} ${mode.${MODE}}
 F90FLAGS:=${F90FLAGS} ${mode.${MODE}}
 
+# If USE_MPI is set to 1, we use mpicc and add the -DUSE_MPI=1 flag, otherwise it's 0
+USE_MPI:=0	
+ifeq (${USE_MPI},1)
+	MPICC:=mpicc
+	CFLAGS:=${CFLAGS} -DUSE_MPI=1
+else
+	CFLAGS:=${CFLAGS} -DUSE_MPI=0
+endif
+
 SRCS_C:=$(wildcard *.c)
 SRCS_F90:=$(wildcard *.F90)
 OBJS:=$(patsubst %.c,${BUILD_DIR}/%.o,$(SRCS_C)) $(patsubst %.F90,${BUILD_DIR}/%.o,$(SRCS_F90))

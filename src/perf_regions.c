@@ -524,9 +524,9 @@ void perf_regions_output_human_readable_text()
 #if PERF_REGIONS_USE_PAPI
 	FILE *s = stdout;
 
-	fprintf(s, "Performance counters profiling:\n");
-	fprintf(s, "----------------------\n");
-	fprintf(s, "Section");
+	fprintf(s, "[MULE] perf_regions: Performance counters profiling:\n");
+	fprintf(s, "[MULE] perf_regions: ----------------------\n");
+	fprintf(s, "[MULE] perf_regions: Section");
 	for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_regions.perf_counter_names[j]);
 #  if PERF_COUNTERS_NESTED
@@ -566,7 +566,7 @@ void perf_regions_output_human_readable_text()
 		if (r->region_name == 0)
 			continue;
 
-		fprintf(s, "%s", r->region_name);
+		fprintf(s, "[MULE] perf_regions: %s", r->region_name);
 
 		for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		{

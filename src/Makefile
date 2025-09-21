@@ -2,34 +2,38 @@
 PAPI_INC:=
 PAPI_LIB:=
 
-F90=gfortran
+ifndef F90
+	ifndef FC
+		F90:=gfortran
+	else
+		F90:=${FC}
+	endif
+endif
 
+ifndef CFLAGS
+	CFLAGS:=-g -O3 -fPIC -Wall
+endif
 
-MPICC:=gcc
+ifndef USE_MPI
+	USE_MPI:=1
+else
+	USE_MPI:=0
+endif
+
 BUILD_DIR:=../build/
-CFLAGS:=-g -O3 -fPIC -Wall
 
 mode.:=-DPERF_DEBUG=0
 mode.release:=-DPERF_DEBUG=0
 mode.debug:=-DPERF_DEBUG=1
 
-# Disable DEBUG overheads in perf region library
-CFLAGS:=${CFLAGS} ${mode.${MODE}}
+CFLAGS:=${CFLAGS} ${mode.${MODE}} -DUSE_MPI=${USE_MPI}
 F90FLAGS:=${F90FLAGS} ${mode.${MODE}}
-
-# If USE_MPI is set to 1, we use mpicc and add the -DUSE_MPI=1 flag, otherwise it's 0
-USE_MPI:=0	
-ifeq (${USE_MPI},1)
-	MPICC:=mpicc
-	CFLAGS:=${CFLAGS} -DUSE_MPI=1
-else
-	CFLAGS:=${CFLAGS} -DUSE_MPI=0
-endif
 
 SRCS_C:=$(wildcard *.c)
 SRCS_F90:=$(wildcard *.F90)
 OBJS:=$(patsubst %.c,${BUILD_DIR}/%.o,$(SRCS_C)) $(patsubst %.F90,${BUILD_DIR}/%.o,$(SRCS_F90))
 MODS:=$(patsubst %.F90,${BUILD_DIR}/%.mod,$(SRCS_F90))
+
 TARGET_LIB:=${BUILD_DIR}/libperf_regions.so
 
 all:
@@ -38,15 +42,15 @@ all:
 
 
 ${BUILD_DIR}/libperf_regions.so: ${OBJS}
-	${MPICC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${OBJS} -o ${TARGET_LIB} -lpapi
+	${CC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${OBJS} -o ${TARGET_LIB}
 
 ${BUILD_DIR}/papi_counters.o: papi_counters.c papi_counters.h
 	mkdir -p ${BUILD_DIR}
-	${MPICC} ${CFLAGS} -c -g -I${PAPI_INC} -L${PAPI_LIB} -c papi_counters.c -o ${BUILD_DIR}/papi_counters.o  -lpapi
+	${CC} ${CFLAGS} -c -g -I${PAPI_INC} -L${PAPI_LIB} -c papi_counters.c -o ${BUILD_DIR}/papi_counters.o
 
 ${BUILD_DIR}/%.o: %.c %.h
 	mkdir -p ${BUILD_DIR}
-	${MPICC} ${CFLAGS} -c -g $< -o $@
+	${CC} ${CFLAGS} -c -g $< -o $@
 
 # Generate Fortran ugly interfaces
 ${BUILD_DIR}/perf_regions_fortran.o: perf_regions_fortran.F90

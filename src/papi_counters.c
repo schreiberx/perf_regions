@@ -10,6 +10,8 @@
 #define PRINT_PREFIX "[papi_counters.c] "
 
 
+#if PERF_REGIONS_USE_PAPI
+
 /**
  * Struct to gather all variables
  */
@@ -225,4 +227,4 @@ void papi_counters_read_and_reset(
 	}
 }
 
-
+#endif

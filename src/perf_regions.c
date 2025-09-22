@@ -307,7 +307,9 @@ void perf_regions_init()
 		event = strtok(NULL, ",");
 	}
 
+#if PERF_REGIONS_USE_PAPI
 	papi_counters_init(perf_regions.perf_counter_names, perf_regions.num_perf_counters, perf_regions.verbosity);
+#endif
 
 	free(perf_counter_list_tokens);
 
@@ -521,7 +523,6 @@ void perf_region_stop(
 void perf_regions_output_human_readable_text()
 {
 
-#if PERF_REGIONS_USE_PAPI
 	FILE *s = stdout;
 
 	fprintf(s, "[MULE] perf_regions: Performance counters profiling:\n");
@@ -568,6 +569,8 @@ void perf_regions_output_human_readable_text()
 
 		fprintf(s, "[MULE] perf_regions: %s", r->region_name);
 
+
+#if PERF_REGIONS_USE_PAPI
 		for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		{
 			long long counter_value = r->counter_values[j];
@@ -579,6 +582,8 @@ void perf_regions_output_human_readable_text()
 
 			fprintf(s, "\t%.7e", param_value);
 		}
+#endif
+
 #  if PERF_COUNTERS_NESTED
 		fprintf(s, "\t\t%i\t", r->spoiled);
 #  endif
@@ -594,7 +599,6 @@ void perf_regions_output_human_readable_text()
 
 		fprintf(s, "\n");
 	}
-#endif
 }
 
 
@@ -738,7 +742,9 @@ void perf_regions_finalize()
 		perf_regions.perf_regions_list = NULL;
 	}
 
+#ifndef PERF_REGIONS_USE_PAPI
 	papi_counters_finalize();
+#endif
 
 #if PERF_COUNTERS_NESTED
 	if (perf_regions.num_nested_performance_regions != 0)

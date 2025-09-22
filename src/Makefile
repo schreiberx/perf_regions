@@ -10,6 +10,12 @@ ifndef CFLAGS
 	CFLAGS:=${CFLAGS} -g -O3 -fPIC -Wall
 endif
 
+ifeq ($(PERF_REGIONS_USE_PAPI),1)
+	CFLAGS:=${CFLAGS} -DPERF_REGIONS_USE_PAPI=1
+else
+	CFLAGS:=${CFLAGS} -DPERF_REGIONS_USE_PAPI=0
+endif
+
 ifndef USE_MPI
 	USE_MPI:=1
 endif

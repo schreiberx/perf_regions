@@ -3,21 +3,15 @@ PAPI_INC:=
 PAPI_LIB:=
 
 ifndef F90
-	ifndef FC
-		F90:=gfortran
-	else
-		F90:=${FC}
-	endif
+	F90:=gfortran
 endif
 
 ifndef CFLAGS
-	CFLAGS:=-g -O3 -fPIC -Wall
+	CFLAGS:=${CFLAGS} -g -O3 -fPIC -Wall
 endif
 
 ifndef USE_MPI
 	USE_MPI:=1
-else
-	USE_MPI:=0
 endif
 
 BUILD_DIR:=../build/
@@ -42,11 +36,11 @@ all:
 
 
 ${BUILD_DIR}/libperf_regions.so: ${OBJS}
-	${CC} -fPIC -shared -I${PAPI_INC} -L${PAPI_LIB} ${OBJS} -o ${TARGET_LIB}
+	${CC} -fPIC -shared ${PAPI_INC} ${PAPI_LIB} ${OBJS} -o ${TARGET_LIB}
 
 ${BUILD_DIR}/papi_counters.o: papi_counters.c papi_counters.h
 	mkdir -p ${BUILD_DIR}
-	${CC} ${CFLAGS} -c -g -I${PAPI_INC} -L${PAPI_LIB} -c papi_counters.c -o ${BUILD_DIR}/papi_counters.o
+	${CC} ${CFLAGS} -c -g ${PAPI_INC} ${PAPI_LIB} -c papi_counters.c -o ${BUILD_DIR}/papi_counters.o
 
 ${BUILD_DIR}/%.o: %.c %.h
 	mkdir -p ${BUILD_DIR}
@@ -58,7 +52,7 @@ ${BUILD_DIR}/perf_regions_fortran.o: perf_regions_fortran.F90
 	${F90} -cpp -c perf_regions_fortran.F90 -o ${BUILD_DIR}/perf_regions_fortran.o
 	mv -f perf_regions_fortran.mod "${BUILD_DIR}"
 
--include Makefile.deps
+# -include Makefile.deps
 
 Makefile.deps:
 	$(CC) $(CFLAGS) -MM *.c > $@

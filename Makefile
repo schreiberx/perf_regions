@@ -60,23 +60,23 @@ build_src: all
 ifeq ($(BUILD_METHOD),make)
 
 build_src:
-	make -C ./src MODE=${MODE}
+	make -C ./src MODE=${MODE} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
 
 examples:
-	make -C ./examples MODE=${MODE}
+	make -C ./examples MODE=${MODE} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
 
 run_tests:
-	make -C ./examples run_tests MODE=${MODE}
+	make -C ./examples run_tests MODE=${MODE} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
 
 install: build_src
-	make -C ./src install PREFIX=${PREFIX}
+	make -C ./src install PREFIX=${PREFIX} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
 
 uninstall:
-	make -C ./src uninstall PREFIX=${PREFIX}
+	make -C ./src uninstall PREFIX=${PREFIX} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
 
 clean:
-	make -C ./src clean MODE=${MODE}
-	make -C ./examples clean MODE=${MODE}
+	make -C ./src clean MODE=${MODE} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
+	make -C ./examples clean MODE=${MODE} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
 
 # CMake build
 else ifeq ($(BUILD_METHOD),cmake)
@@ -148,3 +148,11 @@ help:
 	@echo "  BUILD_DIR                 - CMake build directory (default: build)"
 	@echo "  CMAKE_BUILD_TYPE          - CMake build type (default: Release)"
 	@echo "  CMAKE_OPTIONS             - Additional CMake options"
+
+# Clean all generated files including configure outputs  
+distclean:
+	make clean BUILD_METHOD=make 2>/dev/null || true
+	make cmake-clean 2>/dev/null || true
+	rm -rf build build-* *.log
+	rm -f configure_done.txt
+	@echo "Complete cleanup finished"

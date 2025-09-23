@@ -99,6 +99,13 @@ install(FILES
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/perf_regions
 )
 
+# Install the perf_regions.py script
+install(FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/scripts/perf_regions.py"
+    DESTINATION ${CMAKE_INSTALL_BINDIR}
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+)
+
 # CPack configuration for packaging
 set(CPACK_PACKAGE_NAME "perf_regions")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})

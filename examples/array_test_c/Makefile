@@ -3,12 +3,23 @@ CC:=gcc
 CXX:=g++
 
 PAPI_LIB:=-L/users/home/opt/papi/papi-5.1.0/lib/ -lpapi 
-PERFREGION_LIB:=-L../../build -lperf_regions
+
+# Detect which build system to use
+ifneq (,$(wildcard ../../build/libperf_regions.so))
+    # CMake build exists
+    PERFREGION_LIB:=-L../../build -lperf_regions
+else ifneq (,$(wildcard ../../src/libperf_regions.so))
+    # Traditional Makefile build exists  
+    PERFREGION_LIB:=-L../../src -lperf_regions
+else
+    # Default to src location
+    PERFREGION_LIB:=-L../../src -lperf_regions
+endif
 
 CFLAGS_PERFREGION:=-I../../src
 LINKFLAGS_PERFREGION:=${PAPI_LIB} ${PERFREGION_LIB}
 
-all:	build
+all:	tests
 
 build:
 	make  -C ../../src
@@ -30,5 +41,7 @@ array_test_perf_region:
 
 clean :
 	./perf_regions_instrumentation.py cleanup
-	rm -f array_test array_test_perf_region
+	rm -f array_test array_test_perf_region *.o *.mod
 	rm -f perf_region_list.txt
+
+.PHONY: all build run_tests tests array_test array_test_perf_region clean

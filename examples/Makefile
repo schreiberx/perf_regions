@@ -21,3 +21,5 @@ clean:
 	make -C stream_benchmark clean
 	make -C nemo_test_f clean
 	make -C nested_test_f clean
+
+.PHONY: all run_tests clean

@@ -3,7 +3,18 @@ CC:=gcc
 CXX:=g++
 
 PAPI_LIB:=-L. -lpapi 
-PERFREGION_LIB:=-L../../build -lperf_regions -I../../build
+
+# Detect which build system to use
+ifneq (,$(wildcard ../../build/libperf_regions.so))
+    # CMake build exists
+    PERFREGION_LIB:=-L../../build -lperf_regions -I../../build
+else ifneq (,$(wildcard ../../src/libperf_regions.so))
+    # Traditional Makefile build exists  
+    PERFREGION_LIB:=-L../../src -lperf_regions
+else
+    # Default to src location
+    PERFREGION_LIB:=-L../../src -lperf_regions
+endif
 
 CFLAGS_PERFREGION:=-I../../src -O0 -g
 LINKFLAGS_PERFREGION:=${PAPI_LIB} ${PERFREGION_LIB}
@@ -29,4 +40,7 @@ nested_test_perf_regions: nested_test.F90
 
 clean :
 	./perf_regions_instrumentation.py cleanup
-	rm -f nested_test nested_test_perf_regions perf_regions_fortran.o
+	rm -f nested_test nested_test_perf_regions perf_regions_fortran.o *.mod
+	rm -f perf_region_list.txt
+
+.PHONY: all build run_tests nested_test nested_test_perf_regions clean

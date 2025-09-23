@@ -1,100 +1,97 @@
+# Traditional Makefile for perf_regions library
+# This provides the traditional build system support
 
-PAPI_INC:=
-PAPI_LIB:=
+# Compiler settings
+CC ?= gcc
+FC ?= gfortran
 
-ifndef F90
-	F90:=gfortran
-endif
+# Compiler flags
+CFLAGS ?= -fPIC -Wall -O2
+FCFLAGS ?= -fPIC -Wall -O2
+LDFLAGS ?= -shared
 
-ifndef CFLAGS
-	CFLAGS:=${CFLAGS} -g -O3 -fPIC -Wall
-endif
-
-ifeq ($(PERF_REGIONS_USE_PAPI),1)
-	CFLAGS:=${CFLAGS} -DPERF_REGIONS_USE_PAPI=1
+# MPI settings
+USE_MPI ?= 1
+ifeq ($(USE_MPI),1)
+MPI_CC ?= mpicc
+MPI_FC ?= mpif90
+CC = $(MPI_CC)
+FC = $(MPI_FC)
+CFLAGS += -DUSE_MPI=1
 else
-	CFLAGS:=${CFLAGS} -DPERF_REGIONS_USE_PAPI=0
+CFLAGS += -DUSE_MPI=0
 endif
 
-ifndef USE_MPI
-	USE_MPI:=1
+# PAPI settings
+USE_PAPI ?= 1
+ifeq ($(USE_PAPI),1)
+CFLAGS += -DPERF_REGIONS_USE_PAPI=1
+LDFLAGS += -lpapi
+else
+CFLAGS += -DPERF_REGIONS_USE_PAPI=0
 endif
 
-BUILD_DIR:=../build/
-
-mode.:=-DPERF_DEBUG=0
-mode.release:=-DPERF_DEBUG=0
-mode.debug:=-DPERF_DEBUG=1
-
-CFLAGS:=${CFLAGS} ${mode.${MODE}} -DUSE_MPI=${USE_MPI}
-F90FLAGS:=${F90FLAGS} ${mode.${MODE}}
-
-SRCS_C:=$(wildcard *.c)
-SRCS_F90:=$(wildcard *.F90)
-OBJS:=$(patsubst %.c,${BUILD_DIR}/%.o,$(SRCS_C)) $(patsubst %.F90,${BUILD_DIR}/%.o,$(SRCS_F90))
-MODS:=$(patsubst %.F90,${BUILD_DIR}/%.mod,$(SRCS_F90))
-
-TARGET_LIB:=${BUILD_DIR}/libperf_regions.so
-
-all:
-	make Makefile.deps
-	make ${TARGET_LIB}
-
-
-${BUILD_DIR}/libperf_regions.so: ${OBJS}
-	${CC} -fPIC -shared ${PAPI_INC} ${PAPI_LIB} ${OBJS} -o ${TARGET_LIB}
-
-${BUILD_DIR}/papi_counters.o: papi_counters.c papi_counters.h
-	mkdir -p ${BUILD_DIR}
-	${CC} ${CFLAGS} -c -g ${PAPI_INC} ${PAPI_LIB} -c papi_counters.c -o ${BUILD_DIR}/papi_counters.o
-
-${BUILD_DIR}/%.o: %.c %.h
-	mkdir -p ${BUILD_DIR}
-	${CC} ${CFLAGS} -c -g $< -o $@
-
-# Generate Fortran ugly interfaces
-${BUILD_DIR}/perf_regions_fortran.o: perf_regions_fortran.F90
-	mkdir -p ${BUILD_DIR}
-	${F90} -cpp -c perf_regions_fortran.F90 -o ${BUILD_DIR}/perf_regions_fortran.o
-	mv -f perf_regions_fortran.mod "${BUILD_DIR}"
-
-# -include Makefile.deps
-
-Makefile.deps:
-	$(CC) $(CFLAGS) -MM *.c > $@
-	$(F90) $(F90FLAGS) -MM *.F90 >> $@
-
-
-clean:
-	rm -f ${TARGET_LIB}
-	rm -f ${OBJS}
-	rm -f ${MODS}
-
-# Install targets
+# Install settings
 PREFIX ?= /usr/local
-DESTDIR ?=
-INSTALL_LIBDIR ?= ${PREFIX}/lib
-INSTALL_INCLUDEDIR ?= ${PREFIX}/include/perf_regions
+LIBDIR = $(PREFIX)/lib
+INCLUDEDIR = $(PREFIX)/include/perf_regions
+BINDIR = $(PREFIX)/bin
 
-install: ${TARGET_LIB}
-	@echo "Installing to prefix: ${PREFIX}"
-	@echo "DESTDIR: ${DESTDIR}"
-	install -d ${DESTDIR}${INSTALL_LIBDIR}
-	install -d ${DESTDIR}${INSTALL_INCLUDEDIR}
-	install -m 644 ${TARGET_LIB} ${DESTDIR}${INSTALL_LIBDIR}/
-	install -m 644 perf_regions.h ${DESTDIR}${INSTALL_INCLUDEDIR}/
-	install -m 644 perf_regions_defines.h ${DESTDIR}${INSTALL_INCLUDEDIR}/
-	@if [ -f ${BUILD_DIR}/perf_regions_fortran.mod ]; then \
-		echo "Installing Fortran module..."; \
-		install -m 644 ${BUILD_DIR}/perf_regions_fortran.mod ${DESTDIR}${INSTALL_INCLUDEDIR}/; \
-	else \
-		echo "Warning: Fortran module not found (build first)"; \
-	fi
-	@echo "Installation complete!"
+# Object files
+C_SOURCES = perf_regions.c posix_clock.c papi_counters.c
+F_SOURCES = perf_regions_fortran.F90
 
+C_OBJECTS = $(C_SOURCES:.c=.o)
+F_OBJECTS = $(F_SOURCES:.F90=.o)
+
+LIBRARY = libperf_regions.so
+LIBRARY_VERSION = libperf_regions.so.1.0.0
+LIBRARY_SONAME = libperf_regions.so.1
+
+# Headers to install (excluding internal implementation headers)
+INSTALL_HEADERS = perf_regions.h perf_regions_defines.h
+
+# Default target
+all: $(LIBRARY)
+
+# Build the shared library
+$(LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
+	$(FC) $(LDFLAGS) -Wl,-soname,$(LIBRARY_SONAME) -o $(LIBRARY_VERSION) $^ $(LDFLAGS)
+	ln -sf $(LIBRARY_VERSION) $(LIBRARY_SONAME)
+	ln -sf $(LIBRARY_SONAME) $(LIBRARY)
+
+# C object files
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Fortran object files  
+%.o: %.F90
+	$(FC) $(FCFLAGS) -c $< -o $@
+
+# Install target
+install: $(LIBRARY)
+	@echo "Installing perf_regions to $(PREFIX)"
+	install -d $(LIBDIR)
+	install -d $(INCLUDEDIR)
+	install -d $(BINDIR)
+	install -m 755 $(LIBRARY_VERSION) $(LIBDIR)/
+	cd $(LIBDIR) && ln -sf $(LIBRARY_VERSION) $(LIBRARY_SONAME)
+	cd $(LIBDIR) && ln -sf $(LIBRARY_SONAME) $(LIBRARY)
+	install -m 644 $(INSTALL_HEADERS) $(INCLUDEDIR)/
+	install -m 644 *.mod $(INCLUDEDIR)/ 2>/dev/null || true
+	install -m 755 ../scripts/perf_regions.py $(BINDIR)/
+
+# Uninstall target
 uninstall:
-	rm -f ${DESTDIR}${INSTALL_LIBDIR}/libperf_regions.so*
-	rm -f ${DESTDIR}${INSTALL_INCLUDEDIR}/perf_regions.h
-	rm -f ${DESTDIR}${INSTALL_INCLUDEDIR}/perf_regions_defines.h
-	rm -f ${DESTDIR}${INSTALL_INCLUDEDIR}/perf_regions_fortran.mod
-	@echo "Uninstallation complete!"
+	@echo "Uninstalling perf_regions from $(PREFIX)"
+	rm -f $(LIBDIR)/$(LIBRARY_VERSION)
+	rm -f $(LIBDIR)/$(LIBRARY_SONAME) 
+	rm -f $(LIBDIR)/$(LIBRARY)
+	rm -rf $(INCLUDEDIR)
+	rm -f $(BINDIR)/perf_regions.py
+
+# Clean target
+clean:
+	rm -f *.o *.mod $(LIBRARY) $(LIBRARY_VERSION) $(LIBRARY_SONAME)
+
+.PHONY: all install uninstall clean

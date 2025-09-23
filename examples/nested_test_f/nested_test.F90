@@ -2,11 +2,11 @@ PROGRAM main
 
 !pragma perf_regions include
  
-CALL timing_init()
+!CALL timing_init()
 call test1
 !call test2
 
-CALL timing_finalize()
+!CALL timing_finalize()
  
 END PROGRAM main
 
@@ -18,11 +18,11 @@ SUBROUTINE test1
 
 !pragma perf_regions include
  
-CALL timing_start('FOOa');
-CALL timing_start('FOOb');
+!CALL timing_start('FOOa');
+!CALL timing_start('FOOb');
        call test2
-CALL timing_stop('FOOb');
-CALL timing_stop('FOOa');
+!CALL timing_stop('FOOb');
+!CALL timing_stop('FOOa');
 
 end SUBROUTINE test1
 
@@ -63,17 +63,17 @@ SUBROUTINE test2
 
               DO k=1,iters
               
-CALL timing_start('BARa');
+!CALL timing_start('BARa');
 
-CALL timing_start('BARb');
+!CALL timing_start('BARb');
 
                      DO i=1, array_size 
                           a(i) = a(i) + a(i)*a(i)
                      ENDDO
 
-CALL timing_stop('BARb');
+!CALL timing_stop('BARb');
 
-CALL timing_stop('BARa');
+!CALL timing_stop('BARa');
 
                      fac = 1.0;
 

@@ -1,0 +1,465 @@
+#!/bin/bash
+
+# configure script for perf_regions
+# Provides autotools-style configuration interface for CMake backend
+
+set -e
+
+# Default values
+PREFIX="/usr/local"
+BUILD_TYPE="Release"
+ENABLE_MPI="auto"
+ENABLE_PAPI="auto"
+ENABLE_EXAMPLES="yes"
+ENABLE_SHARED="yes"
+ENABLE_STATIC="no"
+BUILD_DIR="build"
+VERBOSE="no"
+HELP="no"
+CMAKE_EXTRA_ARGS=""
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Print colored output
+print_status() {
+    local color=$1
+    local message=$2
+    echo -e "${color}${message}${NC}"
+}
+
+print_error() {
+    print_status "$RED" "ERROR: $1" >&2
+}
+
+print_warning() {
+    print_status "$YELLOW" "WARNING: $1"
+}
+
+print_info() {
+    print_status "$BLUE" "INFO: $1"
+}
+
+print_success() {
+    print_status "$GREEN" "$1"
+}
+
+# Help function
+show_help() {
+    cat << EOF
+\`configure' configures perf_regions to adapt to many kinds of systems.
+
+Usage: $0 [OPTION]... [VAR=VALUE]...
+
+To assign environment variables (e.g., CC, CFLAGS...), specify them as
+VAR=VALUE.  See below for descriptions of some of the useful variables.
+
+Defaults for the options are specified in brackets.
+
+Configuration:
+  -h, --help              display this help and exit
+      --quiet, --silent   do not print \`checking ...' messages
+      --cache-file=FILE   cache test results in FILE [disabled]
+  -C, --config-cache      alias for \`--cache-file=config.cache'
+  -n, --no-create         do not create output files
+      --srcdir=DIR        find the sources in DIR [configure dir or \`..']
+
+Installation directories:
+      --prefix=PREFIX     install architecture-independent files in PREFIX
+                          [$PREFIX]
+      --exec-prefix=EPREFIX   install architecture-dependent files in EPREFIX
+                              [PREFIX]
+      --bindir=DIR        user executables [EPREFIX/bin]
+      --libdir=DIR        object code libraries [EPREFIX/lib]
+      --includedir=DIR    C header files [PREFIX/include]
+
+Fine tuning of the installation directories:
+      --datarootdir=DIR   read-only arch.-independent data root [PREFIX/share]
+      --datadir=DIR       read-only architecture-independent data [DATAROOTDIR]
+      --docdir=DIR        documentation root [DATAROOTDIR/doc/perf_regions]
+
+System types:
+      --build=BUILD       configure for building on BUILD [guessed]
+      --host=HOST         cross-compile to build programs to run on HOST [BUILD]
+
+Optional Features:
+      --disable-option-checking  ignore unrecognized --enable/--with options
+      --disable-FEATURE   do not include FEATURE (same as --enable-FEATURE=no)
+      --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+      --enable-shared[=PKGS]  build shared libraries [default=yes]
+      --enable-static[=PKGS]  build static libraries [default=no]
+      --enable-mpi        enable MPI support [default=auto]
+      --disable-mpi       disable MPI support
+      --enable-papi       enable PAPI performance counters [default=auto]
+      --disable-papi      disable PAPI performance counters
+      --enable-examples   build example programs [default=yes]
+      --disable-examples  do not build example programs
+      --enable-debug      enable debug build [default=no]
+
+Optional Packages:
+      --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+      --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+      --with-papi=DIR         specify PAPI installation directory
+      --with-mpi=DIR          specify MPI installation directory
+
+Some influential environment variables:
+  CC          C compiler command
+  CFLAGS      C compiler flags
+  LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
+              nonstandard directory <lib dir>
+  LIBS        libraries to pass to the linker, e.g. -l<library>
+  CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
+              you have headers in a nonstandard directory <include dir>
+  FC          Fortran compiler command
+  FCFLAGS     Fortran compiler flags
+
+Use these variables to override the choices made by \`configure' or to help
+it to find libraries and programs with nonstandard names/locations.
+
+Report bugs to <https://github.com/schreiberx/perf_regions>.
+EOF
+}
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            show_help
+            exit 0
+            ;;
+        --prefix=*)
+            PREFIX="${1#*=}"
+            shift
+            ;;
+        --prefix)
+            PREFIX="$2"
+            shift 2
+            ;;
+        --enable-debug|--enable-debug=yes)
+            BUILD_TYPE="Debug"
+            shift
+            ;;
+        --disable-debug|--enable-debug=no)
+            BUILD_TYPE="Release"
+            shift
+            ;;
+        --enable-mpi|--enable-mpi=yes)
+            ENABLE_MPI="ON"
+            shift
+            ;;
+        --disable-mpi|--enable-mpi=no)
+            ENABLE_MPI="OFF"
+            shift
+            ;;
+        --enable-papi|--enable-papi=yes)
+            ENABLE_PAPI="ON"
+            shift
+            ;;
+        --disable-papi|--enable-papi=no)
+            ENABLE_PAPI="OFF"
+            shift
+            ;;
+        --enable-examples|--enable-examples=yes)
+            ENABLE_EXAMPLES="yes"
+            shift
+            ;;
+        --disable-examples|--enable-examples=no)
+            ENABLE_EXAMPLES="no"
+            shift
+            ;;
+        --enable-shared|--enable-shared=yes)
+            ENABLE_SHARED="yes"
+            shift
+            ;;
+        --disable-shared|--enable-shared=no)
+            ENABLE_SHARED="no"
+            ENABLE_STATIC="yes"
+            shift
+            ;;
+        --enable-static|--enable-static=yes)
+            ENABLE_STATIC="yes"
+            shift
+            ;;
+        --disable-static|--enable-static=no)
+            ENABLE_STATIC="no"
+            shift
+            ;;
+        --with-papi=*)
+            PAPI_ROOT="${1#*=}"
+            ENABLE_PAPI="ON"
+            shift
+            ;;
+        --with-mpi=*)
+            MPI_ROOT="${1#*=}"
+            ENABLE_MPI="ON"
+            shift
+            ;;
+        --without-papi)
+            ENABLE_PAPI="OFF"
+            shift
+            ;;
+        --without-mpi)
+            ENABLE_MPI="OFF"
+            shift
+            ;;
+        --build-dir=*)
+            BUILD_DIR="${1#*=}"
+            shift
+            ;;
+        --quiet|--silent)
+            VERBOSE="no"
+            shift
+            ;;
+        --verbose)
+            VERBOSE="yes"
+            shift
+            ;;
+        *=*)
+            # Environment variable assignment
+            export "$1"
+            shift
+            ;;
+        -*)
+            print_warning "Unknown option: $1"
+            shift
+            ;;
+        *)
+            print_error "Unknown argument: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Function to check for dependencies
+check_dependencies() {
+    print_info "Checking for required dependencies..."
+    
+    # Check for CMake
+    if ! command_exists cmake; then
+        print_error "CMake not found. Please install CMake (version 3.16 or later)."
+        exit 1
+    fi
+    
+    local cmake_version
+    cmake_version=$(cmake --version | head -n1 | sed 's/cmake version //')
+    print_info "Found CMake $cmake_version"
+    
+    # Check for C compiler
+    if ! command_exists "${CC:-gcc}"; then
+        print_error "C compiler not found. Please install a C compiler."
+        exit 1
+    fi
+    print_info "Found C compiler: ${CC:-gcc}"
+    
+    # Check for Fortran compiler
+    if ! command_exists "${FC:-gfortran}"; then
+        print_error "Fortran compiler not found. Please install a Fortran compiler."
+        exit 1
+    fi
+    print_info "Found Fortran compiler: ${FC:-gfortran}"
+    
+    # Check for Python (required for instrumentation)
+    if ! command_exists python3; then
+        print_error "Python 3 not found. Please install Python 3."
+        exit 1
+    fi
+    print_info "Found Python 3"
+}
+
+# Function to auto-detect MPI
+check_mpi() {
+    if [[ "$ENABLE_MPI" == "auto" ]]; then
+        print_info "Auto-detecting MPI..."
+        if command_exists mpicc && command_exists mpif90; then
+            print_info "MPI compilers found, enabling MPI support"
+            ENABLE_MPI="ON"
+        else
+            print_info "MPI compilers not found, disabling MPI support"
+            ENABLE_MPI="OFF"
+        fi
+    fi
+}
+
+# Function to auto-detect PAPI
+check_papi() {
+    if [[ "$ENABLE_PAPI" == "auto" ]]; then
+        print_info "Auto-detecting PAPI..."
+        
+        # Check for PAPI headers and libraries in common locations
+        local papi_found=false
+        
+        for dir in /usr /usr/local /opt/papi; do
+            if [[ -f "$dir/include/papi.h" && -f "$dir/lib/libpapi.so" ]]; then
+                print_info "PAPI found in $dir, enabling PAPI support"
+                ENABLE_PAPI="ON"
+                papi_found=true
+                break
+            fi
+        done
+        
+        if [[ "$papi_found" == "false" ]]; then
+            print_info "PAPI not found, disabling PAPI support"
+            ENABLE_PAPI="OFF"
+        fi
+    fi
+}
+
+# Function to build CMake arguments
+build_cmake_args() {
+    local args=()
+    
+    # Basic configuration
+    args+=("-DCMAKE_BUILD_TYPE=$BUILD_TYPE")
+    args+=("-DCMAKE_INSTALL_PREFIX=$PREFIX")
+    
+    # Feature flags
+    args+=("-DPERF_REGIONS_USE_MPI=$ENABLE_MPI")
+    args+=("-DPERF_REGIONS_USE_PAPI=$ENABLE_PAPI")
+    
+    if [[ "$ENABLE_EXAMPLES" == "yes" ]]; then
+        args+=("-DPERF_REGIONS_BUILD_EXAMPLES=ON")
+    else
+        args+=("-DPERF_REGIONS_BUILD_EXAMPLES=OFF")
+    fi
+    
+    if [[ "$ENABLE_SHARED" == "yes" ]]; then
+        args+=("-DBUILD_SHARED_LIBS=ON")
+    else
+        args+=("-DBUILD_SHARED_LIBS=OFF")
+    fi
+    
+    # Environment-specific settings
+    if [[ -n "$PAPI_ROOT" ]]; then
+        args+=("-DPAPI_ROOT=$PAPI_ROOT")
+    fi
+    
+    if [[ -n "$MPI_ROOT" ]]; then
+        args+=("-DMPI_ROOT=$MPI_ROOT")
+    fi
+    
+    # Add extra CMake arguments
+    if [[ -n "$CMAKE_EXTRA_ARGS" ]]; then
+        args+=($CMAKE_EXTRA_ARGS)
+    fi
+    
+    echo "${args[@]}"
+}
+
+# Function to run CMake configuration
+run_cmake() {
+    local cmake_args
+    cmake_args=$(build_cmake_args)
+    
+    print_info "Creating build directory: $BUILD_DIR"
+    mkdir -p "$BUILD_DIR"
+    
+    print_info "Running CMake configuration..."
+    if [[ "$VERBOSE" == "yes" ]]; then
+        print_info "CMake command: cmake $cmake_args .."
+    fi
+    
+    cd "$BUILD_DIR"
+    if cmake $cmake_args ..; then
+        cd ..
+        return 0
+    else
+        cd ..
+        return 1
+    fi
+}
+
+# Function to create build scripts
+create_build_scripts() {
+    print_info "Creating build helper scripts..."
+    
+    # Create build script
+    cat > build.sh << 'EOF'
+#!/bin/bash
+# Build script generated by configure
+
+set -e
+
+if [ ! -d "build" ]; then
+    echo "Error: build directory not found. Run ./configure first."
+    exit 1
+fi
+
+cd build
+make -j$(nproc) "$@"
+cd ..
+EOF
+    chmod +x build.sh
+    
+    # Create install script
+    cat > install.sh << 'EOF'
+#!/bin/bash
+# Install script generated by configure
+
+set -e
+
+if [ ! -d "build" ]; then
+    echo "Error: build directory not found. Run ./configure and build first."
+    exit 1
+fi
+
+cd build
+make install "$@"
+cd ..
+EOF
+    chmod +x install.sh
+    
+    print_info "Created build.sh and install.sh helper scripts"
+}
+
+# Function to print configuration summary
+print_summary() {
+    echo ""
+    print_success "Configuration successful!"
+    echo ""
+    echo "perf_regions configuration summary:"
+    echo "=================================="
+    echo "  Install prefix: $PREFIX"
+    echo "  Build type: $BUILD_TYPE"
+    echo "  MPI support: $ENABLE_MPI"
+    echo "  PAPI support: $ENABLE_PAPI"
+    echo "  Build examples: $ENABLE_EXAMPLES"
+    echo "  Build shared libraries: $ENABLE_SHARED"
+    echo "  Build directory: $BUILD_DIR"
+    echo ""
+    echo "Next steps:"
+    echo "  make           # Build the project"
+    echo "  make install   # Install the project"
+    echo ""
+    echo "Or use the helper scripts:"
+    echo "  ./build.sh     # Build the project"
+    echo "  ./install.sh   # Install the project"
+}
+
+# Main execution
+main() {
+    print_info "Configuring perf_regions..."
+    
+    check_dependencies
+    check_mpi
+    check_papi
+    
+    if run_cmake; then
+        create_build_scripts
+        print_summary
+    else
+        print_error "Configuration failed!"
+        exit 1
+    fi
+}
+
+# Run main function
+main "$@"

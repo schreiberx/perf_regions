@@ -3,26 +3,25 @@
 
 import sys
 sys.path.append('../../scripts')
-
 import perf_regions
+
 
 pf = perf_regions.perf_regions(
         ["./"],    # list with source directories
         [
-            ".*CALL timing_init\(.*\)",        # initialization of timing
-            ".*CALL timing_init_mpi\((.*)\).*",  # initialization of timing when using mpi
+            ".*CALL timing_init\\(.*\\)",        # initialization of timing
+            ".*CALL timing_init_mpi\\((.*)\\).*",  # initialization of timing when using mpi
             ".*CALL timing_shutdown.*",        # shutdown of timing
 
             ".*USE timing.*",            # include part
 
-            ".*CALL timing_start\([\"'](.*)[\"']\).*",    # start of timing
-            ".*CALL timing_stop\([\"'](.*)[\"']\).*",    # end of timing
+            ".*CALL timing_start\\([\"'](.*)[\"']\\).*",    # start of timing
+            ".*CALL timing_stop\\([\"'](.*)[\"']\\).*",    # end of timing
         ],
         './',        # output directory of perf region tools
         'fortran',
         ['timing.F90']    # excluded files
     )
-
 
 
 if len(sys.argv) > 1:

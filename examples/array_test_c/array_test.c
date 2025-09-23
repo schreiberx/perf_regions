@@ -34,7 +34,7 @@ int main(int i_argi, char **argv)
 		printf("Iterations: %i\n", iters);
 
 		// initialize everything
-		for (size_t i = 0; i < size; i++)
+		for (int i = 0; i < size; i++)
 			a[i] = i;
 
 		// dummy computations to warmup caches
@@ -52,9 +52,6 @@ int main(int i_argi, char **argv)
 			run_computations();
 			run_computations();
 #pragma perf_regions stop bar
-
-//			double fac = (double)iters * (double)size * sizeof(double);
-			double fac = 1.0;
 
 //			perf_region_set_normalize(PERF_REGIONS_FOO, fac);
 		}

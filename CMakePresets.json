@@ -1,0 +1,111 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default configuration",
+            "description": "Default build configuration with MPI support",
+            "binaryDir": "${sourceDir}/build/default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "PERF_REGIONS_USE_MPI": true,
+                "PERF_REGIONS_USE_PAPI": false,
+                "PERF_REGIONS_BUILD_EXAMPLES": true,
+                "BUILD_SHARED_LIBS": true
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug configuration",
+            "description": "Debug build with all features enabled",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "PERF_REGIONS_USE_MPI": true,
+                "PERF_REGIONS_USE_PAPI": false,
+                "PERF_REGIONS_BUILD_EXAMPLES": true,
+                "BUILD_SHARED_LIBS": true
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release configuration",
+            "description": "Optimized release build",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "PERF_REGIONS_USE_MPI": true,
+                "PERF_REGIONS_USE_PAPI": false,
+                "PERF_REGIONS_BUILD_EXAMPLES": true,
+                "BUILD_SHARED_LIBS": true
+            }
+        },
+        {
+            "name": "with-papi",
+            "displayName": "Configuration with PAPI",
+            "description": "Build with PAPI performance counters support",
+            "binaryDir": "${sourceDir}/build/with-papi",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "PERF_REGIONS_USE_MPI": true,
+                "PERF_REGIONS_USE_PAPI": true,
+                "PERF_REGIONS_BUILD_EXAMPLES": true,
+                "BUILD_SHARED_LIBS": true
+            }
+        },
+        {
+            "name": "minimal",
+            "displayName": "Minimal configuration",
+            "description": "Minimal build without MPI or PAPI",
+            "binaryDir": "${sourceDir}/build/minimal",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "PERF_REGIONS_USE_MPI": false,
+                "PERF_REGIONS_USE_PAPI": false,
+                "PERF_REGIONS_BUILD_EXAMPLES": true,
+                "BUILD_SHARED_LIBS": true
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "displayName": "Build default configuration"
+        },
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "displayName": "Build debug configuration"
+        },
+        {
+            "name": "release",
+            "configurePreset": "release",
+            "displayName": "Build release configuration"
+        },
+        {
+            "name": "with-papi",
+            "configurePreset": "with-papi",
+            "displayName": "Build with PAPI support"
+        },
+        {
+            "name": "minimal",
+            "configurePreset": "minimal",
+            "displayName": "Build minimal configuration"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default",
+            "displayName": "Test default configuration",
+            "output": {"outputOnFailure": true}
+        },
+        {
+            "name": "debug",
+            "configurePreset": "debug",
+            "displayName": "Test debug configuration",
+            "output": {"outputOnFailure": true}
+        }
+    ]
+}

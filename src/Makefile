@@ -69,3 +69,32 @@ clean:
 	rm -f ${TARGET_LIB}
 	rm -f ${OBJS}
 	rm -f ${MODS}
+
+# Install targets
+PREFIX ?= /usr/local
+DESTDIR ?=
+INSTALL_LIBDIR ?= ${PREFIX}/lib
+INSTALL_INCLUDEDIR ?= ${PREFIX}/include/perf_regions
+
+install: ${TARGET_LIB}
+	@echo "Installing to prefix: ${PREFIX}"
+	@echo "DESTDIR: ${DESTDIR}"
+	install -d ${DESTDIR}${INSTALL_LIBDIR}
+	install -d ${DESTDIR}${INSTALL_INCLUDEDIR}
+	install -m 644 ${TARGET_LIB} ${DESTDIR}${INSTALL_LIBDIR}/
+	install -m 644 perf_regions.h ${DESTDIR}${INSTALL_INCLUDEDIR}/
+	install -m 644 perf_regions_defines.h ${DESTDIR}${INSTALL_INCLUDEDIR}/
+	@if [ -f ${BUILD_DIR}/perf_regions_fortran.mod ]; then \
+		echo "Installing Fortran module..."; \
+		install -m 644 ${BUILD_DIR}/perf_regions_fortran.mod ${DESTDIR}${INSTALL_INCLUDEDIR}/; \
+	else \
+		echo "Warning: Fortran module not found (build first)"; \
+	fi
+	@echo "Installation complete!"
+
+uninstall:
+	rm -f ${DESTDIR}${INSTALL_LIBDIR}/libperf_regions.so*
+	rm -f ${DESTDIR}${INSTALL_INCLUDEDIR}/perf_regions.h
+	rm -f ${DESTDIR}${INSTALL_INCLUDEDIR}/perf_regions_defines.h
+	rm -f ${DESTDIR}${INSTALL_INCLUDEDIR}/perf_regions_fortran.mod
+	@echo "Uninstallation complete!"

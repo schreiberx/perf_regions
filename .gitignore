@@ -1,9 +1,81 @@
-build
-.vscode
-**/__pycache__
-**/*.pyc
-**/output_*
-**/*.swp
-**/*.mod
+# Build directories
+build/
+build-*/
+*build*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeLists.txt.user
+CPackConfig.cmake
+CPackSourceConfig.cmake
+install_manifest.txt
+
+# Compiled binaries
+*.so
+*.so.*
+*.a
+*.dll
+*.exe
+*.dylib
+
+# Object files
+*.o
+*.obj
+
+# Fortran modules
+*.mod
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Perf regions specific
+perf_region_list.txt
 **/Makefile.deps
+
+# Test results
+Testing/
+*.xml
+
+# Package files
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+*.pyo
+
+# Output files
+**/output_*
+
+# LyX backup files
 **/*.lyx~

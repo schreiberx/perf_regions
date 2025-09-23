@@ -27,7 +27,7 @@ set_target_properties(perf_regions PROPERTIES
 target_include_directories(perf_regions
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/perf_regions>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 # Link dependencies
@@ -48,7 +48,7 @@ set_target_properties(perf_regions PROPERTIES
 target_include_directories(perf_regions
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/modules>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/perf_regions>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
 # Install the library and headers
@@ -59,13 +59,13 @@ install(TARGETS perf_regions
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# Install headers manually
-install(FILES ${PERF_REGIONS_HEADERS}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/perf_regions
+# Install headers directly to include directory
+install(FILES perf_regions.h perf_regions_defines.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
-# Install Fortran modules
+# Install Fortran modules directly to include directory
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/modules/
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/perf_regions
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.mod"
 )

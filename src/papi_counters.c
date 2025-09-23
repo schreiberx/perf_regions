@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#if PERF_REGIONS_USE_PAPI
 #include <papi.h>
-
 #include "papi_counters.h"
+#endif
 
 
 #define PRINT_PREFIX "[papi_counters.c] "

@@ -14,7 +14,8 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 # Build options
 option(PERF_REGIONS_USE_PAPI "Enable PAPI performance counters" OFF)
 option(PERF_REGIONS_USE_MPI "Enable MPI support" ON)
-option(PERF_REGIONS_BUILD_EXAMPLES "Build example programs" ON)
+# Examples are available via explicit target only; exclude from default/all
+option(PERF_REGIONS_BUILD_EXAMPLES "Enable examples configuration (targets are excluded from ALL; build with 'make examples')" OFF)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 # Set default build type to Release
@@ -60,15 +61,18 @@ endif()
 # Include directories
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Install directory configuration
+include(GNUInstallDirs)
+
 # Add subdirectories
 add_subdirectory(src)
 
-if(PERF_REGIONS_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-endif()
+# Always add examples but exclude from the default/ALL target so they are never
+# built implicitly (including during 'make install'). They can still be built
+# explicitly via the 'examples' target.
+add_subdirectory(examples EXCLUDE_FROM_ALL)
 
 # Install rules
-include(GNUInstallDirs)
 
 # Export targets
 install(EXPORT perf_regionsTargets
@@ -124,6 +128,6 @@ message(STATUS "  Fortran compiler: ${CMAKE_Fortran_COMPILER_ID} ${CMAKE_Fortran
 message(STATUS "  Install prefix: ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "  PAPI support: ${PERF_REGIONS_USE_PAPI}")
 message(STATUS "  MPI support: ${PERF_REGIONS_USE_MPI}")
-message(STATUS "  Build examples: ${PERF_REGIONS_BUILD_EXAMPLES}")
+message(STATUS "  Examples: available via 'make examples' (excluded from ALL)")
 message(STATUS "  Build shared libs: ${BUILD_SHARED_LIBS}")
 message(STATUS "")

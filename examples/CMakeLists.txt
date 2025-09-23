@@ -5,47 +5,48 @@ function(add_perf_regions_example target_name source_files)
     # Parse arguments
     cmake_parse_arguments(ARG "" "" "SOURCES;DEPENDENCIES" ${ARGN})
     
-    # Create the regular executable
-    add_executable(${target_name} ${source_files})
+    # Create the regular executable (excluded from ALL so never built by default)
+    add_executable(${target_name} EXCLUDE_FROM_ALL ${source_files})
     target_link_libraries(${target_name} PRIVATE perf_regions::perf_regions)
     
     if(ARG_DEPENDENCIES)
         add_dependencies(${target_name} ${ARG_DEPENDENCIES})
     endif()
     
-    # Create the instrumented version
+    # Create the instrumented version (also excluded from ALL)
     set(instrumented_target "${target_name}_perf_region")
-    add_executable(${instrumented_target} ${source_files})
+    add_executable(${instrumented_target} EXCLUDE_FROM_ALL ${source_files})
     target_link_libraries(${instrumented_target} PRIVATE perf_regions::perf_regions)
     
-    # Add custom command to run preprocessing
-    add_custom_command(TARGET ${instrumented_target} PRE_BUILD
-        COMMAND ${Python3_EXECUTABLE} perf_regions_instrumentation.py preprocess
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${target_name}
-        COMMENT "Running perf_regions instrumentation preprocessing for ${target_name}"
-    )
-    
-    # Add custom command to cleanup after build
-    add_custom_command(TARGET ${instrumented_target} POST_BUILD
-        COMMAND ${Python3_EXECUTABLE} perf_regions_instrumentation.py cleanup
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${target_name}
-        COMMENT "Cleaning up perf_regions instrumentation for ${target_name}"
-    )
+    # Add custom command to run preprocessing and cleanup only when building examples
+    if(Python3_Interpreter_FOUND)
+        add_custom_command(TARGET ${instrumented_target} PRE_BUILD
+            COMMAND ${Python3_EXECUTABLE} perf_regions_instrumentation.py preprocess
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${target_name}
+            COMMENT "Running perf_regions instrumentation preprocessing for ${target_name}"
+        )
+
+        add_custom_command(TARGET ${instrumented_target} POST_BUILD
+            COMMAND ${Python3_EXECUTABLE} perf_regions_instrumentation.py cleanup
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/${target_name}
+            COMMENT "Cleaning up perf_regions instrumentation for ${target_name}"
+        )
+    endif()
     
     if(ARG_DEPENDENCIES)
         add_dependencies(${instrumented_target} ${ARG_DEPENDENCIES})
     endif()
 endfunction()
 
-# Find Python for instrumentation scripts
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+# Find Python for instrumentation scripts lazily; not required for core build
+find_package(Python3 COMPONENTS Interpreter)
 
 # Add each example subdirectory
-add_subdirectory(array_test_c)
-add_subdirectory(array_test_f)
-add_subdirectory(stream_benchmark)
-add_subdirectory(nemo_test_f)
-add_subdirectory(nested_test_f)
+add_subdirectory(array_test_c EXCLUDE_FROM_ALL)
+add_subdirectory(array_test_f EXCLUDE_FROM_ALL)
+add_subdirectory(stream_benchmark EXCLUDE_FROM_ALL)
+add_subdirectory(nemo_test_f EXCLUDE_FROM_ALL)
+add_subdirectory(nested_test_f EXCLUDE_FROM_ALL)
 
 # Create a target to build all examples
 add_custom_target(examples

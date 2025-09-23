@@ -6,7 +6,7 @@ PREFIX ?= /usr/local
 
 # CMake options
 CMAKE_BUILD_TYPE ?= Release
-CMAKE_OPTIONS ?= -DPERF_REGIONS_USE_MPI=ON -DPERF_REGIONS_BUILD_EXAMPLES=ON
+CMAKE_OPTIONS ?= -DPERF_REGIONS_USE_MPI=ON -DPERF_REGIONS_BUILD_EXAMPLES=OFF
 
 .PHONY: all build_src examples run_tests clean help cmake-configure cmake-build cmake-clean distclean
 
@@ -14,8 +14,12 @@ CMAKE_OPTIONS ?= -DPERF_REGIONS_USE_MPI=ON -DPERF_REGIONS_BUILD_EXAMPLES=ON
 ifneq (,$(wildcard build/Makefile))
 # Configure-based build
 
-all examples: 
+all: 
 	@echo "Using configured build (run by ./configure)"
+	@cd build && $(MAKE) perf_regions
+
+examples:
+	@echo "Building examples with configured build (excluded from ALL)"
 	@cd build && $(MAKE) $@
 
 build_src: all
@@ -36,28 +40,10 @@ clean:
 else
 # Direct build method selection
 
-# Default target (suggest using configure)
-all:
-	@echo "============================================"
-	@echo "Welcome to perf_regions build system!"
-	@echo "============================================"
-	@echo ""
-	@echo "Recommended: Use the configure script"
-	@echo "  ./configure && make"
-	@echo ""
-	@echo "Alternative: Use specific build method"
-	@echo "  make BUILD_METHOD=cmake"
-	@echo "  make BUILD_METHOD=make USE_MPI=0"
-	@echo ""
-	@echo "For help:"
-	@echo "  make help"
-	@echo "  ./configure --help"
-
-# Default target
-build_src: all
-
 # Traditional Makefile build
 ifeq ($(BUILD_METHOD),make)
+
+all: build_src
 
 build_src:
 	make -C ./src MODE=${MODE} USE_MPI=${USE_MPI} USE_PAPI=${USE_PAPI}
@@ -81,9 +67,12 @@ clean:
 # CMake build
 else ifeq ($(BUILD_METHOD),cmake)
 
+all: build_src
+
 build_src: cmake-build
 
-examples: cmake-build
+examples: cmake-configure
+	cd $(BUILD_DIR) && $(MAKE) examples
 
 cmake-configure:
 	@mkdir -p $(BUILD_DIR)
@@ -99,6 +88,27 @@ clean: cmake-clean
 
 cmake-clean:
 	rm -rf $(BUILD_DIR)
+
+else
+# Default target (suggest using configure)
+all:
+	@echo "============================================"
+	@echo "Welcome to perf_regions build system!"
+	@echo "============================================"
+	@echo ""
+	@echo "Recommended: Use the configure script"
+	@echo "  ./configure && make"
+	@echo ""
+	@echo "Alternative: Use specific build method"
+	@echo "  make BUILD_METHOD=cmake"
+	@echo "  make BUILD_METHOD=make USE_MPI=0"
+	@echo ""
+	@echo "For help:"
+	@echo "  make help"
+	@echo "  ./configure --help"
+
+# Default target
+build_src: all
 
 endif
 

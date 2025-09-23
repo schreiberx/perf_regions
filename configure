@@ -10,7 +10,7 @@ PREFIX="/usr/local"
 BUILD_TYPE="Release"
 ENABLE_MPI="auto"
 ENABLE_PAPI="auto"
-ENABLE_EXAMPLES="yes"
+ENABLE_EXAMPLES="no"
 ENABLE_SHARED="yes"
 ENABLE_STATIC="no"
 BUILD_DIR="build"
@@ -96,7 +96,7 @@ Optional Features:
       --disable-mpi       disable MPI support
       --enable-papi       enable PAPI performance counters [default=auto]
       --disable-papi      disable PAPI performance counters
-      --enable-examples   build example programs [default=yes]
+      --enable-examples   build example programs [default=no]
       --disable-examples  do not build example programs
       --enable-debug      enable debug build [default=no]
 

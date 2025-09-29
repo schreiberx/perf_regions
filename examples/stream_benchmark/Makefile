@@ -7,20 +7,9 @@ CFLAGS = -O2 -fopenmp
 FF = gfortran
 FFLAGS = -O2 -fopenmp
 
-# Detect which build system to use
-ifneq (,$(wildcard ../../build/libperf_regions.so))
-    # CMake build exists
-    PERF_REGIONS_DIR=../../
-    PERF_REGIONS_LIB_DIR=$(PERF_REGIONS_DIR)/build
-else ifneq (,$(wildcard ../../src/libperf_regions.so))
-    # Traditional Makefile build exists  
-    PERF_REGIONS_DIR=../../
-    PERF_REGIONS_LIB_DIR=$(PERF_REGIONS_DIR)/src
-else
-    # Default to src location
-    PERF_REGIONS_DIR=../../
-    PERF_REGIONS_LIB_DIR=$(PERF_REGIONS_DIR)/src
-endif
+# Use traditional Makefile build (CMake support removed)
+PERF_REGIONS_DIR=../../
+PERF_REGIONS_LIB_DIR=$(PERF_REGIONS_DIR)/src
 
 #all: stream_f.exe stream_c.exe stream_c_perfregion.exe
 all: build
@@ -41,9 +30,17 @@ stream_c.exe: stream.c
 	./perf_regions_instrumentation.py cleanup
 	$(CC) $(CFLAGS) stream.c -o stream_c.exe
 
+# PAPI settings
+USE_PAPI ?= 1
+ifeq ($(USE_PAPI),1)
+PAPI_LINK_FLAG := -lpapi
+else
+PAPI_LINK_FLAG :=
+endif
+
 stream_c_perfregion.exe: stream.c
 	./perf_regions_instrumentation.py
-	$(CC) $(CFLAGS) stream.c -o stream_c_perfregions.exe -I$(PERF_REGIONS_DIR)/src -L$(PERF_REGIONS_LIB_DIR) -lpapi -lperf_regions
+	$(CC) $(CFLAGS) stream.c -o stream_c_perfregions.exe -I$(PERF_REGIONS_DIR)/src -L$(PERF_REGIONS_LIB_DIR) $(PAPI_LINK_FLAG) -lperf_regions
 	./perf_regions_instrumentation.py cleanup
 
 # an example of a more complex build line for the Intel icc compiler

@@ -1,6 +1,9 @@
 # Traditional Makefile for perf_regions library
 # This provides the traditional build system support
 
+# Include configuration if available
+-include ../config.mk
+
 # Compiler settings
 CC ?= gcc
 FC ?= gfortran
@@ -8,7 +11,13 @@ FC ?= gfortran
 # Compiler flags
 CFLAGS ?= -fPIC -Wall -O2
 FCFLAGS ?= -fPIC -Wall -O2
-LDFLAGS ?= -shared
+
+# Library build options
+BUILD_SHARED_LIBS ?= 1
+BUILD_STATIC_LIBS ?= 0
+
+# Shared library flags
+SHARED_LDFLAGS = -shared
 
 # MPI settings
 USE_MPI ?= 1
@@ -44,21 +53,42 @@ F_SOURCES = perf_regions_fortran.F90
 C_OBJECTS = $(C_SOURCES:.c=.o)
 F_OBJECTS = $(F_SOURCES:.F90=.o)
 
-LIBRARY = libperf_regions.so
-LIBRARY_VERSION = libperf_regions.so.1.0.0
-LIBRARY_SONAME = libperf_regions.so.1
+# Library names
+SHARED_LIBRARY = libperf_regions.so
+SHARED_LIBRARY_VERSION = libperf_regions.so.1.0.0
+SHARED_LIBRARY_SONAME = libperf_regions.so.1
+
+STATIC_LIBRARY = libperf_regions.a
 
 # Headers to install (excluding internal implementation headers)
 INSTALL_HEADERS = perf_regions.h perf_regions_defines.h
 
+# Determine what to build
+TARGETS = 
+ifeq ($(BUILD_SHARED_LIBS),1)
+TARGETS += $(SHARED_LIBRARY)
+endif
+ifeq ($(BUILD_STATIC_LIBS),1)
+TARGETS += $(STATIC_LIBRARY)
+endif
+
+# Validate that at least one library type is selected
+ifeq ($(TARGETS),)
+$(error At least one of BUILD_SHARED_LIBS or BUILD_STATIC_LIBS must be set to 1)
+endif
+
 # Default target
-all: $(LIBRARY)
+all: $(TARGETS)
 
 # Build the shared library
-$(LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
-	$(FC) $(LDFLAGS) -Wl,-soname,$(LIBRARY_SONAME) -o $(LIBRARY_VERSION) $^ $(LDFLAGS)
-	ln -sf $(LIBRARY_VERSION) $(LIBRARY_SONAME)
-	ln -sf $(LIBRARY_SONAME) $(LIBRARY)
+$(SHARED_LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
+	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(SHARED_LIBRARY_SONAME) -o $(SHARED_LIBRARY_VERSION) $^
+	ln -sf $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME)
+	ln -sf $(SHARED_LIBRARY_SONAME) $(SHARED_LIBRARY)
+
+# Build the static library
+$(STATIC_LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
+	ar rcs $@ $^
 
 # C object files
 %.o: %.c
@@ -69,14 +99,19 @@ $(LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
 	$(FC) $(FCFLAGS) -c $< -o $@
 
 # Install target
-install: $(LIBRARY)
+install: $(TARGETS)
 	@echo "Installing perf_regions to $(PREFIX)"
 	install -d $(LIBDIR)
 	install -d $(INCLUDEDIR)
 	install -d $(BINDIR)
-	install -m 755 $(LIBRARY_VERSION) $(LIBDIR)/
-	cd $(LIBDIR) && ln -sf $(LIBRARY_VERSION) $(LIBRARY_SONAME)
-	cd $(LIBDIR) && ln -sf $(LIBRARY_SONAME) $(LIBRARY)
+ifeq ($(BUILD_SHARED_LIBS),1)
+	install -m 755 $(SHARED_LIBRARY_VERSION) $(LIBDIR)/
+	cd $(LIBDIR) && ln -sf $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME)
+	cd $(LIBDIR) && ln -sf $(SHARED_LIBRARY_SONAME) $(SHARED_LIBRARY)
+endif
+ifeq ($(BUILD_STATIC_LIBS),1)
+	install -m 644 $(STATIC_LIBRARY) $(LIBDIR)/
+endif
 	install -m 644 $(INSTALL_HEADERS) $(INCLUDEDIR)/
 	install -m 644 *.mod $(INCLUDEDIR)/ 2>/dev/null || true
 	install -m 755 ../scripts/perf_regions.py $(BINDIR)/
@@ -84,14 +119,15 @@ install: $(LIBRARY)
 # Uninstall target
 uninstall:
 	@echo "Uninstalling perf_regions from $(PREFIX)"
-	rm -f $(LIBDIR)/$(LIBRARY_VERSION)
-	rm -f $(LIBDIR)/$(LIBRARY_SONAME) 
-	rm -f $(LIBDIR)/$(LIBRARY)
+	rm -f $(LIBDIR)/$(SHARED_LIBRARY_VERSION)
+	rm -f $(LIBDIR)/$(SHARED_LIBRARY_SONAME) 
+	rm -f $(LIBDIR)/$(SHARED_LIBRARY)
+	rm -f $(LIBDIR)/$(STATIC_LIBRARY)
 	rm -rf $(INCLUDEDIR)
 	rm -f $(BINDIR)/perf_regions.py
 
 # Clean target
 clean:
-	rm -f *.o *.mod $(LIBRARY) $(LIBRARY_VERSION) $(LIBRARY_SONAME)
+	rm -f *.o *.mod $(SHARED_LIBRARY) $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME) $(STATIC_LIBRARY)
 
 .PHONY: all install uninstall clean

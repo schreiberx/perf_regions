@@ -3,11 +3,12 @@
 
 set -e
 
-if [ ! -d "build" ]; then
-    echo "Error: build directory not found. Run ./configure first."
+if [ ! -f "config.mk" ]; then
+    echo "Error: configuration not found. Run ./configure first."
     exit 1
 fi
 
-cd build
+# Source configuration
+source config.mk
+
 make -j$(nproc) "$@"
-cd ..

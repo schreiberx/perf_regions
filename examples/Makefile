@@ -1,25 +1,25 @@
 all:
-	make -C array_test_c
-	make -C array_test_f
-	make -C stream_benchmark
-	make -C nemo_test_f
-	make -C nested_test_f
+	$(MAKE) -C array_test_c USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C array_test_f USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C stream_benchmark USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C nemo_test_f USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C nested_test_f USE_PAPI=$(USE_PAPI)
 
-	make run_tests
+	$(MAKE) run_tests USE_PAPI=$(USE_PAPI)
 
 run_tests:
-	make -C array_test_c run_tests
-	make -C array_test_f run_tests
-	make -C stream_benchmark run_tests
-	make -C nemo_test_f run_tests
-	make -C nested_test_f run_tests
+	$(MAKE) -C array_test_c run_tests USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C array_test_f run_tests USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C stream_benchmark run_tests USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C nemo_test_f run_tests USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C nested_test_f run_tests USE_PAPI=$(USE_PAPI)
 
 
 clean:
-	make -C array_test_c clean
-	make -C array_test_f clean
-	make -C stream_benchmark clean
-	make -C nemo_test_f clean
-	make -C nested_test_f clean
+	$(MAKE) -C array_test_c clean
+	$(MAKE) -C array_test_f clean
+	$(MAKE) -C stream_benchmark clean
+	$(MAKE) -C nemo_test_f clean
+	$(MAKE) -C nested_test_f clean
 
 .PHONY: all run_tests clean

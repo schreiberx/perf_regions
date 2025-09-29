@@ -2,14 +2,19 @@ FC:=gfortran
 CC:=gcc
 CXX:=g++
 
-PAPI_LIB:=-L. -lpapi 
+# PAPI settings
+USE_PAPI ?= 1
+ifeq ($(USE_PAPI),1)
+PAPI_LIB:=-L. -lpapi
+else
+PAPI_LIB:=
+endif 
 
-# Detect which build system to use
-ifneq (,$(wildcard ../../build/libperf_regions.so))
-    # CMake build exists
-    PERFREGION_LIB:=-L../../build -lperf_regions -I../../build
-else ifneq (,$(wildcard ../../src/libperf_regions.so))
-    # Traditional Makefile build exists  
+# Use traditional Makefile build (CMake support removed)
+# Check if shared library exists, otherwise use static
+ifneq (,$(wildcard ../../src/libperf_regions.so))
+    PERFREGION_LIB:=-L../../src -lperf_regions
+else ifneq (,$(wildcard ../../src/libperf_regions.a))
     PERFREGION_LIB:=-L../../src -lperf_regions
 else
     # Default to src location
@@ -28,7 +33,7 @@ build:
 array_test_perf_region: array_test.F90
 	./perf_regions_instrumentation.py cleanup
 	./perf_regions_instrumentation.py preprocess
-	${FC} -g -o array_test_perf_region array_test.F90 ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+	${FC} -g -I../../src -o array_test_perf_region array_test.F90 ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 run_tests:	build
 	./run_tests.sh

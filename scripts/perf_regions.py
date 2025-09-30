@@ -29,13 +29,13 @@ class PerfRegions:
 
         self.fortran_language_ext = ["F90", "f90", "F", "f"]
         self.fortran_region_pattern_match = {
-            "init": "^.*!\$perf_regions init(| .*)$",  # initialization of timing
-            "init_mpi": "^.*!\$perf_regions init_mpi(| .*)$",  # initialization of timing when using MPI
-            "finalize": "^.*!\$perf_regions finalize(| .*)$",  # shutdown of timing
-            "include": "^.*!\$perf_regions include(| .*)$",  # include part
-            "start": "^.*!\$perf_regions start(| .*)$",  # start of timing
-            "stop": "^.*!\$perf_regions stop(| .*)$",  # end of timing
-            "reset": "^.*!\$perf_regions reset(| .*)$",  # reset timing
+            "init": "^.*!(\$|pragma )perf_regions init(| .*)$",  # initialization of timing
+            "init_mpi": "^.*!(\$|pragma )perf_regions init_mpi(| .*)$",  # initialization of timing when using MPI
+            "finalize": "^.*!(\$|pragma )perf_regions finalize(| .*)$",  # shutdown of timing
+            "include": "^.*!(\$|pragma )perf_regions include(| .*)$",  # include part
+            "start": "^.*!(\$|pragma )perf_regions start(| .*)$",  # start of timing
+            "stop": "^.*!(\$|pragma )perf_regions stop(| .*)$",  # end of timing
+            "reset": "^.*!(\$|pragma )perf_regions reset(| .*)$",  # reset timing
         }
 
         self.c_language_ext = ["c", "cpp", "cxx"]
@@ -150,7 +150,7 @@ class PerfRegions:
                     if not match:
                         continue
 
-                    match_tag = match.group(1)
+                    match_tag = match.group(match.lastindex)
                     # Remove leading space
                     if len(match_tag) > 0:
                         assert match_tag[0] == " "

@@ -1,0 +1,19 @@
+# PAPI settings
+USE_PAPI ?= 1
+ifeq ($(USE_PAPI),1)
+	# Statically link
+	PAPI_STATIC:=$(firstword $(wildcard $(addsuffix /libpapi.a,$(subst :, ,$(LD_LIBRARY_PATH)))))
+	ifneq ($(PAPI_STATIC),)
+		PAPI_LIB:=$(PAPI_STATIC)
+	endif
+else
+	PAPI_LIB:=
+endif 
+
+# Prefer static linking due to nvidia compiler issues
+ifneq (,$(wildcard ../../src/libperf_regions.a))
+    PERFREGION_LIB:=../../src/libperf_regions.a
+else
+    # Default to src location
+    PERFREGION_LIB:=-L../../src -lperf_regions
+endif

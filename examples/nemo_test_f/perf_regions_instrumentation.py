@@ -6,35 +6,23 @@ sys.path.append('../../scripts')
 import perf_regions
 
 
-pf = perf_regions.perf_regions(
-        ["./"],    # list with source directories
-        [
-            ".*CALL timing_init\\(.*\\)",        # initialization of timing
-            ".*CALL timing_init_mpi\\((.*)\\).*",  # initialization of timing when using mpi
-            ".*CALL timing_shutdown.*",        # shutdown of timing
-
-            ".*USE timing.*",            # include part
-
-            ".*CALL timing_start\\([\"'](.*)[\"']\\).*",    # start of timing
-            ".*CALL timing_stop\\([\"'](.*)[\"']\\).*",    # end of timing
-        ],
-        './',        # output directory of perf region tools
-        'fortran',
-        ['timing.F90']    # excluded files
-    )
+pr: perf_regions.PerfRegions = perf_regions.PerfRegions("./*", output_directory="./build_perf_regions")
+# pr: perf_regions.PerfRegions = perf_regions.PerfRegions("./*")
 
 
+option = "preprocess"
 if len(sys.argv) > 1:
-    if sys.argv[1] == 'preprocess':
-        print("PREPROCESS")
-        pf.preprocessor()
+    option = sys.argv[1]
 
-    elif sys.argv[1] == 'cleanup':
-        print("CLEANUP")
-        pf.cleanup()
 
-    else:
-        print("Unsupported argument "+sys.argv[1])
+if option == 'preprocess':
+    print("PREPROCESS")
+    pr.run_preprocessor()
+
+elif option == 'cleanup':
+    print("CLEANUP")
+    pr.remove_perf_regions_annotations()
 
 else:
-    pf.preprocessor()
+    print("Unsupported argument "+sys.argv[1])
+

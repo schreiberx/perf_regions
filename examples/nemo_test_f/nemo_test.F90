@@ -32,7 +32,7 @@ CONTAINS
    INTEGER                                   :: ji, jj, jk
    CHARACTER(len=10)                         :: env
 
-   IF( nn_timing == 1 )  CALL timing_start("testfoo")
+   !IF( nn_timing == 1 )  CALL timing_start("testfoo")
 
    CALL get_environment_variable("JPI", env)
    READ ( env, '(i10)' ) jpi
@@ -254,7 +254,7 @@ CONTAINS
      DEALLOCATE(rnfmsk_z)
      DEALLOCATE(tsn)
 
-     IF( nn_timing == 1 )  CALL timing_stop("testfoo")
+     !IF( nn_timing == 1 )  CALL timing_stop("testfoo")
 
      end subroutine testfoo
 
@@ -274,7 +274,7 @@ CONTAINS
    INTEGER                                   :: ji, jj, jk
    CHARACTER(len=10)                         :: env
 
-   IF( nn_timing == 1 )  CALL timing_start("testbar")
+   !IF( nn_timing == 1 )  CALL timing_start("testbar")
 
    CALL get_environment_variable("JPI", env)
    READ ( env, '(i10)' ) jpi
@@ -496,7 +496,7 @@ CONTAINS
      DEALLOCATE(rnfmsk_z)
      DEALLOCATE(tsn)
 
-     IF( nn_timing == 1 )  CALL timing_stop("testbar")
+     !IF( nn_timing == 1 )  CALL timing_stop("testbar")
 
      end subroutine testbar
 
@@ -515,7 +515,7 @@ CONTAINS
    INTEGER                                   :: ji, jj, jk
    CHARACTER(len=10)                         :: env
 
-   IF( nn_timing == 1 )  CALL timing_start("testxyz")
+   !IF( nn_timing == 1 )  CALL timing_start("testxyz")
 
    CALL get_environment_variable("JPI", env)
    READ ( env, '(i10)' ) jpi
@@ -737,7 +737,7 @@ CONTAINS
      DEALLOCATE(rnfmsk_z)
      DEALLOCATE(tsn)
 
-     IF( nn_timing == 1 )  CALL timing_stop("testxyz")
+     !IF( nn_timing == 1 )  CALL timing_stop("testxyz")
 
      end subroutine testxyz
 

@@ -1,6 +1,6 @@
 PROGRAM main
 
-!pragma perf_regions include
+!$perf_regions include
 
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)
@@ -9,6 +9,8 @@ PROGRAM main
        WRITE(*,*) 'test',1024*1024*128
 
 !             CALL timing_init();
+
+       !$perf_regions init
 
        DO WHILE(array_size < 1024*1024*128/8)
               allocate(a(array_size))
@@ -48,5 +50,7 @@ PROGRAM main
               array_size = array_size*2
       ENDDO
 !             timing_finalize();
+
+       !$perf_regions finalize
 
 END PROGRAM main

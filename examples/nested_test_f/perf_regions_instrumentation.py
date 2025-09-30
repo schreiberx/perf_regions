@@ -2,39 +2,27 @@
 
 
 import sys
-
-sys.path.append("../../scripts")
-
+sys.path.append('../../scripts')
 import perf_regions
 
-pf = perf_regions.perf_regions(
-    ["./"],  # list with source directories
-    [
-        ".*timing_init\\(.*\\)",  # initialization of timing
-        ".*timing_init_mpi\\((.*)\\).*",  # initialization of timing when using mpi
-        ".*timing_finalize.*",  # shutdown of timing
-        ".*!pragma perf_regions include.*",  # include part
-        ".*timing_start\\('(.*)'\\)",  # start of timing
-        ".*timing_stop\\('(.*)'\\)",  # end of timing
-        ".*timing_reset.*",  # reset of timing
-    ],
-    # '../../',    # perf region root directory
-    "./",  # output directory of perf region tools
-    "fortran",
-)
+
+pr: perf_regions.PerfRegions = perf_regions.PerfRegions("./*", output_directory="./build_perf_regions")
+# pr: perf_regions.PerfRegions = perf_regions.PerfRegions("./*")
 
 
+option = "preprocess"
 if len(sys.argv) > 1:
-    if sys.argv[1] == "preprocess":
-        print("PREPROCESS")
-        pf.preprocessor()
+    option = sys.argv[1]
 
-    elif sys.argv[1] == "cleanup":
-        print("CLEANUP")
-        pf.cleanup()
 
-    else:
-        print("Unsupported argument " + sys.argv[1])
+if option == 'preprocess':
+    print("PREPROCESS")
+    pr.run_preprocessor()
+
+elif option == 'cleanup':
+    print("CLEANUP")
+    pr.remove_perf_regions_annotations()
 
 else:
-    pf.preprocessor()
+    print("Unsupported argument "+sys.argv[1])
+

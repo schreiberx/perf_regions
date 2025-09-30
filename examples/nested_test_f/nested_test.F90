@@ -1,6 +1,6 @@
 PROGRAM main
 
-!pragma perf_regions include
+!$perf_regions include
  
 !CALL timing_init()
 call test1
@@ -16,7 +16,7 @@ END PROGRAM main
 
 SUBROUTINE test1
 
-!pragma perf_regions include
+!$perf_regions include
  
 !CALL timing_start('FOOa');
 !CALL timing_start('FOOb');
@@ -32,7 +32,7 @@ end SUBROUTINE test1
 
 SUBROUTINE test2
 
-!pragma perf_regions include
+!$perf_regions include
 
        integer :: array_size, i
        REAL*8,ALLOCATABLE  :: a(:)
@@ -40,6 +40,8 @@ SUBROUTINE test2
        array_size=1
        WRITE(*,*) 'test',1024*1024*128
 
+
+!$perf_regions init
 
        DO WHILE(array_size < 1024*1024*128/4)
               allocate(a(array_size))
@@ -63,6 +65,7 @@ SUBROUTINE test2
 
               DO k=1,iters
               
+!$perf_regions start AAA
 !CALL timing_start('BARa');
 
 !CALL timing_start('BARb');
@@ -75,11 +78,15 @@ SUBROUTINE test2
 
 !CALL timing_stop('BARa');
 
+!$perf_regions stop AAA
+
                      fac = 1.0;
 
               ENDDO
               deallocate(a)
               array_size = array_size*2
       ENDDO
+
+!$perf_regions finalize
 
 end subroutine test2

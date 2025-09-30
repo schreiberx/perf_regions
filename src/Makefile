@@ -43,7 +43,7 @@ endif
 # Install settings
 PREFIX ?= /usr/local
 LIBDIR = $(PREFIX)/lib
-INCLUDEDIR = $(PREFIX)/include/perf_regions
+INCLUDEDIR = $(PREFIX)/include
 BINDIR = $(PREFIX)/bin
 
 # Object files

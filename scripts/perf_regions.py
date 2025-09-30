@@ -95,14 +95,14 @@ class PerfRegions:
 
         else:
             raise Exception(f"Unknown file extension '{file_ext}'")
-        
+
         depth = 1
 
         line_id = 0
         while line_id < num_lines:
             line: str = in_content[line_id]
 
-            prefix_str: str = "  "*depth
+            prefix_str: str = "  " * depth
 
             # Search for exising preprocessed code
             if line.startswith(original_comment):
@@ -144,7 +144,7 @@ class PerfRegions:
             # iterate over regular expressions
             line_processed = False
             if not cleanup:
-                for (p, m_pattern) in prog_match_dict.items():
+                for p, m_pattern in prog_match_dict.items():
 
                     match = re.compile(m_pattern).match(line)
                     if not match:
@@ -201,9 +201,9 @@ class PerfRegions:
                         print(f"{prefix_str}- Found include/use statement")
                         if language == "fortran":
                             self._append_source_lines(out_content, line, "USE perf_regions_fortran", language=language)
-                            self._append_source_lines(
-                                out_content, "[PERF_REGION_DUMMY]", '#include "perf_regions_defines.h"', language=language
-                            )
+                            # self._append_source_lines(
+                            #    out_content, "[PERF_REGION_DUMMY]", '#include "perf_regions_defines.h"', language=language
+                            # )
                         elif language == "c":
                             self._append_source_lines(out_content, line, "#include <perf_regions.h>", language=language)
                         break
@@ -231,7 +231,7 @@ class PerfRegions:
                             )
                         break
 
-                    elif p == "stop":   # timing stop
+                    elif p == "stop":  # timing stop
                         name = match_tag
                         name = name.upper()
                         print(f"{prefix_str}- Found region end '{name}'")
@@ -239,9 +239,13 @@ class PerfRegions:
 
                         id = self.region_name_list_acc.index(name)
                         if language == "fortran":
-                            self._append_source_lines(out_content, line, f"CALL perf_region_stop({id}) !" + name, language=language)
+                            self._append_source_lines(
+                                out_content, line, f"CALL perf_region_stop({id}) !" + name, language=language
+                            )
                         elif language == "c":
-                            self._append_source_lines(out_content, line, f"perf_region_stop({id}); //" + name, language=language)
+                            self._append_source_lines(
+                                out_content, line, f"perf_region_stop({id}); //" + name, language=language
+                            )
 
                     elif p == "reset":  # timing_reset
                         print("{prefix_str}- Found timing_reset call")
@@ -259,7 +263,6 @@ class PerfRegions:
             line_id = line_id + 1
 
         open(filename_out, "w").write("\n".join(out_content))
-
 
     def _append_source_lines(self, content: List[str], old_line, new_line, language: str):
 
@@ -304,7 +307,6 @@ class PerfRegions:
 
         print("FINISHED without errors")
 
-
     def run_preprocessor(self):
         """
         Preprocess all files specified by the pattern in the constructor
@@ -328,7 +330,7 @@ class PerfRegions:
 
         if not self.perf_regions_init_found:
             raise Exception("No pref_regions initialization found!")
-        
+
         if not self.perf_regions_finalize_found:
             raise Exception("No pref_regions finalization found!")
 

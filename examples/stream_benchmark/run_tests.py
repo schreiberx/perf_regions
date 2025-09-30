@@ -11,7 +11,8 @@ os.environ["LD_LIBRARY_PATH"] = f"../../build:{os.environ.get('LD_LIBRARY_PATH',
 events_cacheblocks = "PAPI_L3_TCM"
 events_cacheblocks = "PAPI_L1_DCM,PAPI_LST_INS".split(",")
 events_cacheblocks = "MEM_INST_RETIRED".split(",")
-#events_cacheblocks = "MEM_INST_RETIRED.ALL_STORES".split(",")
+events_cacheblocks = "MEM_UOPS_RETIRED:ALL_LOADS,MEM_UOPS_RETIRED:ALL_STORES".split(",")
+#events_cacheblocks = "PAPI_L3_TCM,LLC-PREFETCHES".split(",")
 perf_regions_counters = (",".join(events_cacheblocks))+",WALLCLOCKTIME"
 os.environ["PERF_REGIONS_COUNTERS"] = perf_regions_counters
 

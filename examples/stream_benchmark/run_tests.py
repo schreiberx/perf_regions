@@ -7,7 +7,17 @@ import pandas as pd
 
 
 os.environ["LD_LIBRARY_PATH"] = f"../../build:{os.environ.get('LD_LIBRARY_PATH', '')}"
-os.environ["PERF_REGIONS_COUNTERS"] = "PAPI_L3_TCM,PAPI_L2_TCM,WALLCLOCKTIME"
+
+events_cacheblocks = "PAPI_L3_TCM"
+events_cacheblocks = "PAPI_L1_DCM,PAPI_LST_INS".split(",")
+events_cacheblocks = "MEM_INST_RETIRED".split(",")
+#events_cacheblocks = "MEM_INST_RETIRED.ALL_STORES".split(",")
+perf_regions_counters = (",".join(events_cacheblocks))+",WALLCLOCKTIME"
+os.environ["PERF_REGIONS_COUNTERS"] = perf_regions_counters
+
+print(f"PERF_REGIONS_COUNTERS={perf_regions_counters}")
+
+
 
 def run_make():
 	result = subprocess.run(["make", "stream_c_perfregions"], capture_output=True, text=True)
@@ -22,6 +32,7 @@ def run_stream():
 	except subprocess.CalledProcessError as e:
 		output = e.output + "\nERROR"
 	return output
+
 
 run_make()
 OUTPUT = run_stream()
@@ -66,22 +77,26 @@ print("="*80)
 print("\nPandas DataFrame of perf region output:")
 print(df)
 
+papi_cacheblocks_sum = values = df[events_cacheblocks[0]].astype(float).tolist()
+for event in events_cacheblocks[1:]:
+    values = df[event].astype(float).tolist()
+    for i, value in enumerate(values):
+        papi_cacheblocks_sum[i] += values[i]
 
-papi_l3_tcm_values = df["PAPI_L3_TCM"].astype(float).tolist()
 counter_values = df["COUNTER"].astype(float).tolist()
 wallclocktime_values = df["WALLCLOCKTIME"].astype(float).tolist()
 
 cacheblock_size = 64
 
 bw = []
-for i in range(len(papi_l3_tcm_values)):
-	misses = papi_l3_tcm_values[i]
+for i in range(len(papi_cacheblocks_sum)):
+	misses = papi_cacheblocks_sum[i]
 	wallclocktime = wallclocktime_values[i]
 
 	# We do not divide by the counter since it's taken into account in the misses and the wallclock time.
 	# counter = counter_values[i]
 	
-	value = misses*cacheblock_size / (wallclocktime*1024.0*1024.0)
+	value = misses*cacheblock_size / (wallclocktime*1000.0*1000.0)
 	bw.append(value)
 
 df["BANDWIDTH"] = bw

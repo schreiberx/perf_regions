@@ -35,9 +35,16 @@ endif
 USE_PAPI ?= 1
 ifeq ($(USE_PAPI),1)
 CFLAGS += -DPERF_REGIONS_USE_PAPI=1
-LDFLAGS += -lpapi
+# Use PAPI from installation prefix - explicit path if LIBDIR is empty
+ifeq ($(strip $(LIBDIR)),)
+PAPI_LIBS := -L$(PREFIX)/lib -lpapi -lpfm
+else
+PAPI_LIBS := -L$(LIBDIR) -lpapi -lpfm
+endif
+LDFLAGS += $(PAPI_LIBS)
 else
 CFLAGS += -DPERF_REGIONS_USE_PAPI=0
+PAPI_LIBS :=
 endif
 
 # Install settings
@@ -82,7 +89,7 @@ all: $(TARGETS)
 
 # Build the shared library
 $(SHARED_LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
-	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(SHARED_LIBRARY_SONAME) -o $(SHARED_LIBRARY_VERSION) $^
+	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(SHARED_LIBRARY_SONAME) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(PAPI_LIBS)
 	ln -sf $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME)
 	ln -sf $(SHARED_LIBRARY_SONAME) $(SHARED_LIBRARY)
 

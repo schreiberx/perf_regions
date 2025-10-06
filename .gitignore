@@ -2,15 +2,7 @@
 build/
 build-*/
 *build*/
-
-# CMake generated files
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-CMakeLists.txt.user
-CPackConfig.cmake
-CPackSourceConfig.cmake
-install_manifest.txt
+config.mk
 
 # Compiled binaries
 *.so
@@ -41,15 +33,6 @@ install_manifest.txt
 *~
 *.bak
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
 # Temporary files
 *.tmp
 *.temp
@@ -62,12 +45,6 @@ perf_region_list.txt
 # Test results
 Testing/
 *.xml
-
-# Package files
-*.tar.gz
-*.zip
-*.deb
-*.rpm
 
 # Python cache
 **/__pycache__/

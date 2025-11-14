@@ -208,6 +208,7 @@ void perf_regions_reset()
 #endif
 
 		r->counter_wallclock_time = 0;
+		r->region_enter_counter = 0;
 		r->max_wallclock_time = 0;
 		r->min_wallclock_time = DBL_MAX;
 		r->squared_dist_wallclock_time = 0;
@@ -757,3 +758,4 @@ void perf_regions_finalize()
 	for (int i = 0; i < perf_regions.num_perf_counters; i++)
 		free(perf_regions.perf_counter_names[i]);
 }
+

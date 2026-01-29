@@ -352,6 +352,7 @@ void perf_regions_init_mpi_fortran(int communicator)
 }
 
 #endif
+
 /**
  * start measuring the performance for region given by the ID.
  */
@@ -362,13 +363,13 @@ void perf_region_start(
 {
 	struct PerfRegion *r = &(perf_regions.perf_regions_list[i_region_id]);
 
-	// denominator to normalize values
-	r->region_enter_counter++;
-
 	// Initialize only once
 	// There's a small overhead, but we hope that this is negligible since we also do this before starting performance counting
 	if (r->region_name == 0)
 		r->region_name = strdup(i_region_name);
+
+	// denominator to normalize values
+	r->region_enter_counter++;
 
 #if PERF_DEBUG
 
@@ -430,6 +431,30 @@ if (perf_regions.use_wallclock_time)
 #else
     gettimeofday(&(r->start_time_value), NULL);
 #endif
+}
+
+
+/**
+ * This is called from Fortran where also the length of the region name is
+ * handed over. We'll have additional overheads therefore for Fortran, but
+ * that's how it goes with Fortran.
+ */
+void perf_region_start_fortran(
+	int i_region_id,	///< id of region
+	const char* i_region_name,	///< region name (associated with ID)
+	size_t len ///< length of region_name
+)
+{
+	struct PerfRegion *r = &(perf_regions.perf_regions_list[i_region_id]);
+
+	if (r->region_name == 0)
+	{
+		r->region_name = (char *)malloc((len + 1) * sizeof(char));
+		strncpy(r->region_name, i_region_name, len);
+		r->region_name[len] = '\0';
+	}
+
+	perf_region_start(i_region_id, 0);
 }
 
 
@@ -538,9 +563,9 @@ void perf_regions_output_human_readable_text()
 	{
 		fprintf(s, "\tWALLCLOCKTIME");
 		fprintf(s, "\tMIN");
-		fprintf(s, "\t\t\tMAX");
-		fprintf(s, "\t\t\tMEAN");
-		fprintf(s, "\t\t\tVAR");
+		fprintf(s, "\tMAX");
+		fprintf(s, "\tMEAN");
+		fprintf(s, "\tVAR");
 	}
 	fprintf(s, "\tCOUNTER");
 	fprintf(s, "\n");
@@ -576,9 +601,6 @@ void perf_regions_output_human_readable_text()
 		{
 			long long counter_value = r->counter_values[j];
 
-			// DON'T NORMALIZE the performance value
-			//counter_value /= r->region_enter_counter;
-
 			double param_value = counter_value;
 
 			fprintf(s, "\t%.7e", param_value);
@@ -586,7 +608,7 @@ void perf_regions_output_human_readable_text()
 #endif
 
 #  if PERF_COUNTERS_NESTED
-		fprintf(s, "\t\t%i\t", r->spoiled);
+		fprintf(s, "\t%i", r->spoiled);
 #  endif
 		if (perf_regions.use_wallclock_time) {
 			fprintf(s, "\t%.7e", r->counter_wallclock_time);
@@ -596,7 +618,7 @@ void perf_regions_output_human_readable_text()
 			fprintf(s, "\t%.7e", r->squared_dist_wallclock_time / r->region_enter_counter);
 		}
 
-		fprintf(s, "\t\t\t%.0f", r->region_enter_counter);
+		fprintf(s, "\t%.0f", r->region_enter_counter);
 
 		fprintf(s, "\n");
 	}

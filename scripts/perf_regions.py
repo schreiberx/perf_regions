@@ -29,25 +29,27 @@ class PerfRegions:
 
         self.fortran_language_ext = ["F90", "f90", "F", "f"]
         self.fortran_region_pattern_match = {
-            "init": "^.*!(\$|pragma )perf_regions init(| .*)$",  # initialization of timing
-            "init_mpi": "^.*!(\$|pragma )perf_regions init_mpi(| .*)$",  # initialization of timing when using MPI
-            "finalize": "^.*!(\$|pragma )perf_regions finalize(| .*)$",  # shutdown of timing
-            "include": "^.*!(\$|pragma )perf_regions include(| .*)$",  # include part
-            "start": "^.*!(\$|pragma )perf_regions start(| .*)$",  # start of timing
-            "stop": "^.*!(\$|pragma )perf_regions stop(| .*)$",  # end of timing
-            "reset": "^.*!(\$|pragma )perf_regions reset(| .*)$",  # reset timing
+            "init": r"^.*!(\$|pragma\s+)perf_regions\s+init(\s*)$",  # initialization of timing
+            "init_mpi": r"^\s*!(\$|pragma\s+)perf_regions\s+init_mpi(\s*)$",  # initialization of timing when using MPI
+            "finalize": r"^\s*!(\$|pragma\s+)perf_regions\s+finalize(\s*)$",  # shutdown of timing
+            "include": r"^\s*!(\$|pragma\s+)perf_regions\s+include(\s*)$",  # include part
+            "start": r"^\s*!(\$|pragma\s+)perf_regions\s+start\s+(.*)$",  # start of timing
+            "stop": r"^\s*!(\$|pragma\s+)perf_regions\s+stop\s+(.*)$",  # end of timing
+            "reset": r"^\s*!(\$|pragma\s+)perf_regions\s+reset(\s*)$",  # reset timing
         }
+        self.fortran_ignore_case = True
 
         self.c_language_ext = ["c", "cpp", "cxx"]
         self.c_region_pattern_match = {
-            "init": "^.*#pragma perf_regions init(| .*)$",  # initialization of timing
-            "init_mpi": "^.*#pragma perf_regions init_mpi(| .*)$",  # initialization of timing when using MPI
-            "finalize": "^.*#pragma perf_regions finalize(| .*)$",  # shutdown of timing
-            "include": "^.*#pragma perf_regions include(| .*)$",  # include part
-            "start": "^.*#pragma perf_regions start(| .*)$",  # start of timing
-            "stop": "^.*#pragma perf_regions stop(| .*)$",  # end of timing
-            "reset": "^.*#pragma perf_regions reset(| .*)$",  # reset timing
+            "init": r"^\s*#pragma\s+perf_regions\s+init\s*$",  # initialization of timing
+            "init_mpi": r"^\s*#pragma\s+perf_regions\s+init_mpi\s*$",  # initialization of timing when using MPI
+            "finalize": r"^\s*#pragma\s+perf_regions\s+finalize\s*$",  # shutdown of timing
+            "include": r"^\s*#pragma\s+perf_regions\s+include\s*$",  # include part
+            "start": r"^\s*#pragma\s+perf_regions\s+start\s+(.*)$",  # start of timing
+            "stop": r"^\s*#pragma\s+perf_regions\s+stop\s+(.*)$",  # end of timing
+            "reset": r"^\s*#pragma\s+perf_regions\s+reset\s*$",  # reset timing
         }
+        self.c_ignore_case = False
 
         if not isinstance(self.list_dirs, List):
             assert isinstance(self.list_dirs, str)
@@ -75,7 +77,8 @@ class PerfRegions:
         if filename_out is None:
             filename_out = filename_in
 
-        in_content: List[str] = open(filename_in).read().splitlines()
+        in_content_raw: str = open(filename_in).read()
+        in_content: List[str] = in_content_raw.splitlines()
         out_content: List[str] = []
 
         num_lines = len(in_content)
@@ -86,12 +89,14 @@ class PerfRegions:
             original_comment = self.fortran_original_comment
             new_code_comment = self.fortran_new_code_comment
             prog_match_dict = self.fortran_region_pattern_match
+            ignore_case = self.fortran_ignore_case
 
         elif file_ext in self.c_language_ext:
             language = "c"
             original_comment = self.c_original_comment
             new_code_comment = self.c_new_code_comment
             prog_match_dict = self.c_region_pattern_match
+            ignore_case = self.c_ignore_case
 
         else:
             raise Exception(f"Unknown file extension '{file_ext}'")
@@ -112,8 +117,9 @@ class PerfRegions:
                 print(f"{prefix_str}- Found original line in code: '{line}'")
                 # next line is the original code
                 line_id = line_id + 1
-                line_backup = in_content[line_id]
-                print(f"{prefix_str}  - original code: '{line_backup}'")
+                line_original = in_content[line_id]
+                # out_content.append(line_backup)
+                print(f"{prefix_str}  - original code (to be restored): '{line_original}'")
 
                 # next line is instrumented code tag
                 line_id = line_id + 1
@@ -122,39 +128,46 @@ class PerfRegions:
                 if line != new_code_comment:
                     raise UserWarning("PERF_REGION_CODE NOT DETECTED!")
 
-                print(f"{prefix_str}  - found new code line: '{line}'")
-                print(f"{prefix_str}  - new code: '{in_content[1]}'")
-
                 # next line is instrumented code -> overwrite
                 line_id = line_id + 1
 
+                print(f"{prefix_str}  - found injected code (to be removed): '{in_content[line_id]}'")
+
                 if language == "fortran":
-                    if line_backup[1:] == "[PERF_REGION_DUMMY]":
-                        line_id = line_id + 1
-                        continue
-                    assert line_backup[0] == "!"
-                    in_content[line_id] = line_backup[1:]  # remove first comment symbol '#'
+                    assert line_original[0] == "!"
+                    in_content[line_id] = line_original[1:]  # remove first comment symbol '#'
 
                 elif language == "c":
-                    assert line_backup[0:2] == "//"
-                    in_content[line_id] = line_backup[2:]  # remove  comment symbol '//'
+                    assert line_original[0:2] == "//"
+                    in_content[line_id] = line_original[2:]  # remove  comment symbol '//'
 
                 continue
 
             # iterate over regular expressions
             line_processed = False
+
             if not cleanup:
                 for p, m_pattern in prog_match_dict.items():
 
-                    match = re.compile(m_pattern).match(line)
+                    if ignore_case:
+                        match = re.compile(m_pattern, re.IGNORECASE).match(line)
+                    else:
+                        match = re.compile(m_pattern).match(line)
+
                     if not match:
                         continue
 
-                    match_tag = match.group(match.lastindex)
-                    # Remove leading space
-                    if len(match_tag) > 0:
-                        assert match_tag[0] == " "
-                        match_tag = match_tag[1:]
+                    if match.lastindex is not None:
+                        match_tag = match.group(match.lastindex)
+
+                        # Remove leading space
+                        while len(match_tag) > 0:
+                            if match_tag[0] != " ":
+                                break
+                            match_tag = match_tag[1:]
+
+                    else:
+                        match_tag = None
 
                     line_processed = True
                     if p == "init":  # initialization without mpi
@@ -187,7 +200,7 @@ class PerfRegions:
                         self.perf_regions_init_found = True
                         break
 
-                    elif p == "finalize":  # finalize
+                    if p == "finalize":  # finalize
                         print(f"{prefix_str}- Found finalize statement")
                         depth -= 1
                         if language == "fortran":
@@ -197,18 +210,15 @@ class PerfRegions:
                         self.perf_regions_finalize_found = True
                         break
 
-                    elif p == "include":  # use/include
+                    if p == "include":  # use/include
                         print(f"{prefix_str}- Found include/use statement")
                         if language == "fortran":
                             self._append_source_lines(out_content, line, "USE perf_regions_fortran", language=language)
-                            # self._append_source_lines(
-                            #    out_content, "[PERF_REGION_DUMMY]", '#include "perf_regions_defines.h"', language=language
-                            # )
                         elif language == "c":
                             self._append_source_lines(out_content, line, "#include <perf_regions.h>", language=language)
                         break
 
-                    elif p == "start":  # start timing
+                    if p == "start":  # start timing
                         name = match_tag
                         name = name.upper()
 
@@ -231,7 +241,7 @@ class PerfRegions:
                             )
                         break
 
-                    elif p == "stop":  # timing stop
+                    if p == "stop":  # timing stop
                         name = match_tag
                         name = name.upper()
                         print(f"{prefix_str}- Found region end '{name}'")
@@ -246,23 +256,29 @@ class PerfRegions:
                             self._append_source_lines(
                                 out_content, line, f"perf_region_stop({id}); //" + name, language=language
                             )
+                        break
 
-                    elif p == "reset":  # timing_reset
+                    if p == "reset":  # timing_reset
                         print("{prefix_str}- Found timing_reset call")
                         if language == "fortran":
                             self._append_source_lines(out_content, line, "! No perf_region equivalent", language=language)
                         elif language == "c":
                             self._append_source_lines(out_content, line, "// No perf_region equivalent", language=language)
+                        break
 
-                    else:
-                        raise Exception(f"Unknown perf_regions tag '{p}'")
+                    raise Exception(f"Unknown perf_regions tag '{p}'")
 
-            if line_processed == False:
+            if line_processed is False:
                 out_content.append(line)
 
             line_id = line_id + 1
 
-        open(filename_out, "w").write("\n".join(out_content))
+        out_content_raw = "\n".join(out_content)
+        if len(in_content_raw) > 0:
+            if in_content_raw[-1] == "\n":
+                out_content_raw += "\n"
+        print(f"- Writing output to file '{filename_out}'")
+        open(filename_out, "w").write(out_content_raw)
 
     def _append_source_lines(self, content: List[str], old_line, new_line, language: str):
 

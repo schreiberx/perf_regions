@@ -11,7 +11,7 @@ USE_PAPI ?= 1
 BUILD_SHARED_LIBS ?= 1
 BUILD_STATIC_LIBS ?= 0
 
-.PHONY: all build_src examples run_tests clean help install uninstall distclean
+.PHONY: all build_src tests run_tests clean help install uninstall distclean
 
 # Default target
 all: build_src
@@ -19,11 +19,11 @@ all: build_src
 build_src:
 	$(MAKE) -C ./src USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI) BUILD_SHARED_LIBS=$(BUILD_SHARED_LIBS) BUILD_STATIC_LIBS=$(BUILD_STATIC_LIBS)
 
-examples:
-	$(MAKE) -C ./examples USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI)
+tests:
+	$(MAKE) -C ./tests USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI)
 
 run_tests:
-	$(MAKE) -C ./examples run_tests USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C ./tests run_tests USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI)
 
 install: build_src
 	$(MAKE) -C ./src install PREFIX=$(PREFIX) USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI) BUILD_SHARED_LIBS=$(BUILD_SHARED_LIBS) BUILD_STATIC_LIBS=$(BUILD_STATIC_LIBS)
@@ -33,7 +33,7 @@ uninstall:
 
 clean:
 	$(MAKE) -C ./src clean
-	$(MAKE) -C ./examples clean
+	$(MAKE) -C ./tests clean
 
 help:
 	@echo "perf_regions build system (traditional make only)"
@@ -45,7 +45,7 @@ help:
 	@echo "Targets:"
 	@echo "  all                       - Build the library"
 	@echo "  build_src                 - Build the library"
-	@echo "  examples                  - Build examples"
+	@echo "  tests                  - Build tests"
 	@echo "  run_tests                 - Run tests"
 	@echo "  install                   - Install library and headers"
 	@echo "  uninstall                 - Uninstall library and headers"

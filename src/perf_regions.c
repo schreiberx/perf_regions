@@ -161,15 +161,16 @@ struct PerfRegions
 	// Measure wallclock time
 	int use_wallclock_time;
 
+#if PERF_REGIONS_USE_PAPI
 	// Measure with PAPI
 	int use_papi;
 
-	// number of performance counters
-	int num_perf_counters;
-
 	// names of performance counters
 	char *perf_counter_names[PERF_COUNTERS_MAX];
+#endif
 
+	// number of performance counters
+	int num_perf_counters;
 
 #if PERF_COUNTERS_NESTED
 	// number of nested performance regions
@@ -250,7 +251,9 @@ void perf_regions_init()
 	perf_regions.perf_regions_list = 0;
 
 	perf_regions.use_wallclock_time = 1;
+#if PERF_REGIONS_USE_PAPI
 	perf_regions.use_papi = 0;
+#endif
 	perf_regions.use_mpi = 0;
 
 #if PERF_COUNTERS_NESTED
@@ -299,10 +302,16 @@ void perf_regions_init()
 		}
 		else
 		{
+#if PERF_REGIONS_USE_PAPI
+
 			perf_regions.perf_counter_names[perf_regions.num_perf_counters] = strdup(event);
 			perf_regions.num_perf_counters++;
 
 			perf_regions.use_papi = 1;
+#else
+			fprintf(stderr, "PAPI performance counters not supported in this build, but PERF_REGIONS_COUNTERS requests '%s'\n", event);
+			exit(-1);
+#endif
 		}
 
 		event = strtok(NULL, ",");
@@ -554,11 +563,15 @@ void perf_regions_output_human_readable_text()
 	fprintf(s, "[MULE] perf_regions: Performance counters profiling:\n");
 	fprintf(s, "[MULE] perf_regions: ----------------------\n");
 	fprintf(s, "[MULE] perf_regions: Section");
+
+#	if PERF_REGIONS_USE_PAPI
 	for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_regions.perf_counter_names[j]);
-#  if PERF_COUNTERS_NESTED
+#	endif
+
+#   if PERF_COUNTERS_NESTED
 	fprintf(s, "\tSPOILED");
-#  endif
+#   endif
 	if (perf_regions.use_wallclock_time)
 	{
 		fprintf(s, "\tWALLCLOCKTIME");
@@ -767,6 +780,9 @@ void perf_regions_finalize()
 
 #ifndef PERF_REGIONS_USE_PAPI
 	papi_counters_finalize();
+
+	for (int i = 0; i < perf_regions.num_perf_counters; i++)
+		free(perf_regions.perf_counter_names[i]);
 #endif
 
 #if PERF_COUNTERS_NESTED
@@ -776,8 +792,5 @@ void perf_regions_finalize()
 		exit(-1);
 	}
 #endif
-
-	for (int i = 0; i < perf_regions.num_perf_counters; i++)
-		free(perf_regions.perf_counter_names[i]);
 }
 

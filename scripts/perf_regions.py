@@ -66,6 +66,21 @@ class PerfRegions:
         self.perf_regions_init_found: bool = False
         self.perf_regions_finalize_found: bool = False
 
+    def _cleanup_name_tag(self, name: str) -> str:
+        # Remove leading/trailing spaces
+        name = name.strip()
+
+        # Replace spaces with underscores
+        name = name.replace(" ", "_")
+
+        if name.startswith("'") and name.endswith("'"):
+            name = name[1:-1]
+
+        if name.startswith('"') and name.endswith('"'):
+            name = name[1:-1]
+
+        return name
+
     def find_and_replace(self, filename_in: str, filename_out: Optional[str] = None, cleanup: bool = False):
         """
         Replace timing_start lines and add region names to region_name_list
@@ -220,7 +235,7 @@ class PerfRegions:
 
                     if p == "start":  # start timing
                         name = match_tag
-                        name = name.upper()
+                        name = self._cleanup_name_tag(name)
 
                         if name in self.region_name_list_acc:
                             print("WARNING: " + name + " already exists in the region name list")
@@ -243,18 +258,19 @@ class PerfRegions:
 
                     if p == "stop":  # timing stop
                         name = match_tag
-                        name = name.upper()
+                        name = self._cleanup_name_tag(name)
+
                         print(f"{prefix_str}- Found region end '{name}'")
                         depth -= 1
 
                         id = self.region_name_list_acc.index(name)
                         if language == "fortran":
                             self._append_source_lines(
-                                out_content, line, f"CALL perf_region_stop({id}) !" + name, language=language
+                                out_content, line, f"CALL perf_region_stop({id})   ! name=\"{name}\"", language=language
                             )
                         elif language == "c":
                             self._append_source_lines(
-                                out_content, line, f"perf_region_stop({id}); //" + name, language=language
+                                out_content, line, f"perf_region_stop({id});   // name=\"{name}\"", language=language
                             )
                         break
 

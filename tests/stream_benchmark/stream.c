@@ -320,7 +320,7 @@ perf_regions_init();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start copy
 //PERF_REGION_CODE
-perf_region_start(0, "COPY");
+perf_region_start(0, "copy");
 #ifdef TUNED
         tuned_STREAM_Copy();
 #else
@@ -331,14 +331,14 @@ perf_region_start(0, "COPY");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop copy
 //PERF_REGION_CODE
-perf_region_stop(0); //COPY
+perf_region_stop(0);   // name="copy"
 	times[0][k] = mysecond() - times[0][k];
 	
 	times[1][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start scale
 //PERF_REGION_CODE
-perf_region_start(1, "SCALE");
+perf_region_start(1, "scale");
 #ifdef TUNED
         tuned_STREAM_Scale(scalar);
 #else
@@ -349,14 +349,14 @@ perf_region_start(1, "SCALE");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop scale
 //PERF_REGION_CODE
-perf_region_stop(1); //SCALE
+perf_region_stop(1);   // name="scale"
 	times[1][k] = mysecond() - times[1][k];
 	
 	times[2][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start add
 //PERF_REGION_CODE
-perf_region_start(2, "ADD");
+perf_region_start(2, "add");
 #ifdef TUNED
         tuned_STREAM_Add();
 #else
@@ -367,14 +367,14 @@ perf_region_start(2, "ADD");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop add
 //PERF_REGION_CODE
-perf_region_stop(2); //ADD
+perf_region_stop(2);   // name="add"
 	times[2][k] = mysecond() - times[2][k];
 	
 	times[3][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start triad
 //PERF_REGION_CODE
-perf_region_start(3, "TRIAD");
+perf_region_start(3, "triad");
 #ifdef TUNED
         tuned_STREAM_Triad(scalar);
 #else
@@ -385,7 +385,7 @@ perf_region_start(3, "TRIAD");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop triad
 //PERF_REGION_CODE
-perf_region_stop(3); //TRIAD
+perf_region_stop(3);   // name="triad"
 	times[3][k] = mysecond() - times[3][k];
 	}
 

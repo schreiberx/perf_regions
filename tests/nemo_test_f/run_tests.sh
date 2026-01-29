@@ -14,19 +14,20 @@ taskset -c 0 ./nemo_test
 taskset -c 0 ./nemo_test_perf_regions
 
 set +e
+
 diff nemo_test.F90 nemo_test.F90_TEST_ORIG > /dev/null
 if [ $? -eq 0 ]; then
 	echo "This should have failed"
 	exit 1
 fi
 
-set -e
-
 diff nemo_test.F90 nemo_test.F90_TEST_PR
 if [ $? -ne 0 ]; then
 	echo "Check with PerfRegion source file failed"
 	exit 1
 fi
+
+set -e
 
 make clean
 

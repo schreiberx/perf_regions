@@ -21,17 +21,17 @@ if [ $? -eq 0 ]; then
 	exit 1
 fi
 
-set -e
-
-diff array_test.c array_test.c_TEST_PR || echo ""
+diff array_test.c array_test.c_TEST_PR
 if [ $? -ne 0 ]; then
 	echo "Check with PerfRegion source file failed"
 	exit 1
 fi
 
+set -e
+
 make clean
 
-diff array_test.c array_test.c_TEST_ORIG || echo ""
+diff array_test.c array_test.c_TEST_ORIG
 if [ $? -ne 0 ]; then
 	echo "Undoing in-situ changes failed"
 	exit 1

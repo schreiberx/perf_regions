@@ -29,20 +29,20 @@ contains
 !PERF_REGION_ORIGINAL
 !      CALL timing_start('FOOa')
 !PERF_REGION_CODE
-CALL perf_region_start(0, "'FOOA'"//achar(0))
+CALL perf_region_start(0, "FOOa"//achar(0))
 !PERF_REGION_ORIGINAL
 !      CALL timing_start('FOOb')
 !PERF_REGION_CODE
-CALL perf_region_start(1, "'FOOB'"//achar(0))
+CALL perf_region_start(1, "FOOb"//achar(0))
       call test2
 !PERF_REGION_ORIGINAL
 !      CALL timing_stop('FOOb')
 !PERF_REGION_CODE
-CALL perf_region_stop(1) !'FOOB'
+CALL perf_region_stop(1)   ! name="FOOb"
 !PERF_REGION_ORIGINAL
 !      CALL timing_stop('FOOa')
 !PERF_REGION_CODE
-CALL perf_region_stop(0) !'FOOA'
+CALL perf_region_stop(0)   ! name="FOOa"
 
    end SUBROUTINE test1
 
@@ -78,11 +78,11 @@ CALL perf_region_stop(0) !'FOOA'
 !PERF_REGION_ORIGINAL
 !            CALL timing_start('BARa'); 
 !PERF_REGION_CODE
-CALL perf_region_start(2, "'BARA'"//achar(0))
+CALL perf_region_start(2, "BARa"//achar(0))
 !PERF_REGION_ORIGINAL
 !            CALL timing_start('BARb'); 
 !PERF_REGION_CODE
-CALL perf_region_start(3, "'BARB'"//achar(0))
+CALL perf_region_start(3, "BARb"//achar(0))
             DO i = 1, array_size
                a(i) = a(i) + a(i)*a(i)
             END DO
@@ -90,11 +90,11 @@ CALL perf_region_start(3, "'BARB'"//achar(0))
 !PERF_REGION_ORIGINAL
 !            CALL timing_stop('BARb'); 
 !PERF_REGION_CODE
-CALL perf_region_stop(3) !'BARB'
+CALL perf_region_stop(3)   ! name="BARb"
 !PERF_REGION_ORIGINAL
 !            CALL timing_stop('BARa'); 
 !PERF_REGION_CODE
-CALL perf_region_stop(2) !'BARA'
+CALL perf_region_stop(2)   ! name="BARa"
             fac = 1.0; 
          END DO
          deallocate (a)

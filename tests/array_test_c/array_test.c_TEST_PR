@@ -31,7 +31,7 @@ perf_regions_init();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start outer
 //PERF_REGION_CODE
-perf_region_start(0, "OUTER");
+perf_region_start(0, "outer");
 
 		printf("\n");
 		printf("**************************************\n");
@@ -50,24 +50,24 @@ perf_region_start(0, "OUTER");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start foo
 //PERF_REGION_CODE
-perf_region_start(1, "FOO");
+perf_region_start(1, "foo");
 
 			run_computations();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop foo
 //PERF_REGION_CODE
-perf_region_stop(1); //FOO
+perf_region_stop(1);   // name="foo"
 
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start bar
 //PERF_REGION_CODE
-perf_region_start(2, "BAR");
+perf_region_start(2, "bar");
 			run_computations();
 			run_computations();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop bar
 //PERF_REGION_CODE
-perf_region_stop(2); //BAR
+perf_region_stop(2);   // name="bar"
 
 			//			perf_region_set_normalize(PERF_REGIONS_FOO, fac);
 		}
@@ -75,7 +75,7 @@ perf_region_stop(2); //BAR
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop outer
 //PERF_REGION_CODE
-perf_region_stop(0); //OUTER
+perf_region_stop(0);   // name="outer"
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions finalize
 //PERF_REGION_CODE

@@ -97,7 +97,7 @@
  */
 #ifndef STREAM_ARRAY_SIZE
 //#   define STREAM_ARRAY_SIZE	10000000
-#   define STREAM_ARRAY_SIZE	10000000
+#   define STREAM_ARRAY_SIZE	20000000
 #endif
 
 /*  2) STREAM runs each kernel "NTIMES" times and reports the *best* result
@@ -115,7 +115,7 @@
 #endif
 #endif
 #ifndef NTIMES
-#   define NTIMES	50
+#   define NTIMES	100
 #endif
 
 /*  Users are allowed to modify the "OFFSET" variable, which *may* change the
@@ -314,13 +314,17 @@ perf_regions_init();
     /*	--- MAIN LOOP --- repeat test cases NTIMES times --- */
 
     scalar = 3.0;
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions start total
+//PERF_REGION_CODE
+perf_region_start(0, "total");
     for (k=0; k<NTIMES; k++)
 	{
 	times[0][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start copy
 //PERF_REGION_CODE
-perf_region_start(0, "copy");
+perf_region_start(1, "copy");
 #ifdef TUNED
         tuned_STREAM_Copy();
 #else
@@ -331,14 +335,14 @@ perf_region_start(0, "copy");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop copy
 //PERF_REGION_CODE
-perf_region_stop(0);   // name="copy"
+perf_region_stop(1);   // name="copy"
 	times[0][k] = mysecond() - times[0][k];
 	
 	times[1][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start scale
 //PERF_REGION_CODE
-perf_region_start(1, "scale");
+perf_region_start(2, "scale");
 #ifdef TUNED
         tuned_STREAM_Scale(scalar);
 #else
@@ -349,14 +353,14 @@ perf_region_start(1, "scale");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop scale
 //PERF_REGION_CODE
-perf_region_stop(1);   // name="scale"
+perf_region_stop(2);   // name="scale"
 	times[1][k] = mysecond() - times[1][k];
 	
 	times[2][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start add
 //PERF_REGION_CODE
-perf_region_start(2, "add");
+perf_region_start(3, "add");
 #ifdef TUNED
         tuned_STREAM_Add();
 #else
@@ -367,14 +371,14 @@ perf_region_start(2, "add");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop add
 //PERF_REGION_CODE
-perf_region_stop(2);   // name="add"
+perf_region_stop(3);   // name="add"
 	times[2][k] = mysecond() - times[2][k];
 	
 	times[3][k] = mysecond();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start triad
 //PERF_REGION_CODE
-perf_region_start(3, "triad");
+perf_region_start(4, "triad");
 #ifdef TUNED
         tuned_STREAM_Triad(scalar);
 #else
@@ -385,9 +389,13 @@ perf_region_start(3, "triad");
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions stop triad
 //PERF_REGION_CODE
-perf_region_stop(3);   // name="triad"
+perf_region_stop(4);   // name="triad"
 	times[3][k] = mysecond() - times[3][k];
 	}
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions stop total
+//PERF_REGION_CODE
+perf_region_stop(0);   // name="total"
 
     /*	--- SUMMARY --- */
 
@@ -401,12 +409,13 @@ perf_region_stop(3);   // name="triad"
 	    }
 	}
     
-    printf("Function    Best Rate MB/s  Avg time     Min time     Max time\n");
+    printf("Function\tBest Rate GB/s\tAvg. Rate GB/s\tAvg time\tMin time\tMax time\n");
     for (j=0; j<4; j++) {
 		avgtime[j] = avgtime[j]/(double)(NTIMES-1);
 
-		printf("%s%12.1f  %11.6f  %11.6f  %11.6f\n", label[j],
-	       1.0E-06 * bytes[j]/mintime[j],
+		printf("%s%12.1f\t%12.1f\t%12.6f\t%12.6f\t%12.6f\n", label[j],
+	       1.0E-09 * bytes[j]/mintime[j],
+	       1.0E-09 * bytes[j]/avgtime[j],
 	       avgtime[j],
 	       mintime[j],
 	       maxtime[j]);

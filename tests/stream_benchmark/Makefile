@@ -29,4 +29,4 @@ stream_c_perfregions: stream.c
 
 clean:
 	$(RM) stream_f stream_c stream_c_perfregions  *.o
-
+	./perf_regions_instrumentation.py cleanup

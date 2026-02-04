@@ -134,8 +134,6 @@ struct PerfRegion
 	double region_enter_counter;
 
 #if PERF_COUNTERS_NESTED
-	long long count_values_read[PERF_COUNTERS_MAX];
-
 	// Set to true if performance counters could be spoiled due to nested
 	int spoiled;
 #endif
@@ -377,7 +375,6 @@ void perf_region_start(
 	if (r->region_name == 0)
 		r->region_name = strdup(i_region_name);
 
-	// denominator to normalize values
 	r->region_enter_counter++;
 
 #if PERF_DEBUG
@@ -411,16 +408,18 @@ void perf_region_start(
 		}
 		else
 		{
-			papi_counters_read_and_reset(r->count_values_read);
+			long long counter_values_stop[PERF_COUNTERS_MAX];
+
+			papi_counters_read_and_reset(counter_values_stop);
 
 			// add performance values to outer nested performance regions
 			for (int i = 0; i < perf_regions.num_nested_performance_regions; i++)
 			{
 				// outer performance region
-				struct PerfRegion *r_outer = perf_regions.nested_performance_regions[i];
+				struct PerfRegion *r2 = perf_regions.nested_performance_regions[i];
 
 				for (int j = 0; j < perf_regions.num_perf_counters; j++)
-					r_outer->counter_values[j] += r->count_values_read[j];
+					r2->counter_values[j] += counter_values_stop[j];
 			}
 		}
 
@@ -483,6 +482,11 @@ void perf_region_stop(
 		printf("Region not active, but stop function called\n");
 		exit(1);
 	}
+	if (perf_regions.num_nested_performance_regions == 0)
+	{
+		printf("More stops than starts detected\n");
+		exit(1);
+	}
 
 	r->active = 0;
 #endif
@@ -493,11 +497,21 @@ void perf_region_stop(
 	{
 #  if PERF_COUNTERS_NESTED
 
+
 		perf_regions.num_nested_performance_regions--;
+
+		long long counter_values_stop[PERF_COUNTERS_MAX];
 
 		if (perf_regions.num_nested_performance_regions == 0)
 		{
-			long long counter_values_stop[PERF_COUNTERS_MAX];
+#if PERF_DEBUG
+			if (r != perf_regions.nested_performance_regions[0])
+			{
+				printf("MISMATCH in nested performance regions on stop\n");
+				exit(-1);
+			}
+#endif
+
 			papi_counters_stop(counter_values_stop);
 
 			for (int j = 0; j < perf_regions.num_perf_counters; j++)
@@ -505,19 +519,19 @@ void perf_region_stop(
 		}
 		else
 		{
-			papi_counters_read_and_reset(r->count_values_read);
+			papi_counters_read_and_reset(counter_values_stop);
 
 			// add performance values to outer nested AND CURRENT performance region
 			for (int i = 0; i <= perf_regions.num_nested_performance_regions; i++)
 			{
 				// outer performance region
-				struct PerfRegion *r_outer = perf_regions.nested_performance_regions[i];
+				struct PerfRegion *r2 = perf_regions.nested_performance_regions[i];
 
 				for (int j = 0; j < perf_regions.num_perf_counters; j++)
-					r_outer->counter_values[j] += r->count_values_read[j];
+					r2->counter_values[j] += counter_values_stop[j];
 
 				if (i < perf_regions.num_nested_performance_regions)
-					r_outer->spoiled = 1;
+					r2->spoiled = 1;
 			}
 		}
 

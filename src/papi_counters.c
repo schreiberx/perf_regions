@@ -218,7 +218,18 @@ void papi_counters_read_and_reset(
 ) {
 	// read the counters
 	if (PAPI_read(papi_counters.event_set, o_count_values_read) == PAPI_OK)
-		return;
+	{
+		if (PAPI_reset(papi_counters.event_set) == PAPI_OK)
+		{
+			return;
+		}
+		else
+		{
+			PAPI_perror("PAPI_reset_counters: ");
+			print_access_right_problems();
+			exit(-1);
+		}
+	}
 
 	if (papi_counters.event_list_len != 0)
 	{

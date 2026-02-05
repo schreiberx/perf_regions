@@ -20,13 +20,16 @@ class TestStreamBenchmark(unittest.TestCase):
             self.env["PERF_REGIONS_COUNTERS"] = perf_regions_counters
         
         # Clean
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
+
+    def execute(self, command):
+        subprocess.check_call(command.split(), cwd=self.base_dir, env=self.env)
 
     def test_stream_execution(self):
         # Build
         # make stream_c_perfregions
         print(f"Building in {self.base_dir}")
-        subprocess.check_call(["make", "stream_c_perfregions"], cwd=self.base_dir, env=self.env)
+        self.execute("make stream_c_perfregions")
         
         # Run
         print("Running ./stream_c_perfregions")

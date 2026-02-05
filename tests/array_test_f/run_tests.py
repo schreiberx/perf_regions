@@ -14,18 +14,21 @@ class TestArrayTestFortran(unittest.TestCase):
         if "PERF_REGIONS_COUNTERS" not in self.env:
             self.env["PERF_REGIONS_COUNTERS"] = "PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM,WALLCLOCKTIME"
 
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
+
+    def execute(self, command):
+        subprocess.check_call(command.split(), cwd=self.base_dir, env=self.env)
 
     def test_workflow(self):
         # make tests
-        subprocess.check_call(["make", "tests"], cwd=self.base_dir, env=self.env)
+        self.execute("make tests")
         
         # Run executed binaries (original and instrumented)
         print("Running ./array_test")
-        subprocess.check_call(["taskset", "-c", "0", "./array_test"], cwd=self.base_dir, env=self.env)
+        self.execute("taskset -c 0 ./array_test")
         
         print("Running ./array_test_perf_regions")
-        subprocess.check_call(["taskset", "-c", "0", "./array_test_perf_regions"], cwd=self.base_dir, env=self.env)
+        self.execute("taskset -c 0 ./array_test_perf_regions")
         
         # Verify changes
         # diff array_test.F90 array_test.F90_TEST_ORIG > /dev/null
@@ -34,13 +37,13 @@ class TestArrayTestFortran(unittest.TestCase):
              subprocess.check_call(["diff", "array_test.F90", "array_test.F90_TEST_ORIG"], cwd=self.base_dir, stdout=subprocess.DEVNULL)
              self.fail("array_test.F90 should be different from array_test.F90_TEST_ORIG")
         except subprocess.CalledProcessError:
-             pass 
+             pass
 
         # diff array_test.F90 array_test.F90_TEST_PR
         subprocess.check_call(["diff", "array_test.F90", "array_test.F90_TEST_PR"], cwd=self.base_dir)
         
         # Cleanup and verify restore
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
         
         subprocess.check_call(["diff", "array_test.F90", "array_test.F90_TEST_ORIG"], cwd=self.base_dir)
 

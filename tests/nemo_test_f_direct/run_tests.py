@@ -15,12 +15,15 @@ class TestNemoTestDirect(unittest.TestCase):
         if "PERF_REGIONS_COUNTERS" not in self.env:
              self.env["PERF_REGIONS_COUNTERS"] = "PAPI_L3_TCM,WALLCLOCKTIME"
 
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
+
+    def execute(self, command):
+        subprocess.check_call(command.split(), cwd=self.base_dir, env=self.env)
 
     def test_variable_sizes(self):
         # Build
         print("Building nemo_test_perf_regions")
-        subprocess.check_call(["make"], cwd=self.base_dir, env=self.env)
+        self.execute("make")
         
         sizes = [1, 2, 4, 8, 16, 32, 64, 128]
         for i in sizes:

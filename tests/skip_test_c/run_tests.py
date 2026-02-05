@@ -15,16 +15,19 @@ class TestSkipTest(unittest.TestCase):
         self.env["LD_LIBRARY_PATH"] = f"{src_path}:{existing_ld}"
 
         # Clean
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
         
         # Default perf regions counters for this test (wallclock is sufficient for logic test)
         if "PERF_REGIONS_COUNTERS" not in self.env:
             self.env["PERF_REGIONS_COUNTERS"] = "WALLCLOCKTIME"
 
+    def execute(self, command):
+        subprocess.check_call(command.split(), cwd=self.base_dir, env=self.env)
+
     def test_skip_execution(self):
         """Test with SKIP_N=2. Expecting 3 updates and 2 skips for Outer region."""
         # Build
-        subprocess.check_call(["make", "skip_test"], cwd=self.base_dir, env=self.env)
+        self.execute("make skip_test")
         
         # Run with SKIP_N=2
         run_env = self.env.copy()
@@ -70,7 +73,7 @@ class TestSkipTest(unittest.TestCase):
     def test_no_skip_execution(self):
         """Test with SKIP_N=0. Expecting 5 updates and 0 skips."""
         # Build
-        subprocess.check_call(["make", "skip_test"], cwd=self.base_dir, env=self.env)
+        self.execute("make skip_test")
         
         # Run with SKIP_N=0
         run_env = self.env.copy()

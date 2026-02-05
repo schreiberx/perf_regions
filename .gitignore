@@ -56,3 +56,4 @@ Testing/
 
 # LyX backup files
 **/*.lyx~
+**/*.json

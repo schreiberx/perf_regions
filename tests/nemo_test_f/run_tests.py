@@ -14,18 +14,21 @@ class TestNemoTestFortran(unittest.TestCase):
         if "PERF_REGIONS_COUNTERS" not in self.env:
             self.env["PERF_REGIONS_COUNTERS"] = "PAPI_L1_TCM,PAPI_L2_TCM,PAPI_L3_TCM,WALLCLOCKTIME"
 
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
+
+    def execute(self, command):
+        subprocess.check_call(command.split(), cwd=self.base_dir, env=self.env)
 
     def test_workflow(self):
         # make tests
-        subprocess.check_call(["make", "tests"], cwd=self.base_dir, env=self.env)
+        self.execute("make tests")
         
         # Run
         print("Running ./nemo_test")
-        subprocess.check_call(["taskset", "-c", "0", "./nemo_test"], cwd=self.base_dir, env=self.env)
+        self.execute("taskset -c 0 ./nemo_test")
         
         print("Running ./nemo_test_perf_regions")
-        subprocess.check_call(["taskset", "-c", "0", "./nemo_test_perf_regions"], cwd=self.base_dir, env=self.env)
+        self.execute("taskset -c 0 ./nemo_test_perf_regions")
         
         # Verify changes
         try:
@@ -34,12 +37,13 @@ class TestNemoTestFortran(unittest.TestCase):
         except subprocess.CalledProcessError:
              pass 
 
-        subprocess.check_call(["diff", "nemo_test.F90", "nemo_test.F90_TEST_PR"], cwd=self.base_dir)
+        # subprocess.check_call(["diff", "nemo_test.F90", "nemo_test.F90_TEST_PR"], cwd=self.base_dir)
+        self.execute("diff nemo_test.F90 nemo_test.F90_TEST_PR")
         
         # Cleanup
-        subprocess.check_call(["make", "clean"], cwd=self.base_dir, env=self.env)
+        self.execute("make clean")
         
-        subprocess.check_call(["diff", "nemo_test.F90", "nemo_test.F90_TEST_ORIG"], cwd=self.base_dir)
+        self.execute("diff nemo_test.F90 nemo_test.F90_TEST_ORIG")
 
 if __name__ == '__main__':
     unittest.main()

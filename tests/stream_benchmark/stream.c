@@ -47,7 +47,10 @@
 # include <limits.h>
 # include <sys/time.h>
 
-#pragma perf_regions include
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions include
+//PERF_REGION_CODE
+#include <perf_regions.h>
 
 /*-----------------------------------------------------------------------
  * INSTRUCTIONS:
@@ -112,7 +115,7 @@
 #endif
 #endif
 #ifndef NTIMES
-#   define NTIMES	100
+#   define NTIMES	50
 #endif
 
 /*  Users are allowed to modify the "OFFSET" variable, which *may* change the
@@ -210,7 +213,10 @@ extern int omp_get_num_threads();
 int
 main()
     {
-#pragma perf_regions init
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions init
+//PERF_REGION_CODE
+perf_regions_init();
     int			quantum, checktick();
     int			BytesPerWord;
     int			k;
@@ -308,11 +314,17 @@ main()
     /*	--- MAIN LOOP --- repeat test cases NTIMES times --- */
 
     scalar = 3.0;
-#pragma perf_regions start total
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions start total
+//PERF_REGION_CODE
+perf_region_start(0, "total");
     for (k=0; k<NTIMES; k++)
 	{
 	times[0][k] = mysecond();
-#pragma perf_regions start copy
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions start copy
+//PERF_REGION_CODE
+perf_region_start(1, "copy");
 #ifdef TUNED
         tuned_STREAM_Copy();
 #else
@@ -320,11 +332,17 @@ main()
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    c[j] = a[j];
 #endif
-#pragma perf_regions stop copy
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions stop copy
+//PERF_REGION_CODE
+perf_region_stop(1);   // name="copy"
 	times[0][k] = mysecond() - times[0][k];
 	
 	times[1][k] = mysecond();
-#pragma perf_regions start scale
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions start scale
+//PERF_REGION_CODE
+perf_region_start(2, "scale");
 #ifdef TUNED
         tuned_STREAM_Scale(scalar);
 #else
@@ -332,11 +350,17 @@ main()
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    b[j] = scalar*c[j];
 #endif
-#pragma perf_regions stop scale
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions stop scale
+//PERF_REGION_CODE
+perf_region_stop(2);   // name="scale"
 	times[1][k] = mysecond() - times[1][k];
 	
 	times[2][k] = mysecond();
-#pragma perf_regions start add
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions start add
+//PERF_REGION_CODE
+perf_region_start(3, "add");
 #ifdef TUNED
         tuned_STREAM_Add();
 #else
@@ -344,11 +368,17 @@ main()
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    c[j] = a[j]+b[j];
 #endif
-#pragma perf_regions stop add
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions stop add
+//PERF_REGION_CODE
+perf_region_stop(3);   // name="add"
 	times[2][k] = mysecond() - times[2][k];
 	
 	times[3][k] = mysecond();
-#pragma perf_regions start triad
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions start triad
+//PERF_REGION_CODE
+perf_region_start(4, "triad");
 #ifdef TUNED
         tuned_STREAM_Triad(scalar);
 #else
@@ -356,10 +386,16 @@ main()
 	for (j=0; j<STREAM_ARRAY_SIZE; j++)
 	    a[j] = b[j]+scalar*c[j];
 #endif
-#pragma perf_regions stop triad
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions stop triad
+//PERF_REGION_CODE
+perf_region_stop(4);   // name="triad"
 	times[3][k] = mysecond() - times[3][k];
 	}
-#pragma perf_regions stop total
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions stop total
+//PERF_REGION_CODE
+perf_region_stop(0);   // name="total"
 
     /*	--- SUMMARY --- */
 
@@ -390,7 +426,10 @@ main()
     checkSTREAMresults();
     printf(HLINE);
 
-#pragma perf_regions finalize
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions finalize
+//PERF_REGION_CODE
+perf_regions_finalize();
     return 0;
 }
 

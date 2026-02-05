@@ -6,12 +6,21 @@ set -e
 # Install Python dependencies
 pip install -r requirements.txt || source venv_setup.sh
 
-# Backup configuration
-cp ../config.mk ../config.mk.bak
+# Handle configuration backup or creation
+if [ -f ../config.mk ]; then
+    cp ../config.mk ../config.mk.bak
+    HAS_CONFIG_BACKUP=1
+else
+    echo "config.mk not found. Running configure..."
+    (cd .. && ./configure)
+    HAS_CONFIG_BACKUP=0
+fi
 
 restore_config() {
-    if [ -f ../config.mk.bak ]; then
+    if [ "$HAS_CONFIG_BACKUP" -eq 1 ]; then
         mv ../config.mk.bak ../config.mk
+    else
+        rm -f ../config.mk
     fi
 }
 trap restore_config EXIT

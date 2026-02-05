@@ -4,6 +4,7 @@ all:
 	$(MAKE) -C stream_benchmark USE_PAPI=$(USE_PAPI)
 	$(MAKE) -C nemo_test_f_direct USE_PAPI=$(USE_PAPI)
 	$(MAKE) -C nemo_test_f USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C bandwidth_monitor_papi USE_PAPI=$(USE_PAPI)
 
 	$(MAKE) run_tests USE_PAPI=$(USE_PAPI)
 
@@ -13,6 +14,7 @@ run_tests:
 	$(MAKE) -C stream_benchmark run_tests USE_PAPI=$(USE_PAPI)
 	$(MAKE) -C nemo_test_f_direct run_tests USE_PAPI=$(USE_PAPI)
 	$(MAKE) -C nemo_test_f run_tests USE_PAPI=$(USE_PAPI)
+	$(MAKE) -C bandwidth_monitor_papi run_tests USE_PAPI=$(USE_PAPI)
 
 
 clean:
@@ -21,5 +23,6 @@ clean:
 	$(MAKE) -C stream_benchmark clean
 	$(MAKE) -C nemo_test_f_direct clean
 	$(MAKE) -C nemo_test_f clean
+	$(MAKE) -C bandwidth_monitor_papi clean
 
 .PHONY: all run_tests clean

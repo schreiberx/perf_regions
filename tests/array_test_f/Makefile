@@ -7,25 +7,23 @@ include ../Makefile.setup
 CFLAGS_PERFREGION+= -I../../src
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
 
-all:	tests
+# Ensure build directory exists
+$(shell mkdir -p build)
 
+all:	build/array_test build/array_test_perf_regions
 
-run_tests:
-	./run_tests.sh
+build/array_test: src/array_test.F90
+	${FC} -g -I../../src -J build -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
-tests: array_test array_test_perf_regions
-
-array_test: array_test.F90
-	./perf_regions_instrumentation.py cleanup
-	${FC} -g -I../../src -o array_test array_test.F90 ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
-
-array_test_perf_regions: array_test.F90
-	./perf_regions_instrumentation.py cleanup
+build/array_test.F90: src/array_test.F90
 	./perf_regions_instrumentation.py preprocess
-	${FC} -g -I../../src -o array_test_perf_regions array_test.F90 ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+
+build/array_test_perf_regions: build/array_test.F90
+	${FC} -g -I../../src -J build -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 clean:
-	./perf_regions_instrumentation.py cleanup
-	rm -f array_test array_test_perf_regions *.o *.mod
+	rm -rf build *.o *.mod
+
+.PHONY: all clean
 
 .PHONY: all build run_tests tests array_test array_test_perf_regions clean

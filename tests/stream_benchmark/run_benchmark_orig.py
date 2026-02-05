@@ -8,7 +8,7 @@ import pandas as pd
 os.environ["LD_LIBRARY_PATH"] = f"../../build:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
 events_cacheblocks = "PAPI_L3_TCM".split(",")
-#events_cacheblocks = "PAPI_L1_DCM,PAPI_LST_INS".split(",")
+# events_cacheblocks = "PAPI_L1_DCM,PAPI_LST_INS".split(",")
 # events_cacheblocks = "MEM_INST_RETIRED".split(",")
 # events_cacheblocks = "MEM_UOPS_RETIRED:ALL_LOADS,MEM_UOPS_RETIRED:ALL_STORES".split(",")
 # events_cacheblocks = "PAPI_L3_TCM,LLC-PREFETCHES".split(",")
@@ -19,7 +19,9 @@ print(f"PERF_REGIONS_COUNTERS={perf_regions_counters}")
 
 
 def run_make():
-    result = subprocess.run(["make", "stream_c_perfregions"], capture_output=True, text=True)
+    result = subprocess.run(
+        ["make", "stream_c_perfregions"], capture_output=True, text=True
+    )
     if result.returncode != 0:
         print(result.stdout)
         print(result.stderr, file=sys.stderr)
@@ -28,7 +30,9 @@ def run_make():
 
 def run_stream():
     try:
-        output = subprocess.check_output(["./stream_c_perfregions"], stderr=subprocess.STDOUT, text=True)
+        output = subprocess.check_output(
+            ["./stream_c_perfregions"], stderr=subprocess.STDOUT, text=True
+        )
     except subprocess.CalledProcessError as e:
         output = e.output + "\nERROR"
     return output
@@ -39,7 +43,10 @@ OUTPUT = run_stream()
 
 if "ERROR" in OUTPUT:
     print(OUTPUT)
-    print("Error: Detected ERROR in output when running './stream_c_perfregions'", file=sys.stderr)
+    print(
+        "Error: Detected ERROR in output when running './stream_c_perfregions'",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 print(OUTPUT)
@@ -72,7 +79,9 @@ for line in OUTPUT.splitlines():
 df = pd.DataFrame(data_table[1:], columns=data_table[0])
 print("=" * 80)
 print("| WARNING: TCM counters may not be accurate on some systems. |")
-print("| WARNING: In addition, also victimed cache lines need to be taken into account (not yet done). |")
+print(
+    "| WARNING: In addition, also victimed cache lines need to be taken into account (not yet done). |"
+)
 print("| WARNING: This needs to be adopted to each system |")
 print("=" * 80)
 print("\nPandas DataFrame of perf region output:")

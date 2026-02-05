@@ -13,11 +13,23 @@ def main():
     # Define list of test commands
     # (name, command_args)
     test_commands = [
-        ("array_test_c", [sys.executable, os.path.join("array_test_c", "run_tests.py")]),
+        (
+            "array_test_c",
+            [sys.executable, os.path.join("array_test_c", "run_tests.py")],
+        ),
         ("skip_test_c", [sys.executable, os.path.join("skip_test_c", "run_tests.py")]),
-        ("array_test_f", [sys.executable, os.path.join("array_test_f", "run_tests.py")]),
-        ("stream_benchmark", [sys.executable, os.path.join("stream_benchmark", "run_tests.py")]),
-        ("nemo_test_f_direct", [sys.executable, os.path.join("nemo_test_f_direct", "run_tests.py")]),
+        (
+            "array_test_f",
+            [sys.executable, os.path.join("array_test_f", "run_tests.py")],
+        ),
+        (
+            "stream_benchmark",
+            [sys.executable, os.path.join("stream_benchmark", "run_tests.py")],
+        ),
+        (
+            "nemo_test_f_direct",
+            [sys.executable, os.path.join("nemo_test_f_direct", "run_tests.py")],
+        ),
         ("nemo_test_f", [sys.executable, os.path.join("nemo_test_f", "run_tests.py")]),
     ]
 
@@ -25,7 +37,7 @@ def main():
     failed_tests = []
 
     print(f"Running all tests from {base_dir}...")
-    
+
     # Set environment for no-papi
     env = os.environ.copy()
     if args.no_papi:
@@ -34,7 +46,7 @@ def main():
 
     for name, cmd in test_commands:
         print(f"\n[{name}] Executing...")
-        
+
         try:
             # Run in the base_dir (tests/)
             subprocess.check_call(cmd, cwd=base_dir, env=env)

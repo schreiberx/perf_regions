@@ -4,10 +4,15 @@ include ../Makefile.setup
 CFLAGS_PERFREGION+= -I../../src -DUSE_MPI=0
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
 
-all: skip_test
+# Ensure build directory exists
+$(shell mkdir -p build)
 
-skip_test: skip_test.c
-	${CC} -g -std=c99 -o skip_test skip_test.c ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+all: build/skip_test
+
+build/skip_test: src/skip_test.c
+	${CC} -g -std=c99 -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 clean:
-	rm -f skip_test *.o *.mod
+	rm -rf build *.o *.mod
+
+.PHONY: all clean

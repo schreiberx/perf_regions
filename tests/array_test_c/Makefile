@@ -7,19 +7,23 @@ include ../Makefile.setup
 CFLAGS_PERFREGION+= -I../../src -DUSE_MPI=0
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
 
-all:	array_test array_test_perf_regions
+# Ensure build directory exists
+$(shell mkdir -p build)
 
-array_test: array_test.c
-	./perf_regions_instrumentation.py cleanup
-	${CC} -g -std=c99 -o array_test array_test.c
+all:	build/array_test build/array_test_perf_regions
 
-array_test_perf_regions: array_test.c
-	./perf_regions_instrumentation.py cleanup
+build/array_test: src/array_test.c
+	${CC} -g -std=c99 -o $@ $<
+
+# The instrumentation script reads src/* and writes to build/*
+build/array_test.c: src/array_test.c
 	./perf_regions_instrumentation.py preprocess
-	${CC} -g -std=c99 -o array_test_perf_regions array_test.c ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+
+# Compile the instrumented source code from build/
+build/array_test_perf_regions: build/array_test.c
+	${CC} -g -std=c99 -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 clean:
-	./perf_regions_instrumentation.py cleanup
-	rm -f array_test array_test_perf_regions *.o *.mod
+	rm -rf build *.o *.mod
 
-.PHONY: all build run_tests array_test array_test_perf_regions clean
+.PHONY: all clean

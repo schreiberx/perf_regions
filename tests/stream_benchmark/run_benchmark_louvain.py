@@ -14,7 +14,7 @@ os.environ["OMP_PROC_BIND"] = "close"
 os.environ["OMP_DISPLAY_ENV"] = "verbose"
 os.environ["OMP_DISPLAY_AFFINITY"] = "true"
 
-places = ",".join(["{"+str(_)+"}" for _ in range(num_threads)])
+places = ",".join(["{" + str(_) + "}" for _ in range(num_threads)])
 os.environ["OMP_PLACES"] = places
 
 
@@ -80,7 +80,7 @@ if 1:
     #
 
     icms_ = range(6)
-    #icms_ = [0, 1, 3, 4]
+    # icms_ = [0, 1, 3, 4]
 
     for imc in icms_:
         cpu = 0
@@ -109,7 +109,9 @@ print("")
 print("*****************************************************")
 print("$ make stream_c_perfregions")
 
-result = subprocess.run(["make", "stream_c_perfregions"], capture_output=True, text=True)
+result = subprocess.run(
+    ["make", "stream_c_perfregions"], capture_output=True, text=True
+)
 if result.returncode != 0:
     print(result.stdout)
     print(result.stderr, file=sys.stderr)
@@ -121,13 +123,18 @@ print("*****************************************************")
 print("./stream_c_perfregions")
 
 try:
-    output = subprocess.check_output(["./stream_c_perfregions"], stderr=subprocess.STDOUT, text=True)
+    output = subprocess.check_output(
+        ["./stream_c_perfregions"], stderr=subprocess.STDOUT, text=True
+    )
 except subprocess.CalledProcessError as e:
     output = e.output + "\nERROR"
 
 if "ERROR" in output:
     print(output)
-    print("Error: Detected ERROR in output when running './stream_c_perfregions'", file=sys.stderr)
+    print(
+        "Error: Detected ERROR in output when running './stream_c_perfregions'",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 print("")
@@ -136,9 +143,10 @@ print("PERF REGION OUTPUT:")
 
 print(output)
 
+
 def cleanup_events(cols):
-    cols = [_.replace("::UNC_M_CAS_COUNT:ALL", "")for _ in cols]
-    cols = [_.replace("icx_unc_", "")for _ in cols]
+    cols = [_.replace("::UNC_M_CAS_COUNT:ALL", "") for _ in cols]
+    cols = [_.replace("icx_unc_", "") for _ in cols]
 
     return cols
 
@@ -185,7 +193,7 @@ bw = []
 for i, accesses in enumerate(papi_cacheblocks_sum):
     wallclocktime = wallclocktime_values[i]
 
-    value = accesses * cacheblock_size / wallclocktime * 1e-9 # in GB/s
+    value = accesses * cacheblock_size / wallclocktime * 1e-9  # in GB/s
     # value /= counter_values[i]
     bw.append(value)
 
@@ -204,12 +212,10 @@ if 1:
     df_indexed = df.set_index("Section")
     bw_list = df_indexed.loc[["copy", "scale", "add", "triad"], "BANDWIDTH"].tolist()
 
-    bw_avg = sum(bw_list)/len(bw_list)
+    bw_avg = sum(bw_list) / len(bw_list)
     bw_total = df_indexed.loc["total", "BANDWIDTH"]
-
 
     print("")
     print(f"Total bandwidth: {bw_total} GB/s")
     print(f"Avg bandwidth: {bw_avg} GB/s")
     print("")
-

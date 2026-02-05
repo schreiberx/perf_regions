@@ -9,24 +9,23 @@ CFLAGS_PERFREGION:=-I../../src -O0 -g -DUSE_MPI=0
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
 
 
-all: build
+# Ensure build directory exists
+$(shell mkdir -p build)
 
-build:
-	make -C ../../src
-	make stream_c
+all: build/stream_c build/stream_c_perfregions
 
-run_tests:
-	./run_tests.py
+build/stream_c: src/stream.c
+	$(CC) $(CFLAGS) -o $@ src/stream.c
 
-stream_c: stream.c
-	./perf_regions_instrumentation.py cleanup
-	$(CC) $(CFLAGS) stream.c -o stream_c
+build/stream.c: src/stream.c
+	./perf_regions_instrumentation.py preprocess
 
-stream_c_perfregions: stream.c
-	./perf_regions_instrumentation.py cleanup
-	./perf_regions_instrumentation.py
-	$(CC) $(CFLAGS) stream.c -o stream_c_perfregions ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+build/stream_c_perfregions: build/stream.c
+	$(CC) $(CFLAGS) -o $@ build/stream.c ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 clean:
+	rm -rf build *.o *.mod
+
+.PHONY: all clean
 	$(RM) stream_f stream_c stream_c_perfregions  *.o
 	./perf_regions_instrumentation.py cleanup

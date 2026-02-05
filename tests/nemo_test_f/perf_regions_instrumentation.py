@@ -2,12 +2,12 @@
 
 
 import sys
+import os
 
 sys.path.append("../../scripts")
 import perf_regions
 
-# pr: perf_regions.PerfRegions = perf_regions.PerfRegions("./*", output_directory="./build_perf_regions")
-pr: perf_regions.PerfRegions = perf_regions.PerfRegions("./*")
+pr: perf_regions.PerfRegions = perf_regions.PerfRegions(["./src/*"], output_directory="./build")
 pr.fortran_region_pattern_match = {
     "include": r"^(.*)use\s+timing\s*$",  # initialization of timing
     "init": r"^(.*)call\s+timing_init\(.*\).*$",  # initialization of timing
@@ -26,8 +26,7 @@ if option == "preprocess":
     pr.run_preprocessor()
 
 elif option == "cleanup":
-    print("CLEANUP")
-    pr.remove_perf_regions_annotations()
+    print("CLEANUP: No-op for separate build dir")
 
 else:
     print("Unsupported argument " + sys.argv[1])

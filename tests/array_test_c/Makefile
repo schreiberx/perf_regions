@@ -4,16 +4,10 @@ CXX ?= g++
 
 include ../Makefile.setup
 
-CFLAGS_PERFREGION:=-I../../src
+CFLAGS_PERFREGION+= -I../../src -DUSE_MPI=0
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
 
-all:	tests
-
-
-run_tests:
-	./run_tests.sh
-
-tests: array_test array_test_perf_regions
+all:	array_test array_test_perf_regions
 
 array_test: array_test.c
 	./perf_regions_instrumentation.py cleanup
@@ -28,4 +22,4 @@ clean:
 	./perf_regions_instrumentation.py cleanup
 	rm -f array_test array_test_perf_regions *.o *.mod
 
-.PHONY: all build run_tests tests array_test array_test_perf_regions clean
+.PHONY: all build run_tests array_test array_test_perf_regions clean

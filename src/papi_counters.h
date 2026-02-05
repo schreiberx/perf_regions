@@ -1,7 +1,5 @@
 
-// "Maximum number of performance counters which may be used. Feel free to increase this number"
-#define PERF_COUNTERS_MAX		(256)
-
+#include "perf_regions_defines.h"
 
 #if PERF_REGIONS_USE_PAPI
 

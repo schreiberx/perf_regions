@@ -34,7 +34,7 @@ endif
 # PAPI settings
 USE_PAPI ?= 1
 ifeq ($(USE_PAPI),1)
-CFLAGS += -DPERF_REGIONS_USE_PAPI=1
+CFLAGS += -DPERF_REGIONS_USE_PAPI=1 -I$(PREFIX)/include
 # Use PAPI from installation prefix - explicit path if LIBDIR is empty
 ifeq ($(strip $(LIBDIR)),)
 PAPI_LIBS := -L$(PREFIX)/lib -lpapi -lpfm
@@ -54,7 +54,7 @@ INCLUDEDIR = $(PREFIX)/include
 BINDIR = $(PREFIX)/bin
 
 # Object files
-C_SOURCES = perf_regions.c posix_clock.c papi_counters.c
+C_SOURCES = perf_regions.c perf_regions_output.c posix_clock.c papi_counters.c
 F_SOURCES = perf_regions_fortran.F90
 
 C_OBJECTS = $(C_SOURCES:.c=.o)

@@ -5,7 +5,7 @@ CFLAGS ?= -O2 -fopenmp
 
 include ../Makefile.setup
 
-CFLAGS_PERFREGION:=-I../../src -O0 -g
+CFLAGS_PERFREGION:=-I../../src -O0 -g -DUSE_MPI=0
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
 
 

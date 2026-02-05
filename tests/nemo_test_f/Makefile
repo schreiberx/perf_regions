@@ -4,7 +4,7 @@ CXX ?= g++
 
 include ../Makefile.setup
 
-CFLAGS_PERFREGION:=-I../../src -O0 -g
+CFLAGS_PERFREGION+= -I../../src -O0 -g
 LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB} 
 
 all:	tests

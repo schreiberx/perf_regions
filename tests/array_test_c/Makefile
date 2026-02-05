@@ -4,8 +4,8 @@ CXX ?= g++
 
 include ../Makefile.setup
 
-CFLAGS_PERFREGION+= -I../../src -DUSE_MPI=0
-LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
+CFLAGS+= -DUSE_MPI=0 $(PERFREGION_CFLAGS)
+LDFLAGS+= $(PERFREGION_LDFLAGS)
 
 # Ensure build directory exists
 $(shell mkdir -p build)
@@ -22,7 +22,7 @@ build/array_test.c: src/array_test.c
 
 # Compile the instrumented source code from build/
 build/array_test_perf_regions: build/array_test.c
-	${CC} -g -std=c99 -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+	${CC} -g -std=c99 -o $@ $< ${CFLAGS} ${LDFLAGS}
 
 clean:
 	rm -rf build *.o *.mod

@@ -9,6 +9,8 @@ clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir clean; \
 	done
+	rm -f output_clean_*.txt
+	rm -f output_build_*.txt
 
 .PHONY: all run_tests clean
 	$(MAKE) -C array_test_c clean

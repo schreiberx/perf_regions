@@ -7,7 +7,6 @@ import subprocess
 def base_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
-
 @pytest.fixture
 def env(request, base_dir):
     env_vars = os.environ.copy()

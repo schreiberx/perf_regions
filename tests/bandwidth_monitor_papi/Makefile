@@ -1,13 +1,13 @@
 CC ?= gcc
 include ../Makefile.setup
 
-CFLAGS_PERFREGION:=-I../../src $(PAPI_INC)
-LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
+CFLAGS += $(PERFREGION_CFLAGS)
+LDFLAGS += $(PERFREGION_LDFLAGS)
 
 all: bandwidth_monitor_papi
 
 bandwidth_monitor_papi: src/bandwidth_monitor_papi.c
-	$(CC) -g -O2 $(CFLAGS_PERFREGION) -o bandwidth_monitor_papi src/bandwidth_monitor_papi.c $(LINKFLAGS_PERFREGION)
+	$(CC) -g -O2 $(CFLAGS) -o bandwidth_monitor_papi src/bandwidth_monitor_papi.c $(LDFLAGS)
 
 clean:
 	rm -f bandwidth_monitor_papi

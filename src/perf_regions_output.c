@@ -101,11 +101,6 @@ void perf_regions_output_human_readable_text()
 }
 
 
-void perf_regions_output_csv_file()
-{
-
-}
-
 void perf_regions_output_json_file(const char* filename)
 {
 	FILE *s;

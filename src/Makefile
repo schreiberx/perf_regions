@@ -34,17 +34,10 @@ endif
 # PAPI settings
 USE_PAPI ?= 1
 ifeq ($(USE_PAPI),1)
-CFLAGS += -DPERF_REGIONS_USE_PAPI=1 -I$(PREFIX)/include
-# Use PAPI from installation prefix - explicit path if LIBDIR is empty
-ifeq ($(strip $(LIBDIR)),)
-PAPI_LIBS := -L$(PREFIX)/lib -lpapi -lpfm
-else
-PAPI_LIBS := -L$(LIBDIR) -lpapi -lpfm
-endif
-LDFLAGS += $(PAPI_LIBS)
+CFLAGS += -DPERF_REGIONS_USE_PAPI=1 $(PAPI_CFLAGS)
+LDFLAGS += $(PAPI_LDFLAGS)
 else
 CFLAGS += -DPERF_REGIONS_USE_PAPI=0
-PAPI_LIBS :=
 endif
 
 # Install settings
@@ -59,7 +52,11 @@ C_SOURCES = perf_regions.c perf_regions_output.c posix_clock.c papi_counters.c
 F_SOURCES = perf_regions_fortran.F90
 
 C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(C_SOURCES:.c=.o))
+ifeq ($(USE_FORTRAN),1)
 F_OBJECTS = $(addprefix $(BUILD_DIR)/, $(F_SOURCES:.F90=.o))
+else
+F_OBJECTS =
+endif
 
 # Library names
 ifeq ($(USE_MPI),1)
@@ -74,7 +71,13 @@ else
 LIB_SUFFIX_PAPI = 
 endif
 
-LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)
+ifeq ($(USE_FORTRAN),1)
+LIB_SUFFIX_FORTRAN = _fort
+else
+LIB_SUFFIX_FORTRAN = 
+endif
+
+LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)$(LIB_SUFFIX_FORTRAN)
 
 SHARED_LIBRARY = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so
 SHARED_LIBRARY_VERSION = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so.1.0.0
@@ -107,7 +110,11 @@ $(BUILD_DIR):
 
 # Build the shared library
 $(SHARED_LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
-	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(notdir $(SHARED_LIBRARY_SONAME)) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(PAPI_LIBS)
+ifeq ($(USE_FORTRAN),1)
+	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(notdir $(SHARED_LIBRARY_SONAME)) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(LDFLAGS)
+else
+	$(CC) $(SHARED_LDFLAGS) -Wl,-soname,$(notdir $(SHARED_LIBRARY_SONAME)) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(LDFLAGS)
+endif
 	ln -sf $(notdir $(SHARED_LIBRARY_VERSION)) $(SHARED_LIBRARY_SONAME)
 	ln -sf $(notdir $(SHARED_LIBRARY_SONAME)) $(SHARED_LIBRARY)
 
@@ -121,7 +128,9 @@ $(BUILD_DIR)/%.o: %.c
 
 # Fortran object files  
 $(BUILD_DIR)/%.o: %.F90
+ifeq ($(USE_FORTRAN),1)
 	$(FC) $(FCFLAGS) -c $< -o $@
+endif
 
 # Install target
 install: $(TARGETS)
@@ -155,5 +164,7 @@ uninstall:
 clean:
 	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/*.mod $(SHARED_LIBRARY) $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME) $(STATIC_LIBRARY)
 	rm -rf $(BUILD_DIR)
+# Some compilers have leftover files here
+	rm -f *.mod
 
 .PHONY: all install uninstall clean

@@ -5,7 +5,6 @@
 #include <sys/time.h>
 #include <string.h>
 
-
 #include "perf_regions.h"
 #include "papi_counters.h"
 
@@ -282,6 +281,7 @@ void perf_regions_init()
 		}
 		free(output_tokens);
 	}
+	printf("PERF_REGIONS_OUTPUT: console=%i json=%i file=%s\n", perf_regions.output_console, perf_regions.output_json, perf_regions.output_json_filename);
 
 	free(perf_counter_list_tokens);
 
@@ -610,18 +610,13 @@ void perf_regions_finalize()
 	}
 #else
 
-/* output performance information on each region to console */
+	/* output performance information on each region to console */
 	if (perf_regions.output_console)
 		perf_regions_output_human_readable_text();
 
 	if (perf_regions.output_json)
 		perf_regions_output_json_file(perf_regions.output_json_filename);
 #endif
-
-	/*
-	 * Output .csv file
-	 */
-	perf_regions_output_csv_file();
 
 
 	/*

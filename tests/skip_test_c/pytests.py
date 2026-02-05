@@ -66,15 +66,25 @@ def test_skip_execution(base_dir, env):
         data = json.load(f)
 
     outer = next((r for r in data if r["region"] == "Outer"), None)
+    inner = next((r for r in data if r["region"] == "Inner"), None)
     independent = next((r for r in data if r["region"] == "Independent"), None)
+    independent_inner = next((r for r in data if r["region"] == "IndependentInner"), None)
 
     assert outer is not None
     assert outer["counter"] == 3
     assert outer["skipped"] == 2
 
+    inner["wallclock_time"] < outer["wallclock_time"]
+
     assert independent is not None
     assert independent["counter"] == 3
     assert independent["skipped"] == 2
+
+    assert independent_inner is not None
+    assert independent_inner["counter"] == 15
+    assert independent_inner["skipped"] == 10
+
+    independent_inner["wallclock_time"] < independent["wallclock_time"]
 
 
 @pytest.mark.parametrize("env", ["papi", "wallclock"], indirect=True)

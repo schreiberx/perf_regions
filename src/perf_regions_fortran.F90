@@ -32,6 +32,7 @@ MODULE perf_regions_fortran
 
         contains
 
+
         ! Use a dummy subroutine because we need to forward the length of the string
         subroutine perf_region_start(region_id, region_name)
                 use, intrinsic :: iso_c_binding, only: C_SIZE_T

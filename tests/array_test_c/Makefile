@@ -17,7 +17,8 @@ build/array_test: src/array_test.c
 
 # The instrumentation script reads src/* and writes to build/*
 build/array_test.c: src/array_test.c
-	./perf_regions_instrumentation.py preprocess
+	cp $< $@
+	./bin/perf_regions_instrumentation.py preprocess
 
 # Compile the instrumented source code from build/
 build/array_test_perf_regions: build/array_test.c

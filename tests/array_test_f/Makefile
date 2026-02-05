@@ -16,7 +16,8 @@ build/array_test: src/array_test.F90
 	${FC} -g -I../../src -J build -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
 
 build/array_test.F90: src/array_test.F90
-	./perf_regions_instrumentation.py preprocess
+	cp $< $@
+	./bin/perf_regions_instrumentation.py preprocess
 
 build/array_test_perf_regions: build/array_test.F90
 	${FC} -g -I../../src -J build -o $@ $< ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
@@ -25,5 +26,3 @@ clean:
 	rm -rf build *.o *.mod
 
 .PHONY: all clean
-
-.PHONY: all build run_tests tests array_test array_test_perf_regions clean

@@ -8,6 +8,28 @@ LIBDIR = $(PREFIX)/lib
 
 # PAPI library from installation prefix
 PAPI_LIB:=-L$(LIBDIR) -lpapi -lpfm
+PAPI_INC:=-I$(PREFIX)/include
+
+# MPI settings - default to match src/Makefile
+USE_MPI ?= 1
+ifeq ($(USE_MPI),1)
+LIB_SUFFIX_MPI = _mpi
+else
+LIB_SUFFIX_MPI = 
+endif
+
+# PAPI settings - default to match src/Makefile
+USE_PAPI ?= 1
+ifeq ($(USE_PAPI),1)
+LIB_SUFFIX_PAPI = _papi
+else
+LIB_SUFFIX_PAPI = 
+endif
+
+LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)
 
 # perf_regions library from installation prefix, with RPATH for runtime resolution
-PERFREGION_LIB:=-L../../src/ -L$(LIBDIR) -lperf_regions -Wl,-rpath,$(LIBDIR)
+# We use abspath to ensure validity regardless of where make is run from (assuming relative depth is consistent)
+BUILD_DIR_REL := ../../build
+BUILD_DIR := $(abspath $(BUILD_DIR_REL))
+PERFREGION_LIB:=-L$(BUILD_DIR) -L$(LIBDIR) -lperf_regions$(LIB_SUFFIX) -Wl,-rpath,$(LIBDIR) -Wl,-rpath,$(BUILD_DIR)

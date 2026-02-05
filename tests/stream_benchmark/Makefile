@@ -18,7 +18,8 @@ build/stream_c: src/stream.c
 	$(CC) $(CFLAGS) -o $@ src/stream.c
 
 build/stream.c: src/stream.c
-	./perf_regions_instrumentation.py preprocess
+	cp $< $@
+	./bin/perf_regions_instrumentation.py preprocess
 
 build/stream_c_perfregions: build/stream.c
 	$(CC) $(CFLAGS) -o $@ build/stream.c ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
@@ -27,5 +28,3 @@ clean:
 	rm -rf build *.o *.mod
 
 .PHONY: all clean
-	$(RM) stream_f stream_c stream_c_perfregions  *.o
-	./perf_regions_instrumentation.py cleanup

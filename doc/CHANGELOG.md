@@ -10,8 +10,13 @@
     - `src`: source code
     - `bin`: scripts
     - `build`: for building process
-    - `test_data`: Verification for changes with perf_region
+    - `test_data`: Verification for changes with `perf_region`
     - `pytests.py`: All test cases for this test
 
-- `perf_region` Libraries are now postfixed with `_mpi` or `_papi`.
-  E.g., enabling a build with MPI and without PAPI would result in `perf_region_mpi.so`.
+- `perf_region` library names now depend on options:
+    - MPI: `_mpi`
+    - PAPI: `_papi`
+    - Fortran: `_fort`
+    E.g., enabling a build with MPI and without PAPI would result in `perf_region_mpi.so`.
+
+

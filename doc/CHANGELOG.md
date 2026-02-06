@@ -19,4 +19,5 @@
     - Fortran: `_fort`
     E.g., enabling a build with MPI and without PAPI would result in `perf_region_mpi.so`.
 
+- Thanks to Thomas Gruber for discussions on performance counters.
 

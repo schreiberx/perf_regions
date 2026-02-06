@@ -4,31 +4,24 @@ CXX ?= g++
 
 include ../Makefile.setup
 
-CFLAGS_PERFREGION:=-I../../src -O0 -g
-LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB} 
+# Ensure build directory exists
+$(shell mkdir -p build)
 
-all:	tests
-	
-tests:
-	make -C ../../src
-	make nemo_test
-	make nemo_test_perf_regions
+all:	build/nemo_test build/nemo_test_perf_regions
 
-run_tests:
-	./run_tests.sh
+build/nemo_test: src/nemo_test.F90
+	${FC} -g -I../../src -o $@ $<
 
-nemo_test:
-	./perf_regions_instrumentation.py cleanup
-	${FC} -g -o nemo_test nemo_test.F90
+build/nemo_test.F90: src/nemo_test.F90
+	cp $< $@
+	./bin/perf_regions_instrumentation.py preprocess
 
-nemo_test_perf_regions: nemo_test.F90
-	./perf_regions_instrumentation.py cleanup
-	./perf_regions_instrumentation.py preprocess
-	${FC} -g -I../../src -o nemo_test_perf_regions nemo_test.F90 ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+build/nemo_test_perf_regions: build/nemo_test.F90
+	${FC} -g -I../../src -o $@ $< ${FCFLAGS} ${LDFLAGS} ${PERFREGION_FFLAGS} ${PERFREGION_LDFLAGS_FORT}
 
-clean :
-	./perf_regions_instrumentation.py cleanup
+clean:
+	rm -rf build *.o *.mod
 	rm -f nemo_test nemo_test_perf_regions perf_regions_fortran.o *.mod
 	rm -f perf_region_list.txt
 
-.PHONY: all tests run_tests nemo_test nemo_test_perf_regions clean
+.PHONY: all tests nemo_test nemo_test_perf_regions clean

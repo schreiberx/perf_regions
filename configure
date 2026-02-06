@@ -10,6 +10,7 @@ PREFIX="/usr/local"
 BUILD_TYPE="Release"
 ENABLE_MPI="auto"
 ENABLE_PAPI="auto"
+ENABLE_FORTRAN="auto"
 ENABLE_TESTS="no"
 ENABLE_SHARED="yes"
 ENABLE_STATIC="yes"
@@ -96,6 +97,8 @@ Optional Features:
       --disable-mpi       disable MPI support
       --enable-papi       enable PAPI performance counters [default=auto]
       --disable-papi      disable PAPI performance counters
+      --enable-fortran    enable Fortran support [default=auto]
+      --disable-fortran   disable Fortran support
       --enable-tests   build example programs [default=no]
       --disable-tests  do not build example programs
       --enable-debug      enable debug build [default=no]
@@ -161,6 +164,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --disable-papi|--enable-papi=no)
             ENABLE_PAPI="OFF"
+            shift
+            ;;
+        --enable-fortran|--enable-fortran=yes)
+            ENABLE_FORTRAN="ON"
+            shift
+            ;;
+        --disable-fortran|--enable-fortran=no)
+            ENABLE_FORTRAN="OFF"
             shift
             ;;
         --enable-tests|--enable-tests=yes)
@@ -251,11 +262,22 @@ check_dependencies() {
     print_info "Found C compiler: ${CC:-gcc}"
     
     # Check for Fortran compiler
-    if ! command_exists "${FC:-gfortran}"; then
-        print_error "Fortran compiler not found. Please install a Fortran compiler."
-        exit 1
+    if [[ "$ENABLE_FORTRAN" == "auto" || "$ENABLE_FORTRAN" == "ON" ]]; then
+        if command_exists "${FC:-gfortran}"; then
+            print_info "Found Fortran compiler: ${FC:-gfortran}"
+            if [[ "$ENABLE_FORTRAN" == "auto" ]]; then
+                ENABLE_FORTRAN="ON"
+            fi
+        else
+            if [[ "$ENABLE_FORTRAN" == "ON" ]]; then
+                print_error "Fortran compiler not found but Fortran support requested."
+                exit 1
+            else
+                print_info "Fortran compiler not found, disabling Fortran support"
+                ENABLE_FORTRAN="OFF"
+            fi
+        fi
     fi
-    print_info "Found Fortran compiler: ${FC:-gfortran}"
     
     # Check for make
     if ! command_exists make; then
@@ -300,15 +322,28 @@ check_papi() {
         
         # Check for PAPI headers and libraries in common locations
         local papi_found=false
+
+        # Check via pkg-config
+        if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists papi; then
+            print_info "PAPI found via pkg-config, enabling PAPI support"
+            ENABLE_PAPI="ON"
+            papi_found=true
+            PAPI_CFLAGS=$(pkg-config --cflags papi)
+            PAPI_LDFLAGS=$(pkg-config --libs papi)
+        fi
         
-        for dir in /usr /usr/local /opt/papi; do
-            if [[ -f "$dir/include/papi.h" && -f "$dir/lib/libpapi.so" ]]; then
-                print_info "PAPI found in $dir, enabling PAPI support"
-                ENABLE_PAPI="ON"
-                papi_found=true
-                break
-            fi
-        done
+        if [[ "$papi_found" == "false" ]]; then
+            for dir in /usr /usr/local /opt/papi; do
+                if [[ -f "$dir/include/papi.h" && -f "$dir/lib/libpapi.so" ]]; then
+                    print_info "PAPI found in $dir, enabling PAPI support"
+                    ENABLE_PAPI="ON"
+                    papi_found=true
+                    PAPI_CFLAGS="-I$dir/include"
+                    PAPI_LDFLAGS="-L$dir/lib -lpapi"
+                    break
+                fi
+            done
+        fi
         
         if [[ "$papi_found" == "false" ]]; then
             print_info "PAPI not found, disabling PAPI support"
@@ -331,6 +366,9 @@ BUILD_TYPE=$BUILD_TYPE
 # Feature flags
 USE_MPI=$(if [[ "$ENABLE_MPI" == "ON" ]]; then echo 1; else echo 0; fi)
 USE_PAPI=$(if [[ "$ENABLE_PAPI" == "ON" ]]; then echo 1; else echo 0; fi)
+USE_FORTRAN=$(if [[ "$ENABLE_FORTRAN" == "ON" ]]; then echo 1; else echo 0; fi)
+PAPI_CFLAGS=$PAPI_CFLAGS
+PAPI_LDFLAGS=$PAPI_LDFLAGS
 
 # Library build options
 BUILD_SHARED_LIBS=$(if [[ "$ENABLE_SHARED" == "yes" ]]; then echo 1; else echo 0; fi)
@@ -350,7 +388,7 @@ $(if [[ -n "$PAPI_ROOT" ]]; then echo "PAPI_ROOT=$PAPI_ROOT"; fi)
 $(if [[ -n "$MPI_ROOT" ]]; then echo "MPI_ROOT=$MPI_ROOT"; fi)
 
 # Export variables for use in sub-makefiles
-export PREFIX USE_MPI USE_PAPI BUILD_SHARED_LIBS BUILD_STATIC_LIBS
+export PREFIX USE_MPI USE_PAPI USE_FORTRAN PAPI_CFLAGS PAPI_LDFLAGS BUILD_SHARED_LIBS BUILD_STATIC_LIBS
 EOF
 }
 
@@ -406,6 +444,7 @@ print_summary() {
     echo "  Build type: $BUILD_TYPE"
     echo "  MPI support: $ENABLE_MPI"
     echo "  PAPI support: $ENABLE_PAPI"
+    echo "  Fortran support: $ENABLE_FORTRAN"
     echo "  Build tests: $ENABLE_TESTS"
     echo "  Build shared libraries: $ENABLE_SHARED"
     echo "  Build static libraries: $ENABLE_STATIC"

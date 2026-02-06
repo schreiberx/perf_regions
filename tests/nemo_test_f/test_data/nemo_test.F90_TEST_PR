@@ -1,0 +1,129 @@
+
+module timing
+contains
+   subroutine timing_start(s)
+      character(len=*), intent(in) :: s
+   end subroutine
+
+   subroutine timing_stop(s)
+      character(len=*), intent(in) :: s
+   end subroutine
+
+   subroutine timing_init()
+   end subroutine
+
+   subroutine timing_finalize()
+   end subroutine
+
+end module
+
+module foo
+!PERF_REGION_ORIGINAL
+!        use timing
+!PERF_REGION_CODE
+USE perf_regions_fortran
+contains
+
+   SUBROUTINE test1
+
+!PERF_REGION_ORIGINAL
+!      CALL timing_start('FOOa')
+!PERF_REGION_CODE
+CALL perf_region_start(0, "FOOa"//achar(0))
+!PERF_REGION_ORIGINAL
+!      CALL timing_start('FOOb')
+!PERF_REGION_CODE
+CALL perf_region_start(1, "FOOb"//achar(0))
+      call test2
+!PERF_REGION_ORIGINAL
+!      CALL timing_stop('FOOb')
+!PERF_REGION_CODE
+CALL perf_region_stop(1)   ! name="FOOb"
+!PERF_REGION_ORIGINAL
+!      CALL timing_stop('FOOa')
+!PERF_REGION_CODE
+CALL perf_region_stop(0)   ! name="FOOa"
+
+   end SUBROUTINE test1
+
+   SUBROUTINE test2
+
+      integer :: array_size, i
+      REAL*8, ALLOCATABLE  :: a(:)
+      REAL*8 :: fac
+      array_size = 1
+      WRITE (*, *) 'test', 1024*1024*128
+
+      DO WHILE (array_size < 1024*1024*128/4)
+         allocate (a(array_size))
+         iters = (1024*128)/array_size
+         IF (iters <= 0) iters = 2
+         iters = MIN(128, iters)
+
+         WRITE (*, *) "**************************************"
+         WRITE (*, *) "Mem size: ", array_size*0.001, " KByte"
+         WRITE (*, *) "Iterations: ", iters
+
+         !initialize everything
+         DO i = 1, array_size
+            a(i) = i; 
+         END DO
+
+         DO i = 1, array_size
+            a(i) = a(i) + a(i)*a(i)
+         END DO
+
+         DO k = 1, iters
+
+!PERF_REGION_ORIGINAL
+!            CALL timing_start('BARa'); 
+!PERF_REGION_CODE
+CALL perf_region_start(2, "BARa"//achar(0))
+!PERF_REGION_ORIGINAL
+!            CALL timing_start('BARb'); 
+!PERF_REGION_CODE
+CALL perf_region_start(3, "BARb"//achar(0))
+            DO i = 1, array_size
+               a(i) = a(i) + a(i)*a(i)
+            END DO
+
+!PERF_REGION_ORIGINAL
+!            CALL timing_stop('BARb'); 
+!PERF_REGION_CODE
+CALL perf_region_stop(3)   ! name="BARb"
+!PERF_REGION_ORIGINAL
+!            CALL timing_stop('BARa'); 
+!PERF_REGION_CODE
+CALL perf_region_stop(2)   ! name="BARa"
+            fac = 1.0; 
+         END DO
+         deallocate (a)
+         array_size = array_size*2
+      END DO
+
+   end subroutine test2
+end module
+
+PROGRAM main
+
+!PERF_REGION_ORIGINAL
+!   USE timing
+!PERF_REGION_CODE
+USE perf_regions_fortran
+   USE foo
+
+!PERF_REGION_ORIGINAL
+!   CALL timing_init()
+!PERF_REGION_CODE
+CALL perf_regions_init()
+
+   call test1
+   call test2
+
+!PERF_REGION_ORIGINAL
+!   CALL timing_finalize()
+!PERF_REGION_CODE
+CALL perf_regions_finalize()
+
+END PROGRAM main
+

@@ -1,23 +1,18 @@
-all:
-	$(MAKE) -C array_test_c tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C array_test_f tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C stream_benchmark USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C nemo_test_f_direct USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C nemo_test_f USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C bandwidth_monitor_papi USE_PAPI=$(USE_PAPI)
+SUBDIRS = array_test_c array_test_f stream_benchmark nemo_test_f_direct nemo_test_f bandwidth_monitor_papi skip_test_c
 
-	$(MAKE) run_tests USE_PAPI=$(USE_PAPI)
+all: run_tests
 
 run_tests:
-	$(MAKE) -C array_test_c run_tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C array_test_f run_tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C stream_benchmark run_tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C nemo_test_f_direct run_tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C nemo_test_f run_tests USE_PAPI=$(USE_PAPI)
-	$(MAKE) -C bandwidth_monitor_papi run_tests USE_PAPI=$(USE_PAPI)
-
+	python3 -m pytest
 
 clean:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir clean; \
+	done
+	rm -f output_clean_*.txt
+	rm -f output_build_*.txt
+
+.PHONY: all run_tests clean
 	$(MAKE) -C array_test_c clean
 	$(MAKE) -C array_test_f clean
 	$(MAKE) -C stream_benchmark clean

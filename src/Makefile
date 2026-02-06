@@ -34,17 +34,10 @@ endif
 # PAPI settings
 USE_PAPI ?= 1
 ifeq ($(USE_PAPI),1)
-CFLAGS += -DPERF_REGIONS_USE_PAPI=1
-# Use PAPI from installation prefix - explicit path if LIBDIR is empty
-ifeq ($(strip $(LIBDIR)),)
-PAPI_LIBS := -L$(PREFIX)/lib -lpapi -lpfm
-else
-PAPI_LIBS := -L$(LIBDIR) -lpapi -lpfm
-endif
-LDFLAGS += $(PAPI_LIBS)
+CFLAGS += -DPERF_REGIONS_USE_PAPI=1 $(PAPI_CFLAGS)
+LDFLAGS += $(PAPI_LDFLAGS)
 else
 CFLAGS += -DPERF_REGIONS_USE_PAPI=0
-PAPI_LIBS :=
 endif
 
 # Install settings
@@ -52,20 +45,45 @@ PREFIX ?= /usr/local
 LIBDIR = $(PREFIX)/lib
 INCLUDEDIR = $(PREFIX)/include
 BINDIR = $(PREFIX)/bin
+BUILD_DIR ?= ../build
 
 # Object files
-C_SOURCES = perf_regions.c posix_clock.c papi_counters.c
+C_SOURCES = perf_regions.c perf_regions_output.c posix_clock.c papi_counters.c
 F_SOURCES = perf_regions_fortran.F90
 
-C_OBJECTS = $(C_SOURCES:.c=.o)
-F_OBJECTS = $(F_SOURCES:.F90=.o)
+C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(C_SOURCES:.c=.o))
+ifeq ($(USE_FORTRAN),1)
+F_OBJECTS = $(addprefix $(BUILD_DIR)/, $(F_SOURCES:.F90=.o))
+else
+F_OBJECTS =
+endif
 
 # Library names
-SHARED_LIBRARY = libperf_regions.so
-SHARED_LIBRARY_VERSION = libperf_regions.so.1.0.0
-SHARED_LIBRARY_SONAME = libperf_regions.so.1
+ifeq ($(USE_MPI),1)
+LIB_SUFFIX_MPI = _mpi
+else
+LIB_SUFFIX_MPI = 
+endif
 
-STATIC_LIBRARY = libperf_regions.a
+ifeq ($(USE_PAPI),1)
+LIB_SUFFIX_PAPI = _papi
+else
+LIB_SUFFIX_PAPI = 
+endif
+
+ifeq ($(USE_FORTRAN),1)
+LIB_SUFFIX_FORTRAN = _fort
+else
+LIB_SUFFIX_FORTRAN = 
+endif
+
+LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)$(LIB_SUFFIX_FORTRAN)
+
+SHARED_LIBRARY = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so
+SHARED_LIBRARY_VERSION = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so.1.0.0
+SHARED_LIBRARY_SONAME = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so.1
+
+STATIC_LIBRARY = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).a
 
 # Headers to install (excluding internal implementation headers)
 INSTALL_HEADERS = perf_regions.h perf_regions_defines.h
@@ -85,25 +103,34 @@ $(error At least one of BUILD_SHARED_LIBS or BUILD_STATIC_LIBS must be set to 1)
 endif
 
 # Default target
-all: $(TARGETS)
+all: $(BUILD_DIR) $(TARGETS)
+
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
 # Build the shared library
 $(SHARED_LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
-	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(SHARED_LIBRARY_SONAME) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(PAPI_LIBS)
-	ln -sf $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME)
-	ln -sf $(SHARED_LIBRARY_SONAME) $(SHARED_LIBRARY)
+ifeq ($(USE_FORTRAN),1)
+	$(FC) $(SHARED_LDFLAGS) -Wl,-soname,$(notdir $(SHARED_LIBRARY_SONAME)) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(LDFLAGS)
+else
+	$(CC) $(SHARED_LDFLAGS) -Wl,-soname,$(notdir $(SHARED_LIBRARY_SONAME)) -Wl,-rpath,$(LIBDIR) -o $(SHARED_LIBRARY_VERSION) $^ $(LDFLAGS)
+endif
+	ln -sf $(notdir $(SHARED_LIBRARY_VERSION)) $(SHARED_LIBRARY_SONAME)
+	ln -sf $(notdir $(SHARED_LIBRARY_SONAME)) $(SHARED_LIBRARY)
 
 # Build the static library
 $(STATIC_LIBRARY): $(C_OBJECTS) $(F_OBJECTS)
 	ar rcs $@ $^
 
 # C object files
-%.o: %.c
+$(BUILD_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Fortran object files  
-%.o: %.F90
+$(BUILD_DIR)/%.o: %.F90
+ifeq ($(USE_FORTRAN),1)
 	$(FC) $(FCFLAGS) -c $< -o $@
+endif
 
 # Install target
 install: $(TARGETS)
@@ -113,28 +140,31 @@ install: $(TARGETS)
 	install -d $(BINDIR)
 ifeq ($(BUILD_SHARED_LIBS),1)
 	install -m 755 $(SHARED_LIBRARY_VERSION) $(LIBDIR)/
-	cd $(LIBDIR) && ln -sf $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME)
-	cd $(LIBDIR) && ln -sf $(SHARED_LIBRARY_SONAME) $(SHARED_LIBRARY)
+	cd $(LIBDIR) && ln -sf $(notdir $(SHARED_LIBRARY_VERSION)) $(notdir $(SHARED_LIBRARY_SONAME))
+	cd $(LIBDIR) && ln -sf $(notdir $(SHARED_LIBRARY_SONAME)) $(notdir $(SHARED_LIBRARY))
 endif
 ifeq ($(BUILD_STATIC_LIBS),1)
 	install -m 644 $(STATIC_LIBRARY) $(LIBDIR)/
 endif
 	install -m 644 $(INSTALL_HEADERS) $(INCLUDEDIR)/
-	install -m 644 *.mod $(INCLUDEDIR)/ 2>/dev/null || true
+	install -m 644 $(BUILD_DIR)/*.mod $(INCLUDEDIR)/ 2>/dev/null || true
 	install -m 755 ../scripts/perf_regions.py $(BINDIR)/
 
 # Uninstall target
 uninstall:
 	@echo "Uninstalling perf_regions from $(PREFIX)"
-	rm -f $(LIBDIR)/$(SHARED_LIBRARY_VERSION)
-	rm -f $(LIBDIR)/$(SHARED_LIBRARY_SONAME) 
-	rm -f $(LIBDIR)/$(SHARED_LIBRARY)
-	rm -f $(LIBDIR)/$(STATIC_LIBRARY)
+	rm -f $(LIBDIR)/$(notdir $(SHARED_LIBRARY_VERSION))
+	rm -f $(LIBDIR)/$(notdir $(SHARED_LIBRARY_SONAME)) 
+	rm -f $(LIBDIR)/$(notdir $(SHARED_LIBRARY))
+	rm -f $(LIBDIR)/$(notdir $(STATIC_LIBRARY))
 	rm -rf $(INCLUDEDIR)
 	rm -f $(BINDIR)/perf_regions.py
 
 # Clean target
 clean:
-	rm -f *.o *.mod $(SHARED_LIBRARY) $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME) $(STATIC_LIBRARY)
+	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/*.mod $(SHARED_LIBRARY) $(SHARED_LIBRARY_VERSION) $(SHARED_LIBRARY_SONAME) $(STATIC_LIBRARY)
+	rm -rf $(BUILD_DIR)
+# Some compilers have leftover files here
+	rm -f *.mod
 
 .PHONY: all install uninstall clean

@@ -32,8 +32,14 @@ PerfRegions requires the PAPI library installed.
 
 ## Linker flags:
 
+For non-MPI builds:
 ```
 -lpapi -L[path to perf regions]/build -lperf_regions 
+```
+
+For MPI builds:
+```
+-lpapi -L[path to perf regions]/build -lperf_regions_mpi 
 ```
 
 ## Compile flags:

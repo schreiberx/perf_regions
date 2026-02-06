@@ -4,23 +4,16 @@ CXX ?= g++
 
 include ../Makefile.setup
 
-LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
+# Ensure build directory exists
+$(shell mkdir -p build)
 
-all:	build
+all:	build/nemo_test_perf_regions
 
-build:
-	make -C ../../src
-	make fortran_perfregion
-
-run_tests:
-	./run_tests.sh
-
-fortran_perfregion:
-	${FC} -g -I../../src -o nemo_test_perf_regions nemo_test.F90 ${LINKFLAGS_PERFREGION} ${PAPI_LIB}
+build/nemo_test_perf_regions: src/nemo_test.F90
+	${FC} -g -I../../src -o $@ $< ${FCFLAGS} ${LDFLAGS} ${PERFREGION_FFLAGS} ${PERFREGION_LDFLAGS_FORT}
 
 clean :
-	rm -f nemo_test nemo_test_perf_regions *.mod
-	rm -f perf_region_list.txt
+	rm -rf build *.mod perf_region_list.txt
 
-.PHONY: all build run_tests fortran_perfregion clean
+.PHONY: all clean
 

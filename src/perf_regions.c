@@ -5,11 +5,11 @@
 #include <sys/time.h>
 #include <string.h>
 
-
 #include "perf_regions.h"
 #include "papi_counters.h"
 
 #include "perf_regions_defines.h"
+#include "perf_regions_output.h"
 // #include "perf_regions_names.h"
 
 #define PRINT_PREFIX "[perf_regions.c] "
@@ -105,89 +105,9 @@
 #include <mpi.h>
 #endif
 
-/**
- * Structure for each of the performance regions
- */
-struct PerfRegion
-{
-#if PERF_REGIONS_USE_PAPI
-	// storage for performance counter
-	long long counter_values[PERF_COUNTERS_MAX];
-#endif
+// Structs moved to perf_regions.h
 
-	// accumulator to get total wallclock time spent in this region and its variance (over time)
-	double counter_wallclock_time;
-	double squared_dist_wallclock_time;
-	double min_wallclock_time;
-	double max_wallclock_time;
-	double running_mean;
-
-#ifdef PERF_TIMING_POSIX
-	// Start time value (seconds)
-	double region_enter_time_posix;
-#else
-	// time value
-	struct timeval start_time_value;
-#endif
-
-	// region enter counter to normalize the performance counters
-	double region_enter_counter;
-
-#if PERF_COUNTERS_NESTED
-	// Set to true if performance counters could be spoiled due to nested
-	int spoiled;
-#endif
-
-#if PERF_DEBUG
-	// debug flag to assure that perf counters are not entering a region twice
-	int active;
-#endif
-
-	// Region name
-	char* region_name;
-};
-
-
-struct PerfRegions
-{
-	// verbosity level
-	int verbosity;
-
-	// array with all regions
-	struct PerfRegion *perf_regions_list;
-
-	// Measure wallclock time
-	int use_wallclock_time;
-
-#if PERF_REGIONS_USE_PAPI
-	// Measure with PAPI
-	int use_papi;
-
-	// names of performance counters
-	char *perf_counter_names[PERF_COUNTERS_MAX];
-#endif
-
-	// number of performance counters
-	int num_perf_counters;
-
-#if PERF_COUNTERS_NESTED
-	// number of nested performance regions
-	int num_nested_performance_regions;
-
-	// number of maximal nested performance regions
-	#define PERF_NESTED_REGIONS_MAX 16
-
-	struct PerfRegion *nested_performance_regions[PERF_NESTED_REGIONS_MAX];
-#endif
-
-	// the application uses MPI / perf_regions will be called for MPI processes
-	// we want to do reduction at the end for the result
-	int use_mpi;
-#if USE_MPI
-	MPI_Comm comm;
-#endif
-
-} perf_regions;
+struct PerfRegions perf_regions;
 
 
 /**
@@ -208,6 +128,7 @@ void perf_regions_reset()
 
 		r->counter_wallclock_time = 0;
 		r->region_enter_counter = 0;
+		r->region_skipped_counter = 0;
 		r->max_wallclock_time = 0;
 		r->min_wallclock_time = DBL_MAX;
 		r->squared_dist_wallclock_time = 0;
@@ -244,6 +165,14 @@ void perf_regions_init()
 
 	if (perf_regions.verbosity > 0) {
 		printf(PRINT_PREFIX"Verbosity level: %i\n", perf_regions.verbosity);
+	}
+
+	if (getenv("PERF_REGIONS_SKIP_N") == NULL) {
+		perf_regions.skip_n = 0;
+	} else {
+		perf_regions.skip_n = atoi(getenv("PERF_REGIONS_SKIP_N"));
+		if (perf_regions.verbosity > 0)
+			printf(PRINT_PREFIX"PERF_REGIONS_SKIP_N: %i\n", perf_regions.skip_n);
 	}
 
 	perf_regions.perf_regions_list = 0;
@@ -319,6 +248,41 @@ void perf_regions_init()
 	papi_counters_init(perf_regions.perf_counter_names, perf_regions.num_perf_counters, perf_regions.verbosity);
 #endif
 
+	/*
+	 * Output configuration
+	 */
+	perf_regions.output_console = 1;
+	perf_regions.output_json = 0;
+	perf_regions.output_json_filename = NULL;
+
+	char* env_output = getenv("PERF_REGIONS_OUTPUT");
+	if (env_output != NULL)
+	{
+		perf_regions.output_console = 0; // If variable is set, disable default unless explicitly enabled
+
+		char *output_tokens = strdup(env_output);
+		char *token = strtok(output_tokens, ",");
+		while (token != NULL)
+		{
+			if (strcmp(token, "console") == 0)
+			{
+				perf_regions.output_console = 1;
+			}
+			else if (strncmp(token, "json", 4) == 0)
+			{
+				perf_regions.output_json = 1;
+
+				if (strlen(token) > 5 && token[4] == '=')
+				{
+					perf_regions.output_json_filename = strdup(token + 5);
+				}
+			}
+			token = strtok(NULL, ",");
+		}
+		free(output_tokens);
+	}
+	printf("PERF_REGIONS_OUTPUT: console=%i json=%i file=%s\n", perf_regions.output_console, perf_regions.output_json, perf_regions.output_json_filename);
+
 	free(perf_counter_list_tokens);
 
 	if (perf_regions.perf_regions_list != NULL)
@@ -375,7 +339,31 @@ void perf_region_start(
 	if (r->region_name == 0)
 		r->region_name = strdup(i_region_name);
 
+	//
+	// SKIPPING LOGIC
+	//
+	r->current_execution_skipped = 0;
+#if PERF_COUNTERS_NESTED
+	if (perf_regions.num_nested_performance_regions > 0)
+	{
+		// Check whether parent region is already skipped, if yes, skip current region as well
+		struct PerfRegion *parent = perf_regions.nested_performance_regions[perf_regions.num_nested_performance_regions - 1];
+		if (parent->current_execution_skipped)
+			r->current_execution_skipped = 1;
+	}
+#endif
+
+	// check for skip N
+	if (r->current_execution_skipped == 0)
+	{
+		if (r->region_enter_counter < perf_regions.skip_n)
+			r->current_execution_skipped = 1;
+	}
+
 	r->region_enter_counter++;
+
+	if (r->current_execution_skipped)
+		r->region_skipped_counter++;
 
 #if PERF_DEBUG
 
@@ -395,12 +383,22 @@ void perf_region_start(
 
 #endif
 
+#if PERF_COUNTERS_NESTED
+	perf_regions.nested_performance_regions[perf_regions.num_nested_performance_regions] = r;
+#endif
+
+	if (r->current_execution_skipped)
+	{
+#if PERF_COUNTERS_NESTED
+		perf_regions.num_nested_performance_regions++;
+#endif
+		return;
+	}
+
 #if PERF_REGIONS_USE_PAPI
 	if (perf_regions.use_papi)
 	{
 #  if PERF_COUNTERS_NESTED
-
-		perf_regions.nested_performance_regions[perf_regions.num_nested_performance_regions] = r;
 
 		if (perf_regions.num_nested_performance_regions == 0)
 		{
@@ -423,14 +421,15 @@ void perf_region_start(
 			}
 		}
 
-		perf_regions.num_nested_performance_regions++;
-
 #  else
 		papi_counters_start();
 #  endif
 	}
 
+#endif
 
+#if PERF_COUNTERS_NESTED
+	perf_regions.num_nested_performance_regions++;
 #endif
 
 if (perf_regions.use_wallclock_time)
@@ -476,6 +475,18 @@ void perf_region_stop(
 {
 	struct PerfRegion *r = &perf_regions.perf_regions_list[i_region_id];
 
+	if (r->current_execution_skipped)
+	{
+#if PERF_DEBUG
+		r->active = 0;
+#endif
+#if PERF_COUNTERS_NESTED
+		if (perf_regions.num_nested_performance_regions > 0)
+			perf_regions.num_nested_performance_regions--;
+#endif
+		return;
+	}
+
 #if PERF_DEBUG
 	if (r->active != 1)
 	{
@@ -492,13 +503,14 @@ void perf_region_stop(
 #endif
 
 
+#if PERF_COUNTERS_NESTED
+	perf_regions.num_nested_performance_regions--;
+#endif
+
 #if PERF_REGIONS_USE_PAPI
 	if (perf_regions.use_papi)
 	{
 #  if PERF_COUNTERS_NESTED
-
-
-		perf_regions.num_nested_performance_regions--;
 
 		long long counter_values_stop[PERF_COUNTERS_MAX];
 
@@ -562,194 +574,14 @@ void perf_region_stop(
 		r->min_wallclock_time = r->min_wallclock_time < last_wallclock_time_measurement ? r->min_wallclock_time : last_wallclock_time_measurement;
 		// Variance with Welford's online algorithm
 		double delta = last_wallclock_time_measurement - r->running_mean;
-		r->running_mean += delta / r->region_enter_counter;
+		double valid_samples = r->region_enter_counter - r->region_skipped_counter;
+		if (valid_samples > 0)
+			r->running_mean += delta / valid_samples;
 		r->squared_dist_wallclock_time += delta * (last_wallclock_time_measurement - r->running_mean);
 	}
 }
 
 
-
-void perf_regions_output_human_readable_text()
-{
-
-	FILE *s = stdout;
-
-	fprintf(s, "[MULE] perf_regions: Performance counters profiling:\n");
-	fprintf(s, "[MULE] perf_regions: ----------------------\n");
-	fprintf(s, "[MULE] perf_regions: Section");
-
-#	if PERF_REGIONS_USE_PAPI
-	for (int j = 0; j < perf_regions.num_perf_counters; j++)
-		fprintf(s, "\t%s", perf_regions.perf_counter_names[j]);
-#	endif
-
-#   if PERF_COUNTERS_NESTED
-	fprintf(s, "\tSPOILED");
-#   endif
-	if (perf_regions.use_wallclock_time)
-	{
-		fprintf(s, "\tWALLCLOCKTIME");
-		fprintf(s, "\tMIN");
-		fprintf(s, "\tMAX");
-		fprintf(s, "\tMEAN");
-		fprintf(s, "\tVAR");
-	}
-	fprintf(s, "\tCOUNTER");
-	fprintf(s, "\n");
-
-#  if PERF_DEBUG
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
-	{
-		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
-		if (r->active != 0)
-		{
-			if (r->region_name != 0)
-				fprintf(stderr, "Still in region of %s\n", r->region_name);
-			else
-				fprintf(stderr, "Still in region NULL\n");
-
-			exit(-1);
-		}
-	}
-#  endif
-
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
-	{
-		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
-
-		if (r->region_name == 0)
-			continue;
-
-		fprintf(s, "[MULE] perf_regions: %s", r->region_name);
-
-
-#if PERF_REGIONS_USE_PAPI
-		for (int j = 0; j < perf_regions.num_perf_counters; j++)
-		{
-			long long counter_value = r->counter_values[j];
-
-			double param_value = counter_value;
-
-			fprintf(s, "\t%.7e", param_value);
-		}
-#endif
-
-#  if PERF_COUNTERS_NESTED
-		fprintf(s, "\t%i", r->spoiled);
-#  endif
-		if (perf_regions.use_wallclock_time) {
-			fprintf(s, "\t%.7e", r->counter_wallclock_time);
-			fprintf(s, "\t%.7e", r->min_wallclock_time);
-			fprintf(s, "\t%.7e", r->max_wallclock_time);
-			fprintf(s, "\t%.7e", r->running_mean);
-			fprintf(s, "\t%.7e", r->squared_dist_wallclock_time / r->region_enter_counter);
-		}
-
-		fprintf(s, "\t%.0f", r->region_enter_counter);
-
-		fprintf(s, "\n");
-	}
-}
-
-
-void perf_regions_output_csv_file()
-{
-
-}
-
-void reduce_and_output_human_readable_text()
-{
-	/* Reduces and aggregates performance region statistics across MPI processes.
-	 * This function performs MPI reductions (min, max, sum/average) on wallclock time and performance counters
-	 * for all regions, and outputs the results on the root process.
-	 */
-	if (!perf_regions.use_wallclock_time)
-		return;
-#if USE_MPI
-	int rank, size;
-	MPI_Comm_rank(perf_regions.comm, &rank);
-	MPI_Comm_size(perf_regions.comm, &size);
-
-#  if PERF_REGIONS_USE_PAPI
-
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
-	{
-		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
-		if (r->region_name == 0)
-			continue;
-
-		double *recv_buf = NULL;
-		if (rank == 0)
-		{
-			// we might have a large number of processes
-			recv_buf = (double *)malloc(size * 3 * sizeof(double));
-			if (!recv_buf)
-			{
-				fprintf(stderr, "Failed to allocate recv_buf\n");
-				exit(-1);
-			}
-		}
-		double send_buf[3] = {r->region_enter_counter, r->running_mean, r->squared_dist_wallclock_time};
-		MPI_Gather(send_buf, 3, MPI_DOUBLE, recv_buf, 3, MPI_DOUBLE, 0, perf_regions.comm);
-
-		// Calculate mean and variance of wallclock time across all processes
-		// use the Welford/Chan parallel algorithm so it's numerically stable
-		if (rank == 0)
-		{
-			double n = 0.0;
-			double na, nb;
-			double delta = 0.0;
-			double M2 = 0.0;
-			double M2_b;
-			double avg = 0.0, avg_a, avg_b;
-			double min_wallclock_time = -1;
-			double max_wallclock_time = -1;
-			for (int j = 0; j < size; j++)
-			{
-				na = n;
-				nb = recv_buf[j * 3 + 0];
-				if (nb <= 0)
-					continue;
-				n = na + nb;
-				avg_a = avg;
-				avg_b = recv_buf[j * 3 + 1];
-				delta = avg_b - avg_a;
-				M2_b = recv_buf[j * 3 + 2];
-				M2 += M2_b + delta * delta * na * nb / n;
-				avg = (na * avg_a + nb * avg_b) / n;
-			}
-			double variance_wallclock_time = (n > 1) ? (M2 / (n - 1)) : -1.0;
-
-			// Get total minimum and maximum wallclock time
-			MPI_Reduce(&r->min_wallclock_time, &min_wallclock_time, 1, MPI_DOUBLE, MPI_MIN, 0, perf_regions.comm);
-			MPI_Reduce(&r->max_wallclock_time, &max_wallclock_time, 1, MPI_DOUBLE, MPI_MAX, 0, perf_regions.comm);
-
-			FILE *s = stdout;
-			fprintf(s, "[PERF_REGIONS] section name: %s\n", r->region_name);
-			fprintf(s, "[PERF_REGIONS] [%s].total_samples: %.0f\n", r->region_name, n);
-			fprintf(s, "[PERF_REGIONS] [%s].min_wallclock_time: %.7e\n", r->region_name, min_wallclock_time);
-			fprintf(s, "[PERF_REGIONS] [%s].max_wallclock_time: %.7e\n", r->region_name, max_wallclock_time);
-			fprintf(s, "[PERF_REGIONS] [%s].mean_wallclock_time: %.7e\n", r->region_name, avg);
-			fprintf(s, "[PERF_REGIONS] [%s].variance_wallclock_time: %.7e\n", r->region_name, variance_wallclock_time);
-
-			free(recv_buf);
-		}
-		// Not root process? No mean calculation ot printing, just send the min and max wallclock time
-		else
-		{
-			MPI_Reduce(&r->min_wallclock_time, NULL, 1, MPI_DOUBLE, MPI_MIN, 0, perf_regions.comm);
-			MPI_Reduce(&r->max_wallclock_time, NULL, 1, MPI_DOUBLE, MPI_MAX, 0, perf_regions.comm);
-		}
-	}
-	// Also print results of other performance counters but just for rank 0
-	if (rank == 0)
-	{
-		fprintf(stdout, "Perf_regions, results for rank %d:\n", rank);
-		perf_regions_output_human_readable_text();
-	}
-#  endif
-#endif
-}
 
 /**
  * DECONSTRUCTOR
@@ -760,23 +592,31 @@ void perf_regions_finalize()
 	// Use MPI to generate statistics and output these and the result for rank 0
 	if (perf_regions.use_mpi)
 	{
-		reduce_and_output_human_readable_text();
+		if (perf_regions.output_console)
+			reduce_and_output_human_readable_text();
+		
+		if (perf_regions.output_json)
+			reduce_and_output_json_file(perf_regions.output_json_filename);
 	}
 	else 
 	{
 		/* output performance information on each region to console */
-		perf_regions_output_human_readable_text();
+		if (perf_regions.output_console)
+			perf_regions_output_human_readable_text();
+
+		if (perf_regions.output_json)
+			perf_regions_output_json_file(perf_regions.output_json_filename);
+
 	}
 #else
 
-/* output performance information on each region to console */
+	/* output performance information on each region to console */
+	if (perf_regions.output_console)
 		perf_regions_output_human_readable_text();
-#endif
 
-	/*
-	 * Output .csv file
-	 */
-	perf_regions_output_csv_file();
+	if (perf_regions.output_json)
+		perf_regions_output_json_file(perf_regions.output_json_filename);
+#endif
 
 
 	/*

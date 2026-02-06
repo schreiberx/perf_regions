@@ -9,7 +9,9 @@ detected_imcs = []
 
 try:
     cmd = ["papi_native_avail", "-i", "UNC_M_CAS_COUNT", "--noqual"]
-    output = subprocess.check_output(cmd, universal_newlines=True, stderr=subprocess.STDOUT)
+    output = subprocess.check_output(
+        cmd, universal_newlines=True, stderr=subprocess.STDOUT
+    )
     for line in output.splitlines():
         if "UNC_M_CAS_COUNT" in line:
             # Clean line and extract event
@@ -32,13 +34,13 @@ if len(detected_imcs) > 0:
     num_imc = len(detected_imcs)
     # Extract prefix from first event (e.g. skx_unc_imc0 -> skx_unc_imc)
     evt = detected_imcs[0].split("::")[0]
-    event_prefix = re.sub(r'\d+$', '', evt)
+    event_prefix = re.sub(r"\d+$", "", evt)
 
 if 1:
     # Check for CPU model
     processor_brand = "unknown"
     try:
-        with open('/proc/cpuinfo', 'r') as f:
+        with open("/proc/cpuinfo", "r") as f:
             for line in f:
                 if "model name" in line:
                     processor_brand = line.split(":")[1].strip()

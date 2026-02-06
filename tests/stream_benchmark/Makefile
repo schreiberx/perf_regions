@@ -5,28 +5,22 @@ CFLAGS ?= -O2 -fopenmp
 
 include ../Makefile.setup
 
-CFLAGS_PERFREGION:=-I../../src -O0 -g
-LINKFLAGS_PERFREGION:=${PERFREGION_LIB} ${PAPI_LIB}
+# Ensure build directory exists
+$(shell mkdir -p build)
 
+all: build/stream_c build/stream_c_perfregions
 
-all: build
+build/stream_c: src/stream.c
+	$(CC) $(CFLAGS) -o $@ src/stream.c ${LDFLAGS}
 
-build:
-	make -C ../../src
-	make stream_c
+build/stream.c: src/stream.c
+	cp $< $@
+	./bin/perf_regions_instrumentation.py preprocess
 
-run_tests:
-	./run_tests.py
-
-stream_c: stream.c
-	./perf_regions_instrumentation.py cleanup
-	$(CC) $(CFLAGS) stream.c -o stream_c
-
-stream_c_perfregions: stream.c
-	./perf_regions_instrumentation.py cleanup
-	./perf_regions_instrumentation.py
-	$(CC) $(CFLAGS) stream.c -o stream_c_perfregions ${CFLAGS_PERFREGION} ${LINKFLAGS_PERFREGION}
+build/stream_c_perfregions: build/stream.c
+	$(CC) $(CFLAGS) -DUSE_MPI=0 -o $@ build/stream.c ${LDFLAGS} $(PERFREGION_CFLAGS) $(PERFREGION_LDFLAGS)
 
 clean:
-	$(RM) stream_f stream_c stream_c_perfregions  *.o
-	./perf_regions_instrumentation.py cleanup
+	rm -rf build *.o *.mod
+
+.PHONY: all clean

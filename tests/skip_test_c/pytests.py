@@ -68,7 +68,9 @@ def test_skip_execution(base_dir, env):
     outer = next((r for r in data if r["region"] == "Outer"), None)
     inner = next((r for r in data if r["region"] == "Inner"), None)
     independent = next((r for r in data if r["region"] == "Independent"), None)
-    independent_inner = next((r for r in data if r["region"] == "IndependentInner"), None)
+    independent_inner = next(
+        (r for r in data if r["region"] == "IndependentInner"), None
+    )
 
     assert outer is not None
     assert outer["counter"] == 3

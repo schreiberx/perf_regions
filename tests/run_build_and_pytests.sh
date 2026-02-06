@@ -44,7 +44,6 @@ make_build() {
     make -C .. USE_MPI=${1} USE_PAPI=${2} USE_FORTRAN=${3} > output_build_mpi_${1}_papi_${2}_fortran_${3}.txt 2>&1 || cat output_build_mpi_${1}_papi_${2}_fortran_${3}.txt
 }
 
-
 make_run_tests() {
     echo "Running tests with MPI=${1} PAPI=${2}"
     make_clean ${1} ${2}
@@ -57,7 +56,7 @@ make_run_tests() {
 
     export USE_MPI=${1}
     export USE_PAPI=${2}
-    python3 -m pytest -vvv -d
+    python3 -m pytest -vvv # -s
 }
 
 make_run_tests 1 1

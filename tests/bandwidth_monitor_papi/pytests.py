@@ -2,7 +2,6 @@ import pytest
 import os
 import subprocess
 import re
-import sys
 
 
 @pytest.fixture

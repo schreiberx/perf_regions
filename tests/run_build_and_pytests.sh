@@ -27,7 +27,7 @@ fi
 
 update_config() {
     echo "========================================"
-    echo "Compiling with MPI=$1 PAPI=$2"
+    echo "Compiling with MPI=$1 PAPI=$2" FORTRAN=${3}
     echo "========================================"
     echo "USE_MPI=${1}" > config.mk
     echo "USE_PAPI=${2}" >> config.mk

@@ -148,6 +148,7 @@ ifeq ($(BUILD_STATIC_LIBS),1)
 endif
 	install -m 644 $(INSTALL_HEADERS) $(INCLUDEDIR)/
 	install -m 644 $(BUILD_DIR)/*.mod $(INCLUDEDIR)/ 2>/dev/null || true
+	install -m 644 *.mod $(INCLUDEDIR)/ 2>/dev/null || true
 	install -m 755 ../scripts/perf_regions.py $(BINDIR)/
 
 # Uninstall target

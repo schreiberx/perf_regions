@@ -25,13 +25,16 @@ if ! grep -q "^USE_PAPI=1" ../config.mk; then
     exit 1
 fi
 
+cp ../config.mk ./config_tests.mk
+
 update_config() {
     echo "========================================"
     echo "Compiling with MPI=$1 PAPI=$2" FORTRAN=${3}
     echo "========================================"
-    echo "USE_MPI=${1}" > config.mk
-    echo "USE_PAPI=${2}" >> config.mk
-    echo "USE_FORTRAN=${3}" >> config.mk
+
+    sed -i "s/^USE_MPI=[01]/USE_MPI=${1}/" ./config_tests.mk
+    sed -i "s/^USE_PAPI=[01]/USE_PAPI=${2}/" ./config_tests.mk
+    sed -i "s/^USE_FORTRAN=[01]/USE_FORTRAN=${3}/" ./config_tests.mk
 }
 
 make_clean() {
@@ -46,7 +49,7 @@ make_build() {
 
 make_run_tests() {
     echo "Running tests with MPI=${1} PAPI=${2}"
-    make_clean ${1} ${2}
+    make_clean ${1} ${2} -1
 
     update_config ${1} ${2} 0
     make_build ${1} ${2} 0

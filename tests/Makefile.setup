@@ -1,7 +1,6 @@
 
 # Include configuration to get PREFIX
--include ../../config.mk
--include ../config.mk
+include ../config_tests.mk
 
 # Use installation prefix for library paths - fallback if PREFIX not set
 PREFIX ?= /usr/local
@@ -32,14 +31,16 @@ BUILD_DIR_REL := ../../build
 BUILD_DIR := $(abspath $(BUILD_DIR_REL))
 
 # Define PERFREGION flags
-PERFREGION_CFLAGS := -I../../src $(PAPI_CFLAGS)
-PERFREGION_FFLAGS := -I../../src $(PAPI_CFLAGS)
+PERFREGION_CFLAGS := -I../../src
+PERFREGION_FFLAGS := -I../../src
 
-PERFREGION_LDFLAGS := -L../../build -lperf_regions${LIB_SUFFIX} $(PAPI_LDFLAGS)
-PERFREGION_LDFLAGS_FORT := -L../../build -lperf_regions${LIB_SUFFIX_FORT} $(PAPI_LDFLAGS)
+PERFREGION_LDFLAGS := -L../../build -lperf_regions$(LIB_SUFFIX)
+PERFREGION_LDFLAGS_FORT := -L../../build -lperf_regions$(LIB_SUFFIX_FORT)
 
 # Add PAPI flags if enabled
 ifeq ($(USE_PAPI),1)
     PERFREGION_CFLAGS += $(PAPI_CFLAGS)
+    PERFREGION_FFLAGS += $(PAPI_CFLAGS)
     PERFREGION_LDFLAGS += $(PAPI_LDFLAGS)
+    PERFREGION_LDFLAGS_FORT += $(PAPI_LDFLAGS)
 endif

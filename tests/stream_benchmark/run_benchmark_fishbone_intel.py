@@ -108,10 +108,10 @@ print(f"PERF_REGIONS_COUNTERS={perf_regions_counters}")
 
 print("")
 print("*****************************************************")
-print("$ make stream_c_perfregions")
+print("$ make build/stream_c_perfregions")
 
 result = subprocess.run(
-    ["make", "stream_c_perfregions"], capture_output=True, text=True
+    ["make", "build/stream_c_perfregions"], capture_output=True, text=True
 )
 if result.returncode != 0:
     print(result.stdout)
@@ -121,11 +121,11 @@ if result.returncode != 0:
 
 print("")
 print("*****************************************************")
-print("./stream_c_perfregions")
+print("./build/stream_c_perfregions")
 
 try:
     output = subprocess.check_output(
-        ["./stream_c_perfregions"], stderr=subprocess.STDOUT, text=True
+        ["./build/stream_c_perfregions"], stderr=subprocess.STDOUT, text=True
     )
 except subprocess.CalledProcessError as e:
     output = e.output + "\nERROR"

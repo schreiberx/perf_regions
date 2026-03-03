@@ -1,6 +1,14 @@
 
 # Include configuration to get PREFIX
+ifneq ("$(wildcard ../config_tests.mk)","")
+# Use configuration from testing framework if it exists
+$(info Using '../config_tests.mk')
 include ../config_tests.mk
+else
+# This is for non-test runs
+include ../../config.mk
+$(info Using '../../config.mk')
+endif
 
 # Use installation prefix for library paths - fallback if PREFIX not set
 PREFIX ?= /usr/local
@@ -44,3 +52,12 @@ ifeq ($(USE_PAPI),1)
     PERFREGION_LDFLAGS += $(PAPI_LDFLAGS)
     PERFREGION_LDFLAGS_FORT += $(PAPI_LDFLAGS)
 endif
+
+$(info ===================================================)
+$(info USE_MPI: $(USE_MPI))
+$(info USE_PAPI: $(USE_PAPI))
+$(info PERFREGION_CFLAGS: $(PERFREGION_CFLAGS))
+$(info PERFREGION_FFLAGS: $(PERFREGION_FFLAGS))
+$(info PERFREGION_LDFLAGS: $(PERFREGION_LDFLAGS))
+$(info PERFREGION_LDFLAGS_FORT: $(PERFREGION_LDFLAGS_FORT))
+$(info ===================================================)

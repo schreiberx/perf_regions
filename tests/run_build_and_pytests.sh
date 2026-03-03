@@ -66,3 +66,5 @@ make_run_tests 1 1
 make_run_tests 1 0
 make_run_tests 0 1
 make_run_tests 0 0
+
+rm ./config_tests.mk

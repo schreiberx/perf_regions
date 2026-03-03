@@ -217,6 +217,7 @@ if 1:
     bw_total = df_indexed.loc["total", "BANDWIDTH"]
 
     print("")
-    print(f"Total bandwidth: {bw_total} GB/s")
-    print(f"Avg bandwidth: {bw_avg} GB/s")
+    print("Perf region:")
+    print(f"- Total bandwidth: {bw_total} GB/s")
+    print(f"- Avg. bandwidth: {bw_avg} GB/s")
     print("")

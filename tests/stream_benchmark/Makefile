@@ -3,6 +3,7 @@ CC ?= gcc
 CXX ?= g++
 CFLAGS ?= -O2 -fopenmp
 
+
 include ../Makefile.setup
 
 # Ensure build directory exists

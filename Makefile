@@ -1,5 +1,5 @@
 
-# Traditional Makefile build only (CMake support removed)
+# Traditional Makefile build only
 
 # Include configuration if available
 -include config.mk

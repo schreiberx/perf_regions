@@ -4,10 +4,12 @@ ifneq ("$(wildcard ../config_tests.mk)","")
 # Use configuration from testing framework if it exists
 $(info Using '../config_tests.mk')
 include ../config_tests.mk
-else
-# This is for non-test runs
-include ../../config.mk
+else ifneq ("$(wildcard ../../config.mk)","")
 $(info Using '../../config.mk')
+include ../../config.mk
+else ifneq ("$(wildcard ../../../config.mk)","")
+$(info Using '../../../config.mk')
+include ../../../config.mk
 endif
 
 # Use installation prefix for library paths - fallback if PREFIX not set

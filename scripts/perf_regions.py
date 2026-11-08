@@ -287,7 +287,7 @@ class PerfRegions:
                         escaped_name = self._escape_code_string(name, language)
                         if language == "fortran":
                             self._append_source_lines(
-                                out_content, line, f"""CALL perf_region_start({id}, "{escaped_name}"//achar(0))""", language=language
+                                out_content, line, f"""CALL perf_region_start({id}, "{escaped_name}")""", language=language
                             )
                         elif language == "c":
                             self._append_source_lines(
@@ -340,7 +340,7 @@ class PerfRegions:
                         depth += 1
                         escaped_name = self._escape_code_string(name, language)
                         self._append_source_lines(
-                            out_content, line, f"""CALL perf_region_start({id}, "{escaped_name}"//achar(0))""", language=language
+                            out_content, line, f"""CALL perf_region_start({id}, "{escaped_name}")""", language=language
                         )
                         break
 

@@ -505,6 +505,10 @@ void perf_region_start_fortran(
 {
 	struct PerfRegion *r = perf_region_get_checked(i_region_id);
 
+	/*
+	 * Copy the Fortran string only on the first start of this region.
+	 * Subsequent starts with the same ID must not allocate or copy it again.
+	 */
 	if (r->region_name == NULL)
 	{
 		if (i_region_name == NULL)

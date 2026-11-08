@@ -29,11 +29,11 @@ contains
 !PERF_REGION_ORIGINAL
 !      CALL timing_start('FOOa')
 !PERF_REGION_CODE
-CALL perf_region_start(0, "FOOa"//achar(0))
+CALL perf_region_start(0, "FOOa")
 !PERF_REGION_ORIGINAL
 !      CALL timing_start('FOOb')
 !PERF_REGION_CODE
-CALL perf_region_start(1, "FOOb"//achar(0))
+CALL perf_region_start(1, "FOOb")
       call test2
 !PERF_REGION_ORIGINAL
 !      CALL timing_stop('FOOb')
@@ -78,11 +78,11 @@ CALL perf_region_stop(0)   ! name="FOOa"
 !PERF_REGION_ORIGINAL
 !            CALL timing_start('BARa'); 
 !PERF_REGION_CODE
-CALL perf_region_start(2, "BARa"//achar(0))
+CALL perf_region_start(2, "BARa")
 !PERF_REGION_ORIGINAL
 !            CALL timing_start('BARb'); 
 !PERF_REGION_CODE
-CALL perf_region_start(3, "BARb"//achar(0))
+CALL perf_region_start(3, "BARb")
             DO i = 1, array_size
                a(i) = a(i) + a(i)*a(i)
             END DO

@@ -40,7 +40,7 @@ CALL perf_regions_init()
 !PERF_REGION_ORIGINAL
 !         !$perf_regions start foo
 !PERF_REGION_CODE
-CALL perf_region_start(0, "foo"//achar(0))
+CALL perf_region_start(0, "foo")
 !                     CALL timing_start('FOO');
 
          DO i = 1, array_size

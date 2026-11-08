@@ -1,5 +1,3 @@
-#include "perf_regions_defines.h"
-
 ! This is a Fortran test program that mimics part of the NEMO ocean model code.
 ! It performs various array operations and uses the perf_regions
 ! directly.

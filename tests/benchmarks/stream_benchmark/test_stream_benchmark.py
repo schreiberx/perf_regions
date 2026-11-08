@@ -79,6 +79,31 @@ def expected_region_bytes(region, array_size, ntimes):
     return array_traversals[region] * STREAM_TYPE_BYTES * array_size * ntimes
 
 
+def uncore_skip_reason(output):
+    detail_lines = []
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if any(
+            key in line
+            for key in (
+                "Hardware:",
+                "perf_event_uncore",
+                "perf_event_paranoid",
+                "Uncore events may require",
+            )
+        ):
+            detail_lines.append(line)
+
+    reason = "No supported uncore memory events are available"
+    if detail_lines:
+        reason += ": " + " ".join(detail_lines)
+    else:
+        reason += " (check perf_event_paranoid and PAPI uncore support)"
+    return reason
+
+
 def measured_bandwidth_gbps(region):
     wallclock = region["wallclock_time"]
     assert wallclock > 0.0
@@ -154,10 +179,7 @@ def test_stream_memory_bandwidth(
     if result.returncode != 0:
         output = result.stdout or ""
         if "Could not detect memory bandwidth events" in output:
-            pytest.skip(
-                "No supported uncore memory events are available "
-                "(check perf_event_paranoid and PAPI uncore support)"
-            )
+            pytest.skip(uncore_skip_reason(output))
         if "missing access rights" in output:
             pytest.skip("Uncore memory counters are not accessible")
         pytest.fail(f"STREAM run failed:\n{output}")

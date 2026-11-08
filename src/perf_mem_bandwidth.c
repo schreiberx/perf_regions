@@ -220,6 +220,56 @@ static void inventory_enumerate_component(
 	while (PAPI_enum_cmp_event(&event_code, PAPI_ENUM_EVENTS, component_index) == PAPI_OK);
 }
 
+static void print_papi_uncore_diagnostics(void)
+{
+	const PAPI_hw_info_t *hw = PAPI_get_hardware_info();
+	if (hw != NULL)
+	{
+		fprintf(stderr, PRINT_PREFIX"Hardware: %s, family %d, model %d\n",
+			hw->model_string[0] != '\0' ? hw->model_string : "(unknown)",
+			hw->cpuid_family, hw->cpuid_model);
+	}
+
+	int cidx = PAPI_get_component_index("perf_event_uncore");
+	if (cidx < 0)
+	{
+		fprintf(stderr, PRINT_PREFIX"PAPI component 'perf_event_uncore' was not found.\n");
+		return;
+	}
+
+	const PAPI_component_info_t *component = PAPI_get_component_info(cidx);
+	if (component == NULL)
+	{
+		fprintf(stderr, PRINT_PREFIX"Could not query PAPI component 'perf_event_uncore'.\n");
+		return;
+	}
+
+	if (component->disabled == 0)
+	{
+		fprintf(stderr, PRINT_PREFIX"PAPI component 'perf_event_uncore' is enabled.\n");
+	}
+	else
+	{
+		const char *reason = component->disabled_reason[0] != '\0'
+			? component->disabled_reason
+			: PAPI_strerror(component->disabled);
+		fprintf(stderr, PRINT_PREFIX"PAPI component 'perf_event_uncore' is disabled: %s\n",
+			reason);
+	}
+
+	FILE *f = fopen("/proc/sys/kernel/perf_event_paranoid", "r");
+	if (f != NULL)
+	{
+		int paranoid = -1;
+		if (fscanf(f, "%d", &paranoid) == 1)
+			fprintf(stderr, PRINT_PREFIX"perf_event_paranoid: %d\n", paranoid);
+		fclose(f);
+	}
+
+	fprintf(stderr, PRINT_PREFIX"Uncore events may require "
+		"perf_event_paranoid=0, root, or CAP_PERFMON.\n");
+}
+
 static void inventory_build(struct MemInventory *inventory)
 {
 	int num_components = PAPI_num_components();
@@ -873,6 +923,7 @@ int perf_mem_bandwidth_detect(
 	if (inventory.count == 0)
 	{
 		fprintf(stderr, PRINT_PREFIX"No PAPI native events were found.\n");
+		print_papi_uncore_diagnostics();
 		inventory_free(&inventory);
 		return 0;
 	}
@@ -926,6 +977,7 @@ int perf_mem_bandwidth_detect(
 	if (selection.count == 0)
 	{
 		fprintf(stderr, PRINT_PREFIX"Could not detect memory bandwidth events for this system.\n");
+		print_papi_uncore_diagnostics();
 		fprintf(stderr, PRINT_PREFIX"Use 'papi_native_avail' to inspect native events, or set\n");
 		fprintf(stderr, PRINT_PREFIX"PERF_REGIONS_BANDWIDTH_EVENTS to an explicit event list.\n");
 		selection_free_names(&selection);

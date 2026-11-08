@@ -25,7 +25,7 @@ all: build_src
 build_src:
 	$(MAKE) -C ./src USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI) USE_FORTRAN=$(USE_FORTRAN) BUILD_SHARED_LIBS=$(BUILD_SHARED_LIBS) BUILD_STATIC_LIBS=$(BUILD_STATIC_LIBS)
 
-tests: test
+tests: test_all
 
 test:
 	$(PYTHON) tests/run_tests.py --fast

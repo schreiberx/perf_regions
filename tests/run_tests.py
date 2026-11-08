@@ -581,7 +581,9 @@ def run_matrix(args: argparse.Namespace, python: Path) -> int:
             run_args.test_wallclock = use_wallclock
 
             print()
+            print(color_text("=" * 64, CYAN))
             print(color_text(f"  Runtime: {runtime_label}", BOLD))
+            print(color_text("=" * 64, CYAN))
 
             if use_papi_counters and not doctor_ok:
                 status = "FAIL" if run_args.require_papi_hardware else "SKIP"
@@ -625,7 +627,10 @@ def run_matrix(args: argparse.Namespace, python: Path) -> int:
         if not variant_args.keep_build:
             clean_build_artifacts(variant_args, env)
 
-    return print_matrix_summary(results)
+    exit_code = print_matrix_summary(results)
+    if matrix_has_uncore_skip(results):
+        print_uncore_access_hint()
+    return exit_code
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -798,6 +803,70 @@ def print_papi_hardware_access_hint() -> None:
     )
 
 
+def summary_has_uncore_skip(summary: dict | None) -> bool:
+    if not summary:
+        return False
+
+    for kind, _name, reason in summary.get("details", []):
+        if kind != "SKIPPED":
+            continue
+        reason_lower = reason.lower()
+        if (
+            "uncore" in reason_lower
+            or "perf_event_paranoid" in reason_lower
+            or "cap_perfmon" in reason_lower
+        ):
+            return True
+
+    return False
+
+
+def matrix_has_uncore_skip(results: list[dict]) -> bool:
+    return any(summary_has_uncore_skip(result.get("summary")) for result in results)
+
+
+def print_uncore_access_hint() -> None:
+    print_yellow_block(
+        [
+            "STREAM/uncore memory tests were skipped because uncore access is unavailable.",
+            "For uncore counters, perf_event_paranoid must normally be set to 0.",
+            "A value of 1 may allow core counters while still blocking uncore events.",
+            "Set it temporarily with:",
+            "  sudo sysctl -w kernel.perf_event_paranoid=0",
+            "Or run as root / grant CAP_PERFMON.",
+            "Check PAPI uncore availability with:",
+            "  papi_component_avail",
+        ]
+    )
+
+
+def run_pytest_with_junit(
+    args: argparse.Namespace,
+    python: Path,
+    test_env: dict[str, str],
+) -> dict:
+    temp_dir = Path(tempfile.mkdtemp(prefix="perf-regions-pytest-"))
+    junit_path = temp_dir / "results.xml"
+    command = pytest_command(args, python)
+    command.append(f"--junitxml={junit_path}")
+
+    try:
+        completed = run(
+            command,
+            cwd=TESTS_DIR,
+            env=test_env,
+            check=False,
+        )
+        summary = parse_junit(junit_path)
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    if completed.returncode != 0:
+        raise subprocess.CalledProcessError(completed.returncode, completed.args)
+
+    return summary
+
+
 def print_papi_enable_hint(args: argparse.Namespace) -> None:
     """Print instructions when the run used wallclock-only tests."""
     if args.test_papi_counters:
@@ -907,12 +976,18 @@ def main(argv: list[str] | None = None) -> int:
                 if not result.stdout.endswith("\n"):
                     print(flush=True)
 
+        pytest_summary = None
         if not papi_hardware_unavailable:
-            run(pytest_command(args, python), cwd=TESTS_DIR, env=test_env)
+            if args.test_papi_counters:
+                pytest_summary = run_pytest_with_junit(args, python, test_env)
+            else:
+                run(pytest_command(args, python), cwd=TESTS_DIR, env=test_env)
     finally:
         if not args.keep_build and not args.no_build:
             clean_build_artifacts(args, env)
 
+    if summary_has_uncore_skip(pytest_summary):
+        print_uncore_access_hint()
     if papi_hardware_unavailable or required_papi_hardware_failed:
         print_papi_hardware_access_hint()
     print_papi_enable_hint(args)

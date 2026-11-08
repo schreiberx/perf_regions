@@ -1,4 +1,4 @@
-SUBDIRS = array_test_c array_test_f stream_benchmark nemo_test_f_direct nemo_test_f bandwidth_monitor_papi skip_test_c
+SUBDIRS = array_test_c array_test_f stream_benchmark nemo_test_f_direct nemo_test_f bandwidth_monitor_papi skip_test_c repeated_start_c
 
 all: run_tests
 

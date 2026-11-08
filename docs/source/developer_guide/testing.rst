@@ -127,15 +127,14 @@ Instrumentation golden files
 The tests verify both the instrumented source and the cleanup result against
 files under ``test_data/``. For example:
 
-- ``tests/array_test_c/test_data/array_test.c_TEST_ORIG``
-- ``tests/array_test_c/test_data/array_test.c_TEST_PR``
+- ``tests/array_test_c/test_data/array_test.c.expected_original``
+- ``tests/array_test_c/test_data/array_test.c.expected_instrumented``
 
-``TEST_ORIG`` is the expected original source and ``TEST_PR`` is the expected
-instrumented source. When changing the instrumentation output intentionally,
-update these fixtures together with the tests.
+``expected_original`` is the expected original source and
+``expected_instrumented`` is the expected instrumented source. When changing
+the instrumentation output intentionally, update these fixtures together with
+the tests.
 
-Legacy wrapper
---------------
-
-``tests/run_build_and_pytests.sh`` is kept as a compatibility wrapper. New usage
-should call ``tests/run_tests.py`` directly.
+Additional regression tests cover repeated starts of the same region ID
+(``tests/repeated_start_c``) and consistency of the region limit between the C
+header and the instrumentation script (``tests/test_limits.py``).

@@ -1,4 +1,10 @@
-CFLAGS ?= -O2 -fopenmp
+CC ?= gcc
+
+# Use OpenMP when the selected compiler can compile and link it. This avoids a
+# hard dependency on libomp for compilers that do not bundle an OpenMP runtime.
+STREAM_OPENMP_FLAGS := $(shell printf 'int main(void) { return 0; }\n' | \
+	$(CC) -x c -fopenmp -o /dev/null - >/dev/null 2>&1 && echo -fopenmp)
+CFLAGS ?= -O2 $(STREAM_OPENMP_FLAGS)
 
 include ../Makefile.common
 

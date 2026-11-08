@@ -24,12 +24,12 @@ def test_instrumentation_diffs(base_dir, env, run_command):
     run_command(["make", "build/nemo_test_perf_regions"], cwd=base_dir, env=env)
 
     run_command(
-        ["diff", "src/nemo_test.F90", "test_data/nemo_test.F90_TEST_ORIG"],
+        ["diff", "src/nemo_test.F90", "test_data/nemo_test.F90.expected_original"],
         cwd=base_dir,
         env=env,
     )
     run_command(
-        ["diff", "build/nemo_test.F90", "test_data/nemo_test.F90_TEST_PR"],
+        ["diff", "build/nemo_test.F90", "test_data/nemo_test.F90.expected_instrumented"],
         cwd=base_dir,
         env=env,
     )
@@ -45,7 +45,7 @@ def test_cleanup_restoration(base_dir, env, run_command, instrument_script):
         env=env,
     )
     run_command(
-        ["diff", str(target), "test_data/nemo_test.F90_TEST_ORIG"],
+        ["diff", str(target), "test_data/nemo_test.F90.expected_original"],
         cwd=base_dir,
         env=env,
     )

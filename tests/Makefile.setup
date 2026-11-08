@@ -1,2 +1,0 @@
-# Backwards-compatible alias for the old test setup include.
-include $(dir $(lastword $(MAKEFILE_LIST)))Makefile.common

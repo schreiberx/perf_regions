@@ -47,6 +47,39 @@ static char *perf_regions_strdup(const char *s)
 	return copy;
 }
 
+/*
+ * Store the region name only on the first start of a region ID.  This helper
+ * is shared by the C and Fortran entry points so both keep the same
+ * "copy once" semantics.
+ */
+static void perf_region_store_name_once(
+	struct PerfRegion *r,
+	int i_region_id,
+	const char *i_region_name,
+	size_t len
+)
+{
+	if (r->region_name != NULL)
+		return;
+
+	if (i_region_name == NULL)
+	{
+		fprintf(stderr, PRINT_PREFIX"Region %i started without a name\n", i_region_id);
+		exit(EXIT_FAILURE);
+	}
+
+	char *copy = (char *)malloc(len + 1);
+	if (copy == NULL)
+	{
+		fprintf(stderr, PRINT_PREFIX"Out of memory\n");
+		exit(EXIT_FAILURE);
+	}
+
+	memcpy(copy, i_region_name, len);
+	copy[len] = '\0';
+	r->region_name = copy;
+}
+
 static void perf_regions_trim(char *s)
 {
 	if (s == NULL)
@@ -376,16 +409,9 @@ void perf_region_start(
 {
 	struct PerfRegion *r = perf_region_get_checked(i_region_id);
 
-	// Initialize the name only once.
-	if (r->region_name == NULL)
-	{
-		if (i_region_name == NULL)
-		{
-			fprintf(stderr, PRINT_PREFIX"Region %i started without a name\n", i_region_id);
-			exit(EXIT_FAILURE);
-		}
-		r->region_name = perf_regions_strdup(i_region_name);
-	}
+	/* Initialize the name only once. */
+	size_t name_len = i_region_name != NULL ? strlen(i_region_name) : 0;
+	perf_region_store_name_once(r, i_region_id, i_region_name, name_len);
 
 	/*
 	 * SKIPPING LOGIC
@@ -509,24 +535,7 @@ void perf_region_start_fortran(
 	 * Copy the Fortran string only on the first start of this region.
 	 * Subsequent starts with the same ID must not allocate or copy it again.
 	 */
-	if (r->region_name == NULL)
-	{
-		if (i_region_name == NULL)
-		{
-			fprintf(stderr, PRINT_PREFIX"Region %i started without a name\n", i_region_id);
-			exit(EXIT_FAILURE);
-		}
-
-		r->region_name = (char *)malloc(len + 1);
-		if (r->region_name == NULL)
-		{
-			fprintf(stderr, PRINT_PREFIX"Out of memory\n");
-			exit(EXIT_FAILURE);
-		}
-
-		memcpy(r->region_name, i_region_name, len);
-		r->region_name[len] = '\0';
-	}
+	perf_region_store_name_once(r, i_region_id, i_region_name, len);
 
 	perf_region_start(i_region_id, NULL);
 }

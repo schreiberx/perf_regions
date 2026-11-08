@@ -40,16 +40,12 @@ runner with ``nvc``, ``nvc++``, and ``nvfortran``.
 Documentation
 -------------
 
-Read the Docs uses the repository-root ``.readthedocs.yaml`` and builds the
-Sphinx project from ``docs/source/conf.py``. Documentation dependencies are
-listed in ``docs/requirements.txt``.
-
-GitHub Actions also builds the documentation with
-``.github/workflows/static.yml`` and publishes the generated HTML to GitHub
-Pages on pushes to the default branch. The ``martin_ai_updates`` branch is
-currently included as well so documentation changes can be built and deployed
-for debugging before they are merged. Enable GitHub Pages in the repository
-settings and select **GitHub Actions** as the publishing source.
+GitHub Actions builds the documentation with
+``.github/workflows/static.yml``. Pull requests build the Sphinx site without
+publishing it; pushes to the default branch publish the generated HTML to
+GitHub Pages. Enable GitHub Pages in the repository settings and select
+**GitHub Actions** as the publishing source. The workflow also runs
+``make -C docs linkcheck`` to check the documentation links.
 
 To reproduce the documentation build locally:
 

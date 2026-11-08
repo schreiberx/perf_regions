@@ -32,14 +32,6 @@ PerfRegions uses an autotools-style configuration script:
    make -j
    sudo make install
 
-The generated helper scripts perform the same build and install steps:
-
-.. code-block:: console
-
-   ./configure
-   ./build.sh
-   sudo ./install.sh
-
 Run the following command to list all configuration options:
 
 .. code-block:: console

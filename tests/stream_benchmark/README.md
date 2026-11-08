@@ -1,3 +1,15 @@
+PerfRegions STREAM benchmark fixture
+====================================
+
+This directory contains the STREAM benchmark used by the PerfRegions test
+suite. The Python tests build `build/stream_c_perfregions` and verify that
+PerfRegions instrumentation produces JSON output.
+
+The `run_benchmark_*.py` scripts are site-specific examples. They contain
+machine-dependent PAPI event names and should be adapted before use.
+
+The upstream STREAM documentation follows.
+
 ===============================================
 
 STREAM is the de facto industry standard benchmark
@@ -23,7 +35,7 @@ brings the following new features:
   rather than using static arrays.  Different
   compiler flags may be needed for both portability
   and optimization.
-  See the READ.ME file in the Versions directory
+  See the README file in the Versions directory
   for more details.
 * Error checking and timing done by all ranks and
   gathered by rank 0 for processing and output.

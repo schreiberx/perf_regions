@@ -22,6 +22,33 @@ static double region_valid_samples(const struct PerfRegion *r)
 	return r->region_enter_counter - r->region_skipped_counter;
 }
 
+struct RegionStats
+{
+	double valid_samples;
+	double skipped_samples;
+	double wallclock_time;
+	double min_wallclock_time;
+	double max_wallclock_time;
+	double mean;
+	double variance;
+};
+
+static struct RegionStats region_stats_from_perf_region(const struct PerfRegion *r)
+{
+	int has_samples = region_has_samples(r);
+	struct RegionStats stats;
+
+	stats.valid_samples = region_valid_samples(r);
+	stats.skipped_samples = (double)r->region_skipped_counter;
+	stats.wallclock_time = r->counter_wallclock_time;
+	stats.min_wallclock_time = has_samples ? r->min_wallclock_time : 0.0;
+	stats.max_wallclock_time = has_samples ? r->max_wallclock_time : 0.0;
+	stats.mean = has_samples ? r->running_mean : 0.0;
+	stats.variance = has_samples ? r->squared_dist_wallclock_time / stats.valid_samples : 0.0;
+
+	return stats;
+}
+
 static void json_write_string(FILE *s, const char *str)
 {
 	if (str == NULL)
@@ -87,13 +114,7 @@ static void print_human_region(
 	const char *name,
 	const long long *counters,
 	int spoiled,
-	double wallclock_time,
-	double min_wallclock_time,
-	double max_wallclock_time,
-	double mean,
-	double variance,
-	double valid_samples,
-	double skipped_samples)
+	const struct RegionStats *stats)
 {
 	fprintf(s, "[MULE] perf_regions: %s", name != NULL ? name : "(null)");
 
@@ -115,15 +136,15 @@ static void print_human_region(
 
 	if (perf_regions.use_wallclock_time)
 	{
-		fprintf(s, "\t%.7e", wallclock_time);
-		fprintf(s, "\t%.7e", min_wallclock_time);
-		fprintf(s, "\t%.7e", max_wallclock_time);
-		fprintf(s, "\t%.7e", mean);
-		fprintf(s, "\t%.7e", variance);
+		fprintf(s, "\t%.7e", stats->wallclock_time);
+		fprintf(s, "\t%.7e", stats->min_wallclock_time);
+		fprintf(s, "\t%.7e", stats->max_wallclock_time);
+		fprintf(s, "\t%.7e", stats->mean);
+		fprintf(s, "\t%.7e", stats->variance);
 	}
 
-	fprintf(s, "\t%.0f", valid_samples);
-	fprintf(s, "\t%.0f", skipped_samples);
+	fprintf(s, "\t%.0f", stats->valid_samples);
+	fprintf(s, "\t%.0f", stats->skipped_samples);
 	fprintf(s, "\n");
 }
 
@@ -158,14 +179,7 @@ void perf_regions_output_human_readable_text(void)
 		if (r->region_name == NULL)
 			continue;
 
-		int has_samples = region_has_samples(r);
-		double valid_samples = region_valid_samples(r);
-
-		double wallclock_time = r->counter_wallclock_time;
-		double min_wallclock_time = has_samples ? r->min_wallclock_time : 0.0;
-		double max_wallclock_time = has_samples ? r->max_wallclock_time : 0.0;
-		double mean = has_samples ? r->running_mean : 0.0;
-		double variance = has_samples ? r->squared_dist_wallclock_time / valid_samples : 0.0;
+		struct RegionStats stats = region_stats_from_perf_region(r);
 
 #if PERF_REGIONS_USE_PAPI
 		const long long *counters = r->counter_values;
@@ -179,9 +193,7 @@ void perf_regions_output_human_readable_text(void)
 		int spoiled = 0;
 #endif
 
-		print_human_region(s, r->region_name, counters, spoiled,
-			wallclock_time, min_wallclock_time, max_wallclock_time,
-			mean, variance, valid_samples, (double)r->region_skipped_counter);
+		print_human_region(s, r->region_name, counters, spoiled, &stats);
 	}
 }
 
@@ -190,28 +202,22 @@ static void write_json_region(
 	const char *name,
 	const long long *counters,
 	int spoiled,
-	double wallclock_time,
-	double min_wallclock_time,
-	double max_wallclock_time,
-	double mean,
-	double variance,
-	double valid_samples,
-	double skipped_samples)
+	const struct RegionStats *stats)
 {
 	fprintf(s, "\t{\n\t\t\"region\": ");
 	json_write_string(s, name);
 	fprintf(s, ",\n");
-	fprintf(s, "\t\t\"counter\": %.0f,\n", valid_samples);
-	fprintf(s, "\t\t\"skipped\": %.0f", skipped_samples);
+	fprintf(s, "\t\t\"counter\": %.0f,\n", stats->valid_samples);
+	fprintf(s, "\t\t\"skipped\": %.0f", stats->skipped_samples);
 
 	if (perf_regions.use_wallclock_time)
 	{
 		fprintf(s, ",\n");
-		fprintf(s, "\t\t\"wallclock_time\": %.7e,\n", wallclock_time);
-		fprintf(s, "\t\t\"min\": %.7e,\n", min_wallclock_time);
-		fprintf(s, "\t\t\"max\": %.7e,\n", max_wallclock_time);
-		fprintf(s, "\t\t\"mean\": %.7e,\n", mean);
-		fprintf(s, "\t\t\"variance\": %.7e", variance);
+		fprintf(s, "\t\t\"wallclock_time\": %.7e,\n", stats->wallclock_time);
+		fprintf(s, "\t\t\"min\": %.7e,\n", stats->min_wallclock_time);
+		fprintf(s, "\t\t\"max\": %.7e,\n", stats->max_wallclock_time);
+		fprintf(s, "\t\t\"mean\": %.7e,\n", stats->mean);
+		fprintf(s, "\t\t\"variance\": %.7e", stats->variance);
 	}
 
 #if PERF_COUNTERS_NESTED
@@ -272,14 +278,7 @@ void perf_regions_output_json_file(const char *filename)
 			fprintf(s, ",\n");
 		first_entry = 0;
 
-		int has_samples = region_has_samples(r);
-		double valid_samples = region_valid_samples(r);
-
-		double wallclock_time = r->counter_wallclock_time;
-		double min_wallclock_time = has_samples ? r->min_wallclock_time : 0.0;
-		double max_wallclock_time = has_samples ? r->max_wallclock_time : 0.0;
-		double mean = has_samples ? r->running_mean : 0.0;
-		double variance = has_samples ? r->squared_dist_wallclock_time / valid_samples : 0.0;
+		struct RegionStats stats = region_stats_from_perf_region(r);
 
 #if PERF_REGIONS_USE_PAPI
 		const long long *counters = r->counter_values;
@@ -293,9 +292,7 @@ void perf_regions_output_json_file(const char *filename)
 		int spoiled = 0;
 #endif
 
-		write_json_region(s, r->region_name, counters, spoiled,
-			wallclock_time, min_wallclock_time, max_wallclock_time,
-			mean, variance, valid_samples, (double)r->region_skipped_counter);
+		write_json_region(s, r->region_name, counters, spoiled, &stats);
 	}
 
 	fprintf(s, "\n]\n");
@@ -320,6 +317,21 @@ struct ReducedRegion
 	int spoiled;
 	long long *counters;
 };
+
+static struct RegionStats region_stats_from_reduced(const struct ReducedRegion *r)
+{
+	struct RegionStats stats;
+
+	stats.valid_samples = r->valid_samples;
+	stats.skipped_samples = r->skipped_samples;
+	stats.wallclock_time = r->wallclock_time;
+	stats.min_wallclock_time = r->min_wallclock_time;
+	stats.max_wallclock_time = r->max_wallclock_time;
+	stats.mean = r->mean;
+	stats.variance = r->variance;
+
+	return stats;
+}
 
 static void free_reduced_regions(struct ReducedRegion *regions, int count)
 {
@@ -547,14 +559,13 @@ void reduce_and_output_human_readable_text(void)
 		for (int i = 0; i < count; i++)
 		{
 			struct ReducedRegion *r = &regions[i];
+			struct RegionStats stats = region_stats_from_reduced(r);
 #if PERF_REGIONS_USE_PAPI
 			const long long *counters = r->counters;
 #else
 			const long long *counters = NULL;
 #endif
-			print_human_region(s, r->name, counters, r->spoiled,
-				r->wallclock_time, r->min_wallclock_time, r->max_wallclock_time,
-				r->mean, r->variance, r->valid_samples, r->skipped_samples);
+			print_human_region(s, r->name, counters, r->spoiled, &stats);
 		}
 	}
 
@@ -591,6 +602,7 @@ void reduce_and_output_json_file(const char *filename)
 			for (int i = 0; i < count; i++)
 			{
 				struct ReducedRegion *r = &regions[i];
+				struct RegionStats stats = region_stats_from_reduced(r);
 				if (i > 0)
 					fprintf(s, ",\n");
 
@@ -599,9 +611,7 @@ void reduce_and_output_json_file(const char *filename)
 #else
 				const long long *counters = NULL;
 #endif
-				write_json_region(s, r->name, counters, r->spoiled,
-					r->wallclock_time, r->min_wallclock_time, r->max_wallclock_time,
-					r->mean, r->variance, r->valid_samples, r->skipped_samples);
+				write_json_region(s, r->name, counters, r->spoiled, &stats);
 			}
 			fprintf(s, "\n]\n");
 

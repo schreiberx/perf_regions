@@ -33,6 +33,13 @@ Changelog
 - Tightened the Fortran interface: removed the unnecessary ``//achar(0)``
   concatenation at generated call sites, used explicit ``C_CHAR``/``C_INT``
   kinds, and removed an unused defines-header include from the Fortran module.
+- Removed obsolete configure options and the generated ``build.sh`` and
+  ``install.sh`` helper scripts.
+- Removed legacy test wrappers, renamed instrumentation fixtures to descriptive
+  names, and added regression tests for repeated region starts and shared
+  region-limit consistency.
+- Published the Sphinx documentation through GitHub Actions and added a link
+  check to the documentation workflow.
 
 2025-02-05
 ----------

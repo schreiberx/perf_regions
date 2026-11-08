@@ -1,5 +1,14 @@
 MODULE perf_regions_fortran
 
+        implicit none
+        private
+
+        public :: perf_regions_init
+        public :: perf_regions_init_mpi_fortran
+        public :: perf_regions_finalize
+        public :: perf_region_start
+        public :: perf_region_stop
+
      interface
         subroutine perf_regions_init() bind (C, name ="perf_regions_init")
                 use iso_c_binding

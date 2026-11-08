@@ -19,10 +19,10 @@ the measured results.
 
 ## Documentation
 
-The Sphinx documentation sources live in [`docs/`](docs/). Read the Docs uses
-the repository-root [`.readthedocs.yaml`](.readthedocs.yaml) configuration, and
-the GitHub Actions workflow [`.github/workflows/static.yml`](.github/workflows/static.yml)
-builds and publishes the site to GitHub Pages on pushes to the default branch.
+The Sphinx documentation sources live in [`docs/`](docs/). The GitHub Actions
+workflow [`.github/workflows/static.yml`](.github/workflows/static.yml) builds
+the site for pull requests and publishes it to GitHub Pages on the default
+branch.
 
 Build the documentation locally with:
 
@@ -60,14 +60,6 @@ PerfRegions uses an autotools-style configuration script:
 ./configure --enable-mpi --enable-papi
 make -j
 sudo make install
-```
-
-The generated helper scripts perform the same steps:
-
-```bash
-./configure
-./build.sh
-sudo ./install.sh
 ```
 
 For a minimal build without MPI and PAPI:

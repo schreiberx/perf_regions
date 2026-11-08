@@ -24,12 +24,12 @@ def test_instrumentation_diffs(base_dir, env, run_command):
     run_command(["make", "build/array_test_perf_regions"], cwd=base_dir, env=env)
 
     run_command(
-        ["diff", "src/array_test.c", "test_data/array_test.c_TEST_ORIG"],
+        ["diff", "src/array_test.c", "test_data/array_test.c.expected_original"],
         cwd=base_dir,
         env=env,
     )
     run_command(
-        ["diff", "build/array_test.c", "test_data/array_test.c_TEST_PR"],
+        ["diff", "build/array_test.c", "test_data/array_test.c.expected_instrumented"],
         cwd=base_dir,
         env=env,
     )
@@ -45,7 +45,7 @@ def test_cleanup_restoration(base_dir, env, run_command, instrument_script):
         env=env,
     )
     run_command(
-        ["diff", str(target), "test_data/array_test.c_TEST_ORIG"],
+        ["diff", str(target), "test_data/array_test.c.expected_original"],
         cwd=base_dir,
         env=env,
     )

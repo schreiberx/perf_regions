@@ -4,8 +4,7 @@ on:
   push:
     branches:
       - master
-      # Temporary branch for testing documentation builds and deployments.
-      - martin_ai_updates
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -14,7 +13,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -41,16 +40,22 @@ jobs:
           make -C docs html SPHINXOPTS="-W --keep-going -j auto"
           touch docs/build/html/.nojekyll
 
+      - name: Check documentation links
+        run: make -C docs linkcheck SPHINXOPTS="-j auto"
+
       - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/build/html
 
   deploy:
     name: Deploy documentation
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-24.04
 

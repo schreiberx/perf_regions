@@ -36,6 +36,7 @@ uninstall:
 clean:
 	$(MAKE) -C ./src clean
 	$(MAKE) -C ./tests clean
+	rm -f *.mod
 
 help:
 	@echo "perf_regions build system (traditional make only)"
@@ -47,8 +48,8 @@ help:
 	@echo "Targets:"
 	@echo "  all                       - Build the library"
 	@echo "  build_src                 - Build the library"
-	@echo "  tests                  - Build tests"
-	@echo "  run_tests                 - Run tests"
+	@echo "  tests                     - Run the test suite"
+	@echo "  run_tests                 - Run the test suite"
 	@echo "  install                   - Install library and headers"
 	@echo "  uninstall                 - Uninstall library and headers"
 	@echo "  clean                     - Clean build artifacts"
@@ -60,6 +61,7 @@ help:
 	@echo "Environment variables:"
 	@echo "  USE_MPI                   - Enable MPI support (0/1, default: 1)"
 	@echo "  USE_PAPI                  - Enable PAPI support (0/1, default: 1)"
+	@echo "  USE_FORTRAN               - Build the Fortran interface (0/1, default: 0)"
 	@echo "  BUILD_SHARED_LIBS         - Build shared libraries (0/1, default: 1)"
 	@echo "  BUILD_STATIC_LIBS         - Build static libraries (0/1, default: 0)"
 	@echo "  PREFIX                    - Install prefix (default: /usr/local)"
@@ -69,4 +71,5 @@ help:
 distclean:
 	$(MAKE) clean 2>/dev/null || true
 	rm -rf build-* *.log
+	rm -f src/Makefile.deps build.sh install.sh
 	@echo "Complete cleanup finished"

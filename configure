@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # configure script for perf_regions
-# Provides autotools-style configuration interface for CMake backend
+# Generates config.mk for the traditional Makefile build
 
 set -e
 
@@ -11,13 +11,8 @@ BUILD_TYPE="Release"
 ENABLE_MPI="auto"
 ENABLE_PAPI="auto"
 ENABLE_FORTRAN="auto"
-ENABLE_TESTS="no"
 ENABLE_SHARED="yes"
 ENABLE_STATIC="no"
-BUILD_DIR="build"
-VERBOSE="no"
-HELP="no"
-CMAKE_EXTRA_ARGS=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -61,64 +56,35 @@ VAR=VALUE.  See below for descriptions of some of the useful variables.
 
 Defaults for the options are specified in brackets.
 
-Configuration:
+Options:
   -h, --help              display this help and exit
-      --quiet, --silent   do not print \`checking ...' messages
-      --cache-file=FILE   cache test results in FILE [disabled]
-  -C, --config-cache      alias for \`--cache-file=config.cache'
-  -n, --no-create         do not create output files
-      --srcdir=DIR        find the sources in DIR [configure dir or \`..']
-
-Installation directories:
-      --prefix=PREFIX     install architecture-independent files in PREFIX
-                          [$PREFIX]
-      --exec-prefix=EPREFIX   install architecture-dependent files in EPREFIX
-                              [PREFIX]
-      --bindir=DIR        user executables [EPREFIX/bin]
-      --libdir=DIR        object code libraries [EPREFIX/lib]
-      --includedir=DIR    C header files [PREFIX/include]
-
-Fine tuning of the installation directories:
-      --datarootdir=DIR   read-only arch.-independent data root [PREFIX/share]
-      --datadir=DIR       read-only architecture-independent data [DATAROOTDIR]
-      --docdir=DIR        documentation root [DATAROOTDIR/doc/perf_regions]
-
-System types:
-      --build=BUILD       configure for building on BUILD [guessed]
-      --host=HOST         cross-compile to build programs to run on HOST [BUILD]
-
-Optional Features:
-      --disable-option-checking  ignore unrecognized --enable/--with options
-      --disable-FEATURE   do not include FEATURE (same as --enable-FEATURE=no)
-      --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
-      --enable-shared[=PKGS]  build shared libraries [default=yes]
-      --enable-static[=PKGS]  build static libraries [default=no]
-      --enable-mpi        enable MPI support [default=auto]
+      --prefix=PREFIX     install files under PREFIX [/usr/local]
+      --enable-debug      build with debugging information and -O0
+      --disable-debug     build with optimizations [default]
+      --enable-mpi        enable MPI support [default: auto-detect]
       --disable-mpi       disable MPI support
-      --enable-papi       enable PAPI performance counters [default=auto]
-      --disable-papi      disable PAPI performance counters
-      --enable-fortran    enable Fortran support [default=auto]
+      --enable-papi       enable PAPI support [default: auto-detect]
+      --disable-papi      disable PAPI support
+      --with-papi=DIR     use the PAPI installation in DIR
+      --with-mpi=DIR      use the MPI installation in DIR
+      --without-papi      same as --disable-papi
+      --without-mpi       same as --disable-mpi
+      --enable-fortran    enable Fortran support [default: auto-detect]
       --disable-fortran   disable Fortran support
-      --enable-tests   build example programs [default=no]
-      --disable-tests  do not build example programs
-      --enable-debug      enable debug build [default=no]
+      --enable-shared     build shared libraries [default]
+      --disable-shared    disable shared libraries and enable static libraries
+      --enable-static     build static libraries
+      --disable-static    do not build static libraries [default]
 
-Optional Packages:
-      --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
-      --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-      --with-papi=DIR         specify PAPI installation directory
-      --with-mpi=DIR          specify MPI installation directory
-
-Some influential environment variables:
+Environment variables:
   CC          C compiler command
-  CFLAGS      C compiler flags
-  LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
-              nonstandard directory <lib dir>
-  LIBS        libraries to pass to the linker, e.g. -l<library>
-  CPPFLAGS    (Objective) C/C++ preprocessor flags, e.g. -I<include dir> if
-              you have headers in a nonstandard directory <include dir>
   FC          Fortran compiler command
+  CFLAGS      C compiler flags
   FCFLAGS     Fortran compiler flags
+  LDFLAGS     linker flags, e.g. -L<lib dir> for libraries in a
+              nonstandard directory
+  CPPFLAGS    preprocessor flags, e.g. -I<include dir> for headers in a
+              nonstandard directory
 
 Use these variables to override the choices made by \`configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -174,14 +140,6 @@ while [[ $# -gt 0 ]]; do
             ENABLE_FORTRAN="OFF"
             shift
             ;;
-        --enable-tests|--enable-tests=yes)
-            ENABLE_TESTS="yes"
-            shift
-            ;;
-        --disable-tests|--enable-tests=no)
-            ENABLE_TESTS="no"
-            shift
-            ;;
         --enable-shared|--enable-shared=yes)
             ENABLE_SHARED="yes"
             shift
@@ -215,18 +173,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         --without-mpi)
             ENABLE_MPI="OFF"
-            shift
-            ;;
-        --build-dir=*)
-            BUILD_DIR="${1#*=}"
-            shift
-            ;;
-        --quiet|--silent)
-            VERBOSE="no"
-            shift
-            ;;
-        --verbose)
-            VERBOSE="yes"
             shift
             ;;
         *=*)
@@ -458,47 +404,6 @@ export PREFIX USE_MPI USE_PAPI USE_FORTRAN PAPI_CFLAGS PAPI_LDFLAGS BUILD_SHARED
 EOF
 }
 
-# Function to create build scripts
-create_build_scripts() {
-    print_info "Creating build helper scripts..."
-    
-    # Create build script (uses traditional top-level Makefile)
-    cat > build.sh << 'EOF'
-#!/bin/bash
-# Build script generated by configure — uses top-level Makefile
-
-set -e
-
-if [ ! -f "config.mk" ]; then
-    echo "Error: configuration not found. Run ./configure first."
-    exit 1
-fi
-
-# Invoke top-level Makefile which includes config.mk
-make -j$(nproc) "$@"
-EOF
-    chmod +x build.sh
-
-    # Create install script (uses top-level Makefile)
-    cat > install.sh << 'EOF'
-#!/bin/bash
-# Install script generated by configure — uses top-level Makefile
-
-set -e
-
-if [ ! -f "config.mk" ]; then
-    echo "Error: configuration not found. Run ./configure and build first."
-    exit 1
-fi
-
-# Invoke install via top-level Makefile
-make install "$@"
-EOF
-    chmod +x install.sh
-    
-    print_info "Created build.sh and install.sh helper scripts"
-}
-
 # Function to print configuration summary
 print_summary() {
     echo ""
@@ -511,18 +416,12 @@ print_summary() {
     echo "  MPI support: $ENABLE_MPI"
     echo "  PAPI support: $ENABLE_PAPI"
     echo "  Fortran support: $ENABLE_FORTRAN"
-    echo "  Build tests: $ENABLE_TESTS"
     echo "  Build shared libraries: $ENABLE_SHARED"
     echo "  Build static libraries: $ENABLE_STATIC"
-    echo "  Build directory: $BUILD_DIR"
     echo ""
     echo "Next steps:"
     echo "  make           # Build the project"
     echo "  make install   # Install the project"
-    echo ""
-    echo "Or use the helper scripts:"
-    echo "  ./build.sh     # Build the project"
-    echo "  ./install.sh   # Install the project"
 }
 
 # Main execution
@@ -534,7 +433,6 @@ main() {
     check_papi
     
     create_config
-    create_build_scripts
     print_summary
 }
 

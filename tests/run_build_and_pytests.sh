@@ -21,6 +21,23 @@ grep -q "^USE_PAPI=1" ../config.mk && HAVE_PAPI=1
 
 cp ../config.mk ./config_tests.mk
 
+# If a test-local PAPI was activated with tests/tools/papi-local/env.sh, wire
+# its paths into the generated test configuration.
+LOCAL_PAPI_PREFIX="${PERF_REGIONS_TEST_PAPI_PREFIX:-${PAPI_PREFIX:-}}"
+if [[ -n "$LOCAL_PAPI_PREFIX" && -f "$LOCAL_PAPI_PREFIX/.perf_regions_papi_install" ]]; then
+    if [[ -f "$LOCAL_PAPI_PREFIX/lib64/libpapi.so" || -f "$LOCAL_PAPI_PREFIX/lib64/libpapi.a" ]]; then
+        LOCAL_PAPI_LIBDIR="lib64"
+    else
+        LOCAL_PAPI_LIBDIR="lib"
+    fi
+
+    sed -i "s|^PAPI_CFLAGS=.*|PAPI_CFLAGS=-I$LOCAL_PAPI_PREFIX/include|" ./config_tests.mk
+    sed -i "s|^PAPI_LDFLAGS=.*|PAPI_LDFLAGS=-L$LOCAL_PAPI_PREFIX/$LOCAL_PAPI_LIBDIR -lpapi|" ./config_tests.mk
+    export PATH="$LOCAL_PAPI_PREFIX/bin:${PATH:-}"
+    export LD_LIBRARY_PATH="$LOCAL_PAPI_PREFIX/$LOCAL_PAPI_LIBDIR:${LD_LIBRARY_PATH:-}"
+    HAVE_PAPI=1
+fi
+
 update_config() {
     echo "========================================"
     echo "Compiling with MPI=$1 PAPI=$2" FORTRAN=${3}

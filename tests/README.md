@@ -7,6 +7,28 @@ Run tests run for all combinations of
 
 # Pre-configuration
 
-Before running, make sure to call `./configure` in the `perf_region`'s main directory
-and ensure that MPI and PAPI are both enabled and work (e.g., by calling `make`)
+Before running, call `./configure` in the `perf_region` main directory.
+MPI and PAPI configurations are skipped automatically if they are not enabled
+or not available.
 
+
+# Test-only local PAPI
+
+If PAPI is not installed on the system, install a dedicated test copy under
+`tests/.deps`:
+
+```bash
+tests/tools/papi-local/install.sh
+source tests/tools/papi-local/env.sh
+tests/tools/papi-local/doctor.sh
+```
+
+Then configure/build/test against it:
+
+```bash
+./configure --with-papi="$PAPI_PREFIX"
+./build.sh
+cd tests && ./run_build_and_pytests.sh
+```
+
+See `tests/tools/papi-local/README.md` for details and cleanup.

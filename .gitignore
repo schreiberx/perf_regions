@@ -57,3 +57,6 @@ Testing/
 # LyX backup files
 **/*.lyx~
 **/*.json
+
+# Test-only locally installed dependencies
+tests/.deps/

@@ -21,6 +21,8 @@
 - Restored NEMO `timing_start`/`timing_stop` instrumentation support.
 - Fixed several test/build issues (test assertions, duplicate cleanup,
   `make tests`, dependency tracking, bandwidth-monitor event parsing).
+- Added test-only local PAPI tooling under `tests/tools/papi-local/` so PAPI
+  can be installed under `tests/.deps/` without touching system directories.
 
 # 2025-02-05
 

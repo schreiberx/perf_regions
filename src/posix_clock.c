@@ -1,4 +1,4 @@
-#define _POSIX_C_SOURCE 199309L
+#define _POSIX_C_SOURCE 200809L
 
 #include <unistd.h>
 #include <time.h>
@@ -6,6 +6,7 @@
 
 #ifdef _POSIX_TIMERS
 static clockid_t clock_type;
+static int clock_type_initialized = 0;
 #endif
 
 /** Checks whether we have support for POSIX timers on this system.
@@ -16,14 +17,21 @@ int posix_clock_init(double *res){
 
 #ifdef _POSIX_TIMERS
 
-#ifdef _POSIX_MONOTONIC_CLOCK
+#if defined(_POSIX_MONOTONIC_CLOCK) && _POSIX_MONOTONIC_CLOCK >= 0
   clock_type = CLOCK_MONOTONIC;
 #else
   clock_type = CLOCK_REALTIME;
 #endif
 
-  clock_getres(clock_type, &ts);
+  if (clock_getres(clock_type, &ts) != 0)
+  {
+    fprintf(stderr, "TIMING: ERROR: clock_getres() failed.\n");
+    *res = 0.0;
+    return 0;
+  }
+
   *res = (double)(ts.tv_sec) + 1.0e-9*ts.tv_nsec;
+  clock_type_initialized = 1;
   return 1;
 #else
   /* This system doesn't have support for POSIX timers */
@@ -41,7 +49,9 @@ double posix_clock(void){
   double tnow;
 
 #ifdef _POSIX_TIMERS
-  clock_gettime(clock_type, &ts);
+  if (!clock_type_initialized || clock_gettime(clock_type, &ts) != 0)
+    return 0.0;
+
   tnow = (double)(ts.tv_sec) + 1.0e-9*ts.tv_nsec;
 #else
   tnow = 0.0;

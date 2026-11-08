@@ -57,3 +57,12 @@ Testing/
 # LyX backup files
 **/*.lyx~
 **/*.json
+
+# Local Python environments
+.venv/
+
+# Test-only locally installed dependencies
+tests/.deps/
+# Generated configure helpers (removed from the repository)
+/build.sh
+/install.sh

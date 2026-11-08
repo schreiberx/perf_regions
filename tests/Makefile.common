@@ -1,0 +1,55 @@
+.DEFAULT_GOAL := all
+
+# Shared definitions for perf_regions test Makefiles.
+
+COMMON_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+TEST_ROOT := $(COMMON_DIR)
+REPO_ROOT := $(abspath $(TEST_ROOT)/..)
+
+-include $(REPO_ROOT)/config.mk
+
+CC ?= gcc
+CXX ?= g++
+FC ?= gfortran
+PYTHON ?= python3
+
+PREFIX ?= /usr/local
+TEST_BUILD_DIR ?= build
+INSTRUMENT := $(TEST_ROOT)/tools/instrument.py
+
+USE_MPI ?= 1
+ifeq ($(USE_MPI),1)
+LIB_SUFFIX_MPI = _mpi
+else
+LIB_SUFFIX_MPI =
+endif
+
+USE_PAPI ?= 1
+ifeq ($(USE_PAPI),1)
+LIB_SUFFIX_PAPI = _papi
+else
+LIB_SUFFIX_PAPI =
+endif
+
+LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)
+LIB_SUFFIX_FORT = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)_fort
+
+BUILD_ROOT := $(REPO_ROOT)/build
+BUILD_DIR := $(BUILD_ROOT)/build$(LIB_SUFFIX)
+BUILD_DIR_FORT := $(BUILD_ROOT)/build$(LIB_SUFFIX_FORT)
+
+PERFREGION_CFLAGS := -I$(REPO_ROOT)/src -I$(BUILD_DIR)
+PERFREGION_FFLAGS := -I$(REPO_ROOT)/src -I$(BUILD_DIR_FORT)
+
+PERFREGION_LDFLAGS := -L$(BUILD_DIR) -lperf_regions$(LIB_SUFFIX)
+PERFREGION_LDFLAGS_FORT := -L$(BUILD_DIR_FORT) -lperf_regions$(LIB_SUFFIX_FORT)
+
+ifeq ($(USE_PAPI),1)
+PERFREGION_CFLAGS += $(PAPI_CFLAGS)
+PERFREGION_FFLAGS += $(PAPI_CFLAGS)
+PERFREGION_LDFLAGS += $(PAPI_LDFLAGS)
+PERFREGION_LDFLAGS_FORT += $(PAPI_LDFLAGS)
+endif
+
+$(TEST_BUILD_DIR):
+	mkdir -p $@

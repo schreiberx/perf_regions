@@ -1,0 +1,79 @@
+Changelog
+=========
+
+Unreleased
+----------
+
+- Build artifacts are now kept under ``build/`` in feature-specific directories such as
+  ``build/build_papi_mpi_fort/``.
+- Added memory-transfer pseudo events ``PR_BANDWIDTH_BYTES``,
+  ``PR_BANDWIDTH_GB``, ``PR_MEM_TRANSFER_BYTES``, and ``PR_MEM_TRANSFER_GB``.
+  They auto-detect memory-channel PAPI events, add the individual channel
+  counters to the output, and emit all four consolidated transfer values.
+  PAPI events are now grouped into one event set per component so core and
+  uncore events can be measured together. Added a STREAM-based hardware test
+  that checks the consolidated transfer volume and compares the measured
+  bandwidth against STREAM's reported rates.
+
+2026-03-03
+----------
+
+- Hardened region-ID validation and nested-region bookkeeping
+  (``PERF_NESTED_REGIONS_MAX`` is now 128); invalid IDs no longer cause
+  out-of-bounds accesses.
+- Made ``PERF_TIMING_POSIX``, ``PERF_COUNTERS_NESTED``, and related switches use
+  consistent ``#if`` handling. The ``gettimeofday()`` fallback now compiles and
+  works when POSIX timers are unavailable.
+- ``perf_regions_init()`` and ``perf_regions_finalize()`` are idempotent, and
+  PAPI is shut down and fully cleaned up.
+- MPI reductions now work with PAPI disabled and with PAPI-only runs. They also
+  handle regions that only exist on a subset of ranks without deadlock.
+- JSON output is escaped correctly and reports zero for min/max when a region
+  has no valid samples.
+- The public headers no longer expose configuration-dependent struct layouts;
+  build options are recorded in a generated ``perf_regions_config.h``.
+- Fixed ``uninstall`` so it no longer removes the whole include directory, and
+  added ``DESTDIR`` support.
+- Restored NEMO ``timing_start``/``timing_stop`` instrumentation support.
+- Fixed several test and build issues (test assertions, duplicate cleanup,
+  ``make tests``, dependency tracking, bandwidth-monitor event parsing).
+- Added test-only local PAPI tooling under ``tests/tools/papi-local/`` so PAPI
+  can be installed under ``tests/.deps/`` without touching system directories.
+- Added a GitHub Actions CI workflow covering GCC, Clang, MPI, PAPI, Fortran,
+  and an optional NVIDIA HPC SDK container job.
+- Simplified test execution around ``tests/run_tests.py``, shared pytest
+  fixtures, common test Makefile definitions, and a single instrumentation
+  entry point. CI and local runs now use the same runner.
+- Tightened the Fortran interface: removed the unnecessary ``//achar(0)``
+  concatenation at generated call sites, used explicit ``C_CHAR``/``C_INT``
+  kinds, and removed an unused defines-header include from the Fortran module.
+- Removed obsolete configure options and the generated ``build.sh`` and
+  ``install.sh`` helper scripts.
+- Removed legacy test wrappers, renamed instrumentation fixtures to descriptive
+  names, and added regression tests for repeated region starts and dynamic
+  region-table growth.
+- Replaced the fixed region count with a dynamically growing region table that
+  starts at ``PERF_REGIONS_MIN`` and doubles its capacity as needed.
+- Renamed the test option ``--papi-hardware`` to ``--test-papi-counters`` and
+  added ``--test-wallclock`` (default) and ``--test-no-wallclock``.
+- Added ``tests/run_tests_all.sh`` to run the full PAPI/wallclock test matrix
+  sequentially and wired it into CI.
+- Published the Sphinx documentation through GitHub Actions and added a link
+  check to the documentation workflow.
+
+2025-02-05
+----------
+
+- Started the changelog.
+- Switched the test cases to ``pytest``.
+- Cleaned up the test layout around ``src``, ``bin``, ``build``,
+  ``test_data``, and the pytest test modules.
+- Made the ``perf_region`` library names depend on the enabled options:
+
+  - MPI: ``_mpi``
+  - PAPI: ``_papi``
+  - Fortran: ``_fort``
+
+  For example, enabling MPI without PAPI results in
+  ``libperf_regions_mpi.so``.
+- Thanks to Thomas Gruber for discussions on performance counters.

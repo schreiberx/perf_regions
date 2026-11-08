@@ -2,14 +2,31 @@
 #define PERF_REGION_DEFINES_H
 
 /*
- * "Maximum number of regions"
+ * Optional generated configuration header.  This allows the installed header
+ * files to describe the exact configuration the library was built with.
  */
-#define PERF_REGIONS_MAX		(128)
+#if defined(__has_include)
+#  if __has_include("perf_regions_config.h")
+#    include "perf_regions_config.h"
+#  endif
+#endif
+
+/*
+ * "Minimum number of region slots allocated initially"
+ *
+ * The region array grows automatically, doubling its capacity as needed.
+ */
+#define PERF_REGIONS_MIN		(128)
 
 /*
  * "Maximum number of performance counters"
  */
 #define PERF_COUNTERS_MAX		(256)
+
+/*
+ * "Maximum nesting depth of performance regions"
+ */
+#define PERF_NESTED_REGIONS_MAX		(128)
 
 /*
  * precompiler directives to avoid compiling with timing or perf counters

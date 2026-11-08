@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 """
-Script to replace timing_start/end calls in all NEMO files
-with perf_region_start/end calls.
+Instrument source files with perf_region_start/perf_region_stop calls.
+
+Supports native perf_regions annotations and NEMO-style timing_start/stop
+calls.
 
 Author: Tim Graham, Martin Schreiber
 """
@@ -36,6 +38,12 @@ class PerfRegions:
             "start": r"^\s*!(\$|pragma\s+)perf_regions\s+start\s+(.*)$",  # start of timing
             "stop": r"^\s*!(\$|pragma\s+)perf_regions\s+stop\s+(.*)$",  # end of timing
             "reset": r"^\s*!(\$|pragma\s+)perf_regions\s+reset(\s*)$",  # reset timing
+            # Compatibility with NEMO-style timing_* calls
+            "timing_use": r"^\s*use\s+timing\s*$",
+            "timing_init": r"^\s*call\s+timing_init\s*\(\s*\)\s*$",
+            "timing_finalize": r"^\s*call\s+timing_finalize\s*\(\s*\)\s*$",
+            "timing_start": r"^\s*call\s+timing_start\s*\(\s*(['\"])(.*?)\1\s*\)\s*;?\s*$",
+            "timing_stop": r"^\s*call\s+timing_stop\s*\(\s*(['\"])(.*?)\1\s*\)\s*;?\s*$",
         }
         self.fortran_ignore_case = True
 
@@ -80,6 +88,34 @@ class PerfRegions:
             name = name[1:-1]
 
         return name
+
+    @staticmethod
+    def _escape_code_string(name: str, language: str) -> str:
+        if language == "c":
+            return name.replace("\\", "\\\\").replace('"', '\\"')
+        # Fortran escapes a double quote by doubling it.
+        return name.replace('"', '""')
+
+    @staticmethod
+    def _comment_safe_name(name: str) -> str:
+        return name.replace('"', "'")
+
+    def _region_id_for_start(self, name: str) -> int:
+        if name in self.region_name_list_acc:
+            print("WARNING: " + name + " already exists in the region name list")
+            return self.region_name_list_acc.index(name)
+
+        self.region_name_list_acc.append(name)
+        return len(self.region_name_list_acc) - 1
+
+    def _region_id_for_stop(self, name: str, filename: str, line_no: int) -> int:
+        try:
+            return self.region_name_list_acc.index(name)
+        except ValueError:
+            raise Exception(
+                f"Stop without matching start for region '{name}' in "
+                f"'{filename}' at line {line_no}"
+            )
 
     def find_and_replace(self, filename_in: str, filename_out: Optional[str] = None, cleanup: bool = False):
         """
@@ -234,48 +270,84 @@ class PerfRegions:
                         break
 
                     if p == "start":  # start timing
-                        name = match_tag
-                        name = self._cleanup_name_tag(name)
-
-                        if name in self.region_name_list_acc:
-                            print("WARNING: " + name + " already exists in the region name list")
-                        else:
-                            self.region_name_list_acc.append(name)
-
-                        id = self.region_name_list_acc.index(name)
+                        name = self._cleanup_name_tag(match_tag)
+                        id = self._region_id_for_start(name)
 
                         print(f"{prefix_str}- Found region start '{name}'")
                         depth += 1
+                        escaped_name = self._escape_code_string(name, language)
                         if language == "fortran":
                             self._append_source_lines(
-                                out_content, line, f"""CALL perf_region_start({id}, "{name}"//achar(0))""", language=language
+                                out_content, line, f"""CALL perf_region_start({id}, "{escaped_name}")""", language=language
                             )
                         elif language == "c":
                             self._append_source_lines(
-                                out_content, line, f"""perf_region_start({id}, "{name}");""", language=language
+                                out_content, line, f"""perf_region_start({id}, "{escaped_name}");""", language=language
                             )
                         break
 
                     if p == "stop":  # timing stop
-                        name = match_tag
-                        name = self._cleanup_name_tag(name)
+                        name = self._cleanup_name_tag(match_tag)
 
                         print(f"{prefix_str}- Found region end '{name}'")
                         depth -= 1
 
-                        id = self.region_name_list_acc.index(name)
+                        id = self._region_id_for_stop(name, filename_in, line_id + 1)
+                        comment_name = self._comment_safe_name(name)
                         if language == "fortran":
                             self._append_source_lines(
-                                out_content, line, f"CALL perf_region_stop({id})   ! name=\"{name}\"", language=language
+                                out_content, line, f"CALL perf_region_stop({id})   ! name=\"{comment_name}\"", language=language
                             )
                         elif language == "c":
                             self._append_source_lines(
-                                out_content, line, f"perf_region_stop({id});   // name=\"{name}\"", language=language
+                                out_content, line, f"perf_region_stop({id});   // name=\"{comment_name}\"", language=language
                             )
                         break
 
+                    if p == "timing_use":
+                        print(f"{prefix_str}- Found NEMO 'use timing' statement")
+                        self._append_source_lines(out_content, line, "USE perf_regions_fortran", language=language)
+                        break
+
+                    if p == "timing_init":
+                        print(f"{prefix_str}- Found NEMO timing_init statement")
+                        if not self.perf_regions_init_found:
+                            depth += 1
+                        self._append_source_lines(out_content, line, "CALL perf_regions_init()", language=language)
+                        self.perf_regions_init_found = True
+                        break
+
+                    if p == "timing_finalize":
+                        print(f"{prefix_str}- Found NEMO timing_finalize statement")
+                        depth -= 1
+                        self._append_source_lines(out_content, line, "CALL perf_regions_finalize()", language=language)
+                        self.perf_regions_finalize_found = True
+                        break
+
+                    if p == "timing_start":
+                        name = self._cleanup_name_tag(match_tag)
+                        id = self._region_id_for_start(name)
+                        print(f"{prefix_str}- Found NEMO timing_start '{name}'")
+                        depth += 1
+                        escaped_name = self._escape_code_string(name, language)
+                        self._append_source_lines(
+                            out_content, line, f"""CALL perf_region_start({id}, "{escaped_name}")""", language=language
+                        )
+                        break
+
+                    if p == "timing_stop":
+                        name = self._cleanup_name_tag(match_tag)
+                        id = self._region_id_for_stop(name, filename_in, line_id + 1)
+                        print(f"{prefix_str}- Found NEMO timing_stop '{name}'")
+                        depth -= 1
+                        comment_name = self._comment_safe_name(name)
+                        self._append_source_lines(
+                            out_content, line, f"CALL perf_region_stop({id})   ! name=\"{comment_name}\"", language=language
+                        )
+                        break
+
                     if p == "reset":  # timing_reset
-                        print("{prefix_str}- Found timing_reset call")
+                        print(f"{prefix_str}- Found timing_reset call")
                         if language == "fortran":
                             self._append_source_lines(out_content, line, "! No perf_region equivalent", language=language)
                         elif language == "c":
@@ -367,3 +439,49 @@ class PerfRegions:
             raise Exception("No pref_regions finalization found!")
 
         print("FINISHED without errors")
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Instrument or restore perf_regions annotations."
+    )
+    parser.add_argument(
+        "mode",
+        choices=("preprocess", "cleanup"),
+        help="Instrument files or restore the original source.",
+    )
+    parser.add_argument(
+        "targets",
+        nargs="*",
+        help="Files or glob patterns. Defaults to ./build/*.",
+    )
+    parser.add_argument(
+        "--output-directory",
+        default=None,
+        help="Write instrumented files to this directory.",
+    )
+    args = parser.parse_args(argv)
+
+    targets = args.targets or ["./build/*"]
+    expanded: List[str] = []
+    for target in targets:
+        matches = glob.glob(target)
+        expanded.extend(matches or [target])
+
+    preprocessor = PerfRegions(
+        expanded,
+        output_directory=args.output_directory,
+    )
+
+    if args.mode == "preprocess":
+        preprocessor.run_preprocessor()
+    else:
+        preprocessor.remove_perf_regions_annotations()
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

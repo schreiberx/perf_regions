@@ -1,6 +1,13 @@
 MODULE perf_regions_fortran
 
-# include "perf_regions_defines.h"
+        implicit none
+        private
+
+        public :: perf_regions_init
+        public :: perf_regions_init_mpi_fortran
+        public :: perf_regions_finalize
+        public :: perf_region_start
+        public :: perf_region_stop
 
      interface
         subroutine perf_regions_init() bind (C, name ="perf_regions_init")
@@ -35,9 +42,9 @@ MODULE perf_regions_fortran
 
         ! Use a dummy subroutine because we need to forward the length of the string
         subroutine perf_region_start(region_id, region_name)
-                use, intrinsic :: iso_c_binding, only: C_SIZE_T
-                INTEGER, VALUE, INTENT(IN) :: region_id
-                CHARACTER(len=*), INTENT(IN) ::region_name
+                use, intrinsic :: iso_c_binding, only: C_CHAR, C_INT, C_SIZE_T
+                INTEGER(kind=C_INT), VALUE, INTENT(IN) :: region_id
+                CHARACTER(kind=C_CHAR, len=*), INTENT(IN) :: region_name
 
                 INTEGER(kind=C_SIZE_T) :: len
 

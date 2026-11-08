@@ -1,0 +1,224 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      FC: ${{ matrix.fc }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: gcc-mpi-papi
+            name: GCC + MPI + PAPI + Fortran
+            cc: gcc
+            cxx: g++
+            fc: gfortran
+            mpi: 1
+            papi: local
+
+          - id: gcc-minimal
+            name: GCC + no MPI + no PAPI + Fortran
+            cc: gcc
+            cxx: g++
+            fc: gfortran
+            mpi: 0
+            papi: none
+
+          - id: clang-minimal
+            name: Clang 22 + no MPI + no PAPI + Fortran
+            cc: clang-22
+            cxx: clang++-22
+            fc: gfortran
+            mpi: 0
+            papi: none
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential \
+            ca-certificates \
+            gfortran \
+            git \
+            python3 \
+            python3-pip \
+            python3-venv \
+            util-linux
+          if [[ "${{ matrix.cc }}" == clang-* ]]; then
+            # Install the latest stable LLVM toolchain from the official LLVM
+            # apt repository instead of the older distro default.  Keep this
+            # version in sync with https://apt.llvm.org/llvm.sh.
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              curl \
+              gnupg \
+              lsb-release \
+              software-properties-common
+            curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+            sudo env DEBIAN_FRONTEND=noninteractive bash /tmp/llvm.sh 22
+
+            # The stream benchmark is built with -fopenmp.  Clang's OpenMP
+            # support links against libomp, which is not pulled in by Clang
+            # itself.
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              libomp-22-dev
+          fi
+          if [[ "${{ matrix.mpi }}" == "1" ]]; then
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mpich libmpich-dev
+          fi
+
+      - name: Create Python test environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ci-venv"
+          "$RUNNER_TEMP/ci-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/ci-venv/bin/pip" install -r tests/requirements.txt
+          echo "$RUNNER_TEMP/ci-venv/bin" >> "$GITHUB_PATH"
+
+      - name: Prepare local PAPI cache
+        if: ${{ matrix.papi == 'local' }}
+        run: mkdir -p tests/.deps/cache
+
+      - name: Cache local PAPI tarball
+        if: ${{ matrix.papi == 'local' }}
+        uses: actions/cache@v4
+        with:
+          path: tests/.deps/cache
+          key: papi-${{ runner.os }}-${{ runner.arch }}-7.2.0
+
+      - name: Enable hardware performance counters
+        if: ${{ matrix.papi == 'local' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          if command -v sysctl >/dev/null 2>&1; then
+            sudo sysctl -w kernel.perf_event_paranoid=1 || true
+          else
+            sudo sh -c 'echo 1 > /proc/sys/kernel/perf_event_paranoid' || true
+          fi
+
+      - name: Run all PAPI/wallclock combinations
+        if: ${{ matrix.papi == 'local' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests/run_tests_all.sh \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --fc "${{ matrix.fc }}" \
+            2>&1 | tee "$RUNNER_TEMP/pytest-all.log"
+
+      - name: Run tests
+        if: ${{ matrix.papi != 'local' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(
+            --cc "${{ matrix.cc }}"
+            --cxx "${{ matrix.cxx }}"
+            --fc "${{ matrix.fc }}"
+            --papi "${{ matrix.papi }}"
+            --test-wallclock
+          )
+          if [[ "${{ matrix.mpi }}" == "1" ]]; then
+            args+=(--mpi)
+          else
+            args+=(--no-mpi)
+          fi
+          python3 tests/run_tests.py "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/pytest.log"
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.id }}
+          path: ${{ runner.temp }}/*.log
+          if-no-files-found: ignore
+
+  nvhpc:
+    name: NVIDIA HPC SDK + no MPI + no PAPI + Fortran
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    # Keep this non-blocking until the pinned NVHPC image and compiler version
+    # have been validated in the target repository.
+    continue-on-error: true
+
+    container:
+      # Pin this tag/digest for reproducible CI. Update it deliberately.
+      image: nvcr.io/nvidia/nvhpc:25.7-devel-cuda12.9-ubuntu24.04
+      options: --user root
+
+    env:
+      CC: nvc
+      CXX: nvc++
+      FC: nvfortran
+
+    steps:
+      - name: Bootstrap container tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates \
+            git \
+            make \
+            python3 \
+            python3-pip \
+            python3-venv \
+            util-linux
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check NVIDIA compilers
+        run: |
+          nvc --version
+          nvfortran --version
+
+      - name: Create Python test environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ci-venv"
+          "$RUNNER_TEMP/ci-venv/bin/python" -m pip install --upgrade pip
+          "$RUNNER_TEMP/ci-venv/bin/pip" install -r tests/requirements.txt
+          echo "$RUNNER_TEMP/ci-venv/bin" >> "$GITHUB_PATH"
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/run_tests.py \
+            --cc nvc \
+            --cxx nvc++ \
+            --fc nvfortran \
+            --no-mpi \
+            --papi none \
+            --test-wallclock \
+            2>&1 | tee "$RUNNER_TEMP/nvhpc-pytest.log"
+
+      - name: Upload failure logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-nvhpc
+          path: ${{ runner.temp }}/*.log
+          if-no-files-found: ignore

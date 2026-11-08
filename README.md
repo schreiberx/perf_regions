@@ -20,7 +20,9 @@ the measured results.
 ## Documentation
 
 The Sphinx documentation sources live in [`docs/`](docs/). Read the Docs uses
-the repository-root [`.readthedocs.yaml`](.readthedocs.yaml) configuration.
+the repository-root [`.readthedocs.yaml`](.readthedocs.yaml) configuration, and
+the GitHub Actions workflow [`.github/workflows/static.yml`](.github/workflows/static.yml)
+builds and publishes the site to GitHub Pages on pushes to the default branch.
 
 Build the documentation locally with:
 

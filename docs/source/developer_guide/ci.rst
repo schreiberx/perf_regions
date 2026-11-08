@@ -44,6 +44,11 @@ Read the Docs uses the repository-root ``.readthedocs.yaml`` and builds the
 Sphinx project from ``docs/source/conf.py``. Documentation dependencies are
 listed in ``docs/requirements.txt``.
 
+GitHub Actions also builds the documentation with
+``.github/workflows/static.yml`` and publishes the generated HTML to GitHub
+Pages on pushes to the default branch. Enable GitHub Pages in the repository
+settings and select **GitHub Actions** as the publishing source.
+
 To reproduce the documentation build locally:
 
 .. code-block:: console

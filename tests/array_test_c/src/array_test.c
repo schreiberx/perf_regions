@@ -14,6 +14,8 @@ void run_computations()
 
 int main(int i_argi, char **argv)
 {
+#pragma perf_regions init
+
 	for (size = 1; size < 1024 * 1024 * 128 / 8; size *= 2)
 	{
 		a = malloc(sizeof(double) * size);
@@ -21,7 +23,6 @@ int main(int i_argi, char **argv)
 		iters = (iters <= 0 ? 2 : iters);
 		iters = (iters > 128 ? 128 : iters);
 
-#pragma perf_regions init
 #pragma perf_regions start outer
 
 		printf("\n");
@@ -52,10 +53,11 @@ int main(int i_argi, char **argv)
 		}
 
 #pragma perf_regions stop outer
-#pragma perf_regions finalize
 
 		free(a);
 	}
+#pragma perf_regions finalize
+
 	return 0;
 }
 

@@ -7,8 +7,9 @@ The public C interface is declared in ``perf_regions.h``. The internal layout of
 Region IDs
 ----------
 
-Region IDs are integers in the range ``0`` to ``PERF_REGIONS_MAX - 1``. The
-current limit is 128 regions. Invalid IDs are treated as fatal errors.
+Region IDs are non-negative integers. The region table starts with
+``PERF_REGIONS_MIN`` slots (currently 128) and doubles its capacity whenever a
+larger ID is used. Negative IDs are treated as fatal errors.
 
 .. c:function:: void perf_regions_init(void)
 
@@ -84,7 +85,7 @@ current limit is 128 regions. Invalid IDs are treated as fatal errors.
 Notes
 -----
 
-- ``PERF_REGIONS_MAX`` and ``PERF_NESTED_REGIONS_MAX`` are defined in
+- ``PERF_REGIONS_MIN`` and ``PERF_NESTED_REGIONS_MAX`` are defined in
   ``perf_regions_defines.h``.
 - The library stores process-global state and does not use internal locking.
 - All public headers are installed together with the generated

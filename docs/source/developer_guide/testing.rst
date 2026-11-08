@@ -9,7 +9,9 @@ The canonical test entry point is:
 
 The runner configures the library, builds it, runs pytest, and cleans up
 afterwards. By default it uses wallclock timing, no MPI, and builds both the C
-and Fortran libraries when a Fortran compiler is available.
+and Fortran libraries when a Fortran compiler is available. Pytest runs with
+``-v`` so each test is listed as it runs; pass ``--pytest-args '-q'`` for
+quieter output.
 
 Quick start
 -----------
@@ -41,6 +43,12 @@ Common configurations
    # Test-only local PAPI installation.
    python3 tests/run_tests.py --mpi --papi local
 
+   # PAPI counters with wallclock timing (the default).
+   python3 tests/run_tests.py --mpi --papi local --test-papi-counters
+
+   # PAPI counters without wallclock timing.
+   python3 tests/run_tests.py --mpi --papi local --test-papi-counters --test-no-wallclock
+
    # Already installed PAPI prefix.
    python3 tests/run_tests.py --papi system --papi-prefix /path/to/papi
 
@@ -52,6 +60,33 @@ Common configurations
 
    # Exclude slow tests.
    python3 tests/run_tests.py --fast
+
+All PAPI/wallclock combinations
+-------------------------------
+
+To run the full PAPI/wallclock matrix sequentially:
+
+.. code-block:: console
+
+   tests/run_tests_all.sh
+
+The script runs these combinations for both no-MPI and MPI when MPI compilers
+are available:
+
+- no PAPI, wallclock only
+- PAPI built in, wallclock only
+- PAPI counters with wallclock timing
+- PAPI counters without wallclock timing
+
+Extra arguments are forwarded to each ``run_tests.py`` invocation, for example:
+
+.. code-block:: console
+
+   tests/run_tests_all.sh --cc clang --cxx clang++ --fc gfortran
+
+Use ``PAPI_MODE=system tests/run_tests_all.sh`` to use a system PAPI
+installation instead of the test-local one. Do not pass MPI, PAPI, counter, or
+wallclock options directly; the script controls those.
 
 PAPI counters
 -------------
@@ -66,16 +101,34 @@ Run hardware-counter tests explicitly with:
 
 .. code-block:: console
 
-   python3 tests/run_tests.py --mpi --papi local --papi-hardware
+   python3 tests/run_tests.py --mpi --papi local --test-papi-counters
 
 This requires working PAPI hardware-counter access. Many containers, virtual
-machines, and CI runners do not permit hardware counters. Check the local
+machines, and CI runners do not permit hardware counters. Wallclock timing is
+included by default; add ``--test-no-wallclock`` to test only the PAPI
+counters. When the run uses wallclock-only tests, the runner prints the command
+needed to enable hardware-counter tests at the end. Check the local
 environment with:
 
 .. code-block:: console
 
    source tests/tools/papi-local/env.sh
    tests/tools/papi-local/doctor.sh --strict
+
+If hardware-counter access is unavailable, check the Linux permission setting:
+
+.. code-block:: console
+
+   cat /proc/sys/kernel/perf_event_paranoid
+
+On many systems, lowering the value allows PAPI to access the counters:
+
+.. code-block:: console
+
+   sudo sysctl -w kernel.perf_event_paranoid=1
+
+Use ``0`` or ``-1`` only if you understand the additional access this grants.
+Containers and virtual machines may also require host-side configuration.
 
 Test-only local PAPI
 --------------------
@@ -136,5 +189,5 @@ the instrumentation output intentionally, update these fixtures together with
 the tests.
 
 Additional regression tests cover repeated starts of the same region ID
-(``tests/repeated_start_c``) and consistency of the region limit between the C
-header and the instrumentation script (``tests/test_limits.py``).
+(``tests/repeated_start_c``) and dynamic region-table growth beyond the initial
+allocation (``tests/dynamic_regions_c``).

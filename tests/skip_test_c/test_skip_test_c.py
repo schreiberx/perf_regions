@@ -2,6 +2,11 @@ def find_region(data, name):
     return next((region for region in data if region["region"] == name), None)
 
 
+def assert_nested_region_is_shorter(inner, outer):
+    if "wallclock_time" in inner and "wallclock_time" in outer:
+        assert inner["wallclock_time"] < outer["wallclock_time"]
+
+
 def test_skip_execution(base_dir, env, run_command, output_json, read_json):
     run_command(["make", "build/skip_test"], cwd=base_dir, env=env)
 
@@ -24,7 +29,7 @@ def test_skip_execution(base_dir, env, run_command, output_json, read_json):
     assert outer["skipped"] == 2
 
     assert inner is not None
-    assert inner["wallclock_time"] < outer["wallclock_time"]
+    assert_nested_region_is_shorter(inner, outer)
 
     assert independent is not None
     assert independent["counter"] == 3
@@ -33,7 +38,7 @@ def test_skip_execution(base_dir, env, run_command, output_json, read_json):
     assert independent_inner is not None
     assert independent_inner["counter"] == 15
     assert independent_inner["skipped"] == 10
-    assert independent_inner["wallclock_time"] < independent["wallclock_time"]
+    assert_nested_region_is_shorter(independent_inner, independent)
 
 
 def test_no_skip_execution(base_dir, env, run_command, tmp_path, read_json):

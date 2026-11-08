@@ -19,3 +19,9 @@ Quick example:
 python3 tests/run_tests.py --venv
 python3 tests/run_tests.py --mpi --papi local
 ```
+
+Run the complete PAPI/wallclock matrix with:
+
+```bash
+tests/run_tests_all.sh
+```

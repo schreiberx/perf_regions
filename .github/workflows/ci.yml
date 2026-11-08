@@ -107,7 +107,30 @@ jobs:
           path: tests/.deps/cache
           key: papi-${{ runner.os }}-${{ runner.arch }}-7.2.0
 
+      - name: Enable hardware performance counters
+        if: ${{ matrix.papi == 'local' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          if command -v sysctl >/dev/null 2>&1; then
+            sudo sysctl -w kernel.perf_event_paranoid=1 || true
+          else
+            sudo sh -c 'echo 1 > /proc/sys/kernel/perf_event_paranoid' || true
+          fi
+
+      - name: Run all PAPI/wallclock combinations
+        if: ${{ matrix.papi == 'local' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tests/run_tests_all.sh \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --fc "${{ matrix.fc }}" \
+            2>&1 | tee "$RUNNER_TEMP/pytest-all.log"
+
       - name: Run tests
+        if: ${{ matrix.papi != 'local' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -116,47 +139,14 @@ jobs:
             --cxx "${{ matrix.cxx }}"
             --fc "${{ matrix.fc }}"
             --papi "${{ matrix.papi }}"
-            --wallclock-only
+            --test-wallclock
           )
           if [[ "${{ matrix.mpi }}" == "1" ]]; then
             args+=(--mpi)
           else
             args+=(--no-mpi)
           fi
-          if [[ "${{ matrix.papi }}" == "local" ]]; then
-            args+=(--keep-build)
-          fi
           python3 tests/run_tests.py "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/pytest.log"
-
-      - name: Optional PAPI hardware-counter tests
-        if: ${{ matrix.papi == 'local' }}
-        continue-on-error: true
-        shell: bash
-        run: |
-          set -euo pipefail
-          source tests/tools/papi-local/env.sh
-          if tests/tools/papi-local/doctor.sh --strict; then
-            args=(
-              --cc "${{ matrix.cc }}"
-              --cxx "${{ matrix.cxx }}"
-              --fc "${{ matrix.fc }}"
-              --papi local
-              --papi-hardware
-              --no-configure
-              --no-build
-              --keep-build
-              --pytest-target array_test_c
-              --pytest-target skip_test_c
-            )
-            if [[ "${{ matrix.mpi }}" == "1" ]]; then
-              args+=(--mpi)
-            else
-              args+=(--no-mpi)
-            fi
-            python3 tests/run_tests.py "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/pytest-papi-hardware.log"
-          else
-            echo "Hardware counters are unavailable; skipping PAPI runtime tests."
-          fi
 
       - name: Upload failure logs
         if: failure()
@@ -222,7 +212,7 @@ jobs:
             --fc nvfortran \
             --no-mpi \
             --papi none \
-            --wallclock-only \
+            --test-wallclock \
             2>&1 | tee "$RUNNER_TEMP/nvhpc-pytest.log"
 
       - name: Upload failure logs

@@ -17,6 +17,11 @@ void run_computations()
 
 int main(int i_argi, char **argv)
 {
+//PERF_REGION_ORIGINAL
+//#pragma perf_regions init
+//PERF_REGION_CODE
+perf_regions_init();
+
 	for (size = 1; size < 1024 * 1024 * 128 / 8; size *= 2)
 	{
 		a = malloc(sizeof(double) * size);
@@ -24,10 +29,6 @@ int main(int i_argi, char **argv)
 		iters = (iters <= 0 ? 2 : iters);
 		iters = (iters > 128 ? 128 : iters);
 
-//PERF_REGION_ORIGINAL
-//#pragma perf_regions init
-//PERF_REGION_CODE
-perf_regions_init();
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions start outer
 //PERF_REGION_CODE
@@ -76,13 +77,14 @@ perf_region_stop(2);   // name="bar"
 //#pragma perf_regions stop outer
 //PERF_REGION_CODE
 perf_region_stop(0);   // name="outer"
+
+		free(a);
+	}
 //PERF_REGION_ORIGINAL
 //#pragma perf_regions finalize
 //PERF_REGION_CODE
 perf_regions_finalize();
 
-		free(a);
-	}
 	return 0;
 }
 

@@ -12,9 +12,11 @@
 #endif
 
 /*
- * "Maximum number of regions"
+ * "Minimum number of region slots allocated initially"
+ *
+ * The region array grows automatically, doubling its capacity as needed.
  */
-#define PERF_REGIONS_MAX		(128)
+#define PERF_REGIONS_MIN		(128)
 
 /*
  * "Maximum number of performance counters"

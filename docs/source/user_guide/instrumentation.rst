@@ -54,7 +54,6 @@ The preprocessing run fails if:
 
 - an unknown file extension is encountered,
 - a ``stop`` annotation has no matching ``start``,
-- more than 128 distinct region names are found,
 - no initialization annotation is present,
 - no finalization annotation is present,
 - an input file still contains previous instrumentation markers.

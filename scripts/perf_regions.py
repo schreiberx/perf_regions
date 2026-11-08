@@ -15,9 +15,6 @@ import os
 from typing import List, Optional
 
 
-PERF_REGIONS_MAX = 128
-
-
 class PerfRegions:
     def __init__(
         self,
@@ -103,16 +100,10 @@ class PerfRegions:
     def _comment_safe_name(name: str) -> str:
         return name.replace('"', "'")
 
-    def _region_id_for_start(self, name: str, filename: str, line_no: int) -> int:
+    def _region_id_for_start(self, name: str) -> int:
         if name in self.region_name_list_acc:
             print("WARNING: " + name + " already exists in the region name list")
             return self.region_name_list_acc.index(name)
-
-        if len(self.region_name_list_acc) >= PERF_REGIONS_MAX:
-            raise Exception(
-                f"Too many regions (max {PERF_REGIONS_MAX}) while processing "
-                f"'{filename}' at line {line_no}"
-            )
 
         self.region_name_list_acc.append(name)
         return len(self.region_name_list_acc) - 1
@@ -280,7 +271,7 @@ class PerfRegions:
 
                     if p == "start":  # start timing
                         name = self._cleanup_name_tag(match_tag)
-                        id = self._region_id_for_start(name, filename_in, line_id + 1)
+                        id = self._region_id_for_start(name)
 
                         print(f"{prefix_str}- Found region start '{name}'")
                         depth += 1
@@ -335,7 +326,7 @@ class PerfRegions:
 
                     if p == "timing_start":
                         name = self._cleanup_name_tag(match_tag)
-                        id = self._region_id_for_start(name, filename_in, line_id + 1)
+                        id = self._region_id_for_start(name)
                         print(f"{prefix_str}- Found NEMO timing_start '{name}'")
                         depth += 1
                         escaped_name = self._escape_code_string(name, language)

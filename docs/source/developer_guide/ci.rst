@@ -9,7 +9,8 @@ Linux matrix
 
 The main Linux job runs on Ubuntu 24.04 with these variants:
 
-- GCC with MPI, local test PAPI, and Fortran.
+- GCC with MPI, local test PAPI, and Fortran. This job runs the complete
+  PAPI/wallclock matrix through ``tests/run_tests_all.sh``.
 - GCC without MPI and without PAPI, with Fortran.
 - Clang with the latest supported LLVM toolchain, without MPI and without PAPI,
   with gfortran for Fortran.
@@ -18,17 +19,17 @@ The Clang job installs LLVM from the official LLVM apt repository and installs
 the matching ``libomp`` development package because the stream benchmark uses
 ``-fopenmp``.
 
-Each job creates a Python virtual environment, installs the test requirements,
-and runs:
+Each job creates a Python virtual environment and installs the test
+requirements. The PAPI job attempts to enable Linux hardware counters with
+``kernel.perf_event_paranoid=1`` and then runs:
 
 .. code-block:: console
 
-   python3 tests/run_tests.py ...
+   tests/run_tests_all.sh
 
-The PAPI job also has an optional hardware-counter step. It runs only when
-``tests/tools/papi-local/doctor.sh --strict`` succeeds, and is allowed to fail
-without failing the workflow because free runners usually do not permit
-hardware counter access.
+The script covers no-PAPI, PAPI-wallclock-only, PAPI+wallclock, and
+PAPI-counter-only runs for both no-MPI and MPI configurations. Hardware-counter
+cases are skipped automatically if the runner does not permit counter access.
 
 NVIDIA HPC SDK job
 ------------------

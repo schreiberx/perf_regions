@@ -36,8 +36,14 @@ Changelog
 - Removed obsolete configure options and the generated ``build.sh`` and
   ``install.sh`` helper scripts.
 - Removed legacy test wrappers, renamed instrumentation fixtures to descriptive
-  names, and added regression tests for repeated region starts and shared
-  region-limit consistency.
+  names, and added regression tests for repeated region starts and dynamic
+  region-table growth.
+- Replaced the fixed region count with a dynamically growing region table that
+  starts at ``PERF_REGIONS_MIN`` and doubles its capacity as needed.
+- Renamed the test option ``--papi-hardware`` to ``--test-papi-counters`` and
+  added ``--test-wallclock`` (default) and ``--test-no-wallclock``.
+- Added ``tests/run_tests_all.sh`` to run the full PAPI/wallclock test matrix
+  sequentially and wired it into CI.
 - Published the Sphinx documentation through GitHub Actions and added a link
   check to the documentation workflow.
 

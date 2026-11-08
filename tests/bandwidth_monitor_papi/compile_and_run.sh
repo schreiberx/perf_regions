@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Compatibility helper. Prefer:
-#   python3 tests/run_tests.py --no-mpi --papi local --no-fortran --papi-hardware \
+#   python3 tests/run_tests.py --no-mpi --papi local --no-fortran --test-papi-counters \
 #       --pytest-target bandwidth_monitor_papi
 set -euo pipefail
 
@@ -10,6 +10,6 @@ exec python3 "$SCRIPT_DIR/../run_tests.py" \
     --no-mpi \
     --no-fortran \
     --papi local \
-    --papi-hardware \
+    --test-papi-counters \
     --pytest-target bandwidth_monitor_papi \
     "$@"

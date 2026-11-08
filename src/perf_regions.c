@@ -102,12 +102,59 @@ static void perf_regions_trim(char *s)
 	}
 }
 
+static void perf_regions_grow(int i_region_id)
+{
+	int old_capacity = perf_regions.num_regions_allocated;
+	int new_capacity = old_capacity;
+
+#if PERF_COUNTERS_NESTED
+	struct PerfRegion *old_regions = perf_regions.perf_regions_list;
+	int nested_indices[PERF_NESTED_REGIONS_MAX];
+	int num_nested = perf_regions.num_nested_performance_regions;
+	for (int i = 0; i < num_nested; i++)
+		nested_indices[i] = (int)(perf_regions.nested_performance_regions[i] - old_regions);
+#endif
+
+	if (new_capacity < PERF_REGIONS_MIN)
+		new_capacity = PERF_REGIONS_MIN;
+
+	while (new_capacity <= i_region_id)
+	{
+		if (new_capacity > INT_MAX / 2)
+		{
+			fprintf(stderr, PRINT_PREFIX"Too many regions (region ID %i)\n", i_region_id);
+			exit(EXIT_FAILURE);
+		}
+		new_capacity *= 2;
+	}
+
+	struct PerfRegion *new_regions = (struct PerfRegion *)realloc(
+		perf_regions.perf_regions_list,
+		(size_t)new_capacity * sizeof(struct PerfRegion));
+	if (new_regions == NULL)
+	{
+		fprintf(stderr, PRINT_PREFIX"Out of memory while growing region table to %i entries\n",
+			new_capacity);
+		exit(EXIT_FAILURE);
+	}
+
+	memset(new_regions + old_capacity, 0,
+		(size_t)(new_capacity - old_capacity) * sizeof(struct PerfRegion));
+
+	perf_regions.perf_regions_list = new_regions;
+	perf_regions.num_regions_allocated = new_capacity;
+
+#if PERF_COUNTERS_NESTED
+	for (int i = 0; i < num_nested; i++)
+		perf_regions.nested_performance_regions[i] = &(new_regions[nested_indices[i]]);
+#endif
+}
+
 static struct PerfRegion *perf_region_get_checked(int i_region_id)
 {
-	if (i_region_id < 0 || i_region_id >= PERF_REGIONS_MAX)
+	if (i_region_id < 0)
 	{
-		fprintf(stderr, PRINT_PREFIX"Region ID %i out of boundaries (valid: 0..%i)\n",
-			i_region_id, PERF_REGIONS_MAX - 1);
+		fprintf(stderr, PRINT_PREFIX"Region ID %i is invalid (must be >= 0)\n", i_region_id);
 		exit(EXIT_FAILURE);
 	}
 
@@ -116,6 +163,9 @@ static struct PerfRegion *perf_region_get_checked(int i_region_id)
 		fprintf(stderr, PRINT_PREFIX"perf_regions_init() has not been called\n");
 		exit(EXIT_FAILURE);
 	}
+
+	if (i_region_id >= perf_regions.num_regions_allocated)
+		perf_regions_grow(i_region_id);
 
 	return &(perf_regions.perf_regions_list[i_region_id]);
 }
@@ -126,7 +176,7 @@ static struct PerfRegion *perf_region_get_checked(int i_region_id)
  */
 static void perf_regions_reset(void)
 {
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+	for (int i = 0; i < perf_regions.num_regions_allocated; i++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
 
@@ -361,8 +411,9 @@ void perf_regions_init(void)
 			perf_regions.output_json_filename != NULL ? perf_regions.output_json_filename : "(stdout)");
 	}
 
+	perf_regions.num_regions_allocated = PERF_REGIONS_MIN;
 	perf_regions.perf_regions_list = (struct PerfRegion *)calloc(
-		PERF_REGIONS_MAX, sizeof(struct PerfRegion));
+		(size_t)perf_regions.num_regions_allocated, sizeof(struct PerfRegion));
 	if (perf_regions.perf_regions_list == NULL)
 	{
 		fprintf(stderr, PRINT_PREFIX"Failed to allocate performance regions\n");
@@ -733,11 +784,12 @@ void perf_regions_finalize(void)
 	 */
 	if (perf_regions.perf_regions_list != NULL)
 	{
-		for (int i = 0; i < PERF_REGIONS_MAX; i++)
+		for (int i = 0; i < perf_regions.num_regions_allocated; i++)
 			free(perf_regions.perf_regions_list[i].region_name);
 
 		free(perf_regions.perf_regions_list);
 		perf_regions.perf_regions_list = NULL;
+		perf_regions.num_regions_allocated = 0;
 	}
 
 	free(perf_regions.output_json_filename);

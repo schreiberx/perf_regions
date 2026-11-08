@@ -157,7 +157,7 @@ void perf_regions_output_human_readable_text(void)
 	print_human_header(s);
 
 #if PERF_DEBUG
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+	for (int i = 0; i < perf_regions.num_regions_allocated; i++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
 		if (r->active != 0)
@@ -172,7 +172,7 @@ void perf_regions_output_human_readable_text(void)
 	}
 #endif
 
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+	for (int i = 0; i < perf_regions.num_regions_allocated; i++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
 
@@ -267,7 +267,7 @@ void perf_regions_output_json_file(const char *filename)
 	fprintf(s, "[\n");
 	int first_entry = 1;
 
-	for (int i = 0; i < PERF_REGIONS_MAX; i++)
+	for (int i = 0; i < perf_regions.num_regions_allocated; i++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[i]);
 
@@ -365,7 +365,8 @@ static void reduce_all_regions(struct ReducedRegion **out_regions, int *out_coun
 	struct ReducedRegion *regions = NULL;
 	if (rank == 0)
 	{
-		regions = (struct ReducedRegion *)calloc(PERF_REGIONS_MAX, sizeof(struct ReducedRegion));
+		regions = (struct ReducedRegion *)calloc(
+			(size_t)perf_regions.num_regions_allocated, sizeof(struct ReducedRegion));
 		if (regions == NULL)
 		{
 			fprintf(stderr, PRINT_PREFIX"Failed to allocate reduced regions\n");
@@ -375,7 +376,7 @@ static void reduce_all_regions(struct ReducedRegion **out_regions, int *out_coun
 
 	int count = 0;
 
-	for (int id = 0; id < PERF_REGIONS_MAX; id++)
+	for (int id = 0; id < perf_regions.num_regions_allocated; id++)
 	{
 		struct PerfRegion *r = &(perf_regions.perf_regions_list[id]);
 		int local_present = (r->region_name != NULL);

@@ -5,7 +5,7 @@ Examples:
     python3 tests/run_tests.py
     python3 tests/run_tests.py --mpi --papi local
     python3 tests/run_tests.py --cc clang --no-mpi --papi none
-    python3 tests/run_tests.py --papi local --mpi --papi-hardware
+    python3 tests/run_tests.py --papi local --mpi --test-papi-counters
 """
 
 from __future__ import annotations
@@ -24,6 +24,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 TESTS_DIR = REPO_ROOT / "tests"
 DEFAULT_PAPI_COUNTERS = "PAPI_TOT_CYC,WALLCLOCKTIME"
 LOCAL_PAPI_INSTALLER = TESTS_DIR / "tools" / "papi-local" / "install.sh"
+YELLOW = "\033[1;33m"
+RESET = "\033[0m"
 
 
 def run(
@@ -201,7 +203,7 @@ def build(args: argparse.Namespace, env: dict[str, str]) -> None:
 
 
 def pytest_command(args: argparse.Namespace, python: Path) -> list[str | Path]:
-    cmd: list[str | Path] = [python, "-m", "pytest", "-q"]
+    cmd: list[str | Path] = [python, "-m", "pytest", "-v"]
 
     if args.fast:
         cmd.extend(["-m", "not slow"])
@@ -215,10 +217,9 @@ def pytest_command(args: argparse.Namespace, python: Path) -> list[str | Path]:
             ]
         )
 
-    if args.papi_hardware:
+    if args.test_papi_counters:
         cmd.append("--perf-regions-papi-hardware")
-        if args.counters:
-            cmd.extend(["--perf-regions-counters", args.counters])
+        cmd.extend(["--perf-regions-counters", test_counters(args)])
 
     if args.pytest_args:
         cmd.extend(shlex.split(args.pytest_args))
@@ -226,6 +227,27 @@ def pytest_command(args: argparse.Namespace, python: Path) -> list[str | Path]:
     cmd.extend(args.pytest_target or [])
 
     return cmd
+
+
+def test_counters(args: argparse.Namespace) -> str:
+    if not args.test_papi_counters:
+        return "WALLCLOCKTIME"
+
+    counters = args.counters or os.environ.get("PERF_REGIONS_COUNTERS") or DEFAULT_PAPI_COUNTERS
+    papi_events = [
+        event.strip()
+        for event in counters.split(",")
+        if event.strip() and event.strip() != "WALLCLOCKTIME"
+    ]
+    if not papi_events:
+        raise SystemExit(
+            "ERROR: --test-papi-counters requires at least one non-WALLCLOCKTIME counter"
+        )
+
+    if args.test_wallclock:
+        papi_events.append("WALLCLOCKTIME")
+
+    return ",".join(papi_events)
 
 
 def prepare_test_environment(
@@ -237,13 +259,11 @@ def prepare_test_environment(
 
     test_env["USE_MPI"] = "1" if args.mpi else "0"
     test_env["USE_PAPI"] = "0" if args.papi == "none" else "1"
+    test_env["PERF_REGIONS_COUNTERS"] = test_counters(args)
 
-    if args.papi_hardware:
-        counters = args.counters or os.environ.get("PERF_REGIONS_COUNTERS") or DEFAULT_PAPI_COUNTERS
-        test_env["PERF_REGIONS_COUNTERS"] = counters
+    if args.test_papi_counters:
         test_env["PERF_REGIONS_TEST_PAPI_HARDWARE"] = "1"
     else:
-        test_env["PERF_REGIONS_COUNTERS"] = "WALLCLOCKTIME"
         test_env.pop("PERF_REGIONS_TEST_PAPI_HARDWARE", None)
 
     return test_env
@@ -292,19 +312,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.set_defaults(fortran=True)
 
     parser.add_argument(
-        "--papi-hardware",
+        "--test-papi-counters",
         action="store_true",
-        help="Run PAPI-counter tests instead of wallclock-only tests.",
+        help="Run PAPI hardware-counter tests.",
     )
     parser.add_argument(
-        "--wallclock-only",
+        "--test-wallclock",
         action="store_true",
-        help="Explicitly request wallclock-only tests (the default).",
+        dest="test_wallclock",
+        help="Include wallclock timing in tests (default).",
     )
+    parser.add_argument(
+        "--test-no-wallclock",
+        action="store_false",
+        dest="test_wallclock",
+        help="Disable wallclock timing in tests.",
+    )
+    parser.set_defaults(test_wallclock=True)
     parser.add_argument(
         "--counters",
         default=None,
-        help=f"Counter list for --papi-hardware (default: {DEFAULT_PAPI_COUNTERS}).",
+        help=f"Counter list for --test-papi-counters (default: {DEFAULT_PAPI_COUNTERS}).",
     )
 
     parser.add_argument(
@@ -347,12 +375,87 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
     args = parser.parse_args(argv)
 
-    if args.papi_hardware and args.wallclock_only:
-        parser.error("--papi-hardware and --wallclock-only are mutually exclusive")
-    if args.papi_hardware and args.papi == "none":
-        parser.error("--papi-hardware requires --papi system or --papi local")
+    if args.test_papi_counters and args.papi == "none":
+        parser.error("--test-papi-counters requires --papi system or --papi local")
+    if not args.test_wallclock and not args.test_papi_counters:
+        parser.error("--test-no-wallclock requires --test-papi-counters")
 
     return args
+
+
+def use_color() -> bool:
+    if os.environ.get("NO_COLOR") is not None:
+        return False
+    if os.environ.get("FORCE_COLOR") is not None:
+        return True
+    return sys.stdout.isatty()
+
+
+def print_yellow(message: str) -> None:
+    if use_color():
+        print(f"{YELLOW}{message}{RESET}")
+    else:
+        print(message)
+
+
+def print_yellow_block(lines: list[str]) -> None:
+    print()
+    for line in lines:
+        print_yellow(line)
+
+
+def print_papi_hardware_access_hint() -> None:
+    """Explain how to enable Linux performance-counter access."""
+    print_yellow_block(
+        [
+            "PAPI hardware counters are not available.",
+            "On Linux, counter access is controlled by perf_event_paranoid.",
+            "Check the current value with:",
+            "  cat /proc/sys/kernel/perf_event_paranoid",
+            "To permit hardware-counter access, lower it temporarily, for example:",
+            "  sudo sysctl -w kernel.perf_event_paranoid=1",
+            "Use 0 or -1 only if you understand the additional access this grants.",
+            "Containers and virtual machines may also require host-side configuration.",
+            "See docs/source/developer_guide/testing.rst for details.",
+        ]
+    )
+
+
+def print_papi_enable_hint(args: argparse.Namespace) -> None:
+    """Print instructions when the run used wallclock-only tests."""
+    if args.test_papi_counters:
+        return
+
+    lines = ["PAPI hardware-counter tests were not enabled."]
+
+    if args.papi == "none":
+        lines.extend(
+            [
+                "To enable them with the test-only local PAPI installation:",
+                "  python3 tests/run_tests.py --papi local --test-papi-counters",
+                "Or use an existing PAPI installation:",
+                "  python3 tests/run_tests.py --papi system "
+                "--papi-prefix /path/to/papi --test-papi-counters",
+            ]
+        )
+    else:
+        command = f"python3 tests/run_tests.py --papi {args.papi}"
+        if args.papi_prefix:
+            command += f" --papi-prefix {shlex.quote(args.papi_prefix)}"
+        command += " --test-papi-counters"
+        lines.extend(
+            [
+                "PAPI support is built in, but hardware-counter tests were not requested.",
+                "Add --test-papi-counters to run them:",
+                f"  {command}",
+            ]
+        )
+
+    lines.append(
+        "Add --test-no-wallclock to test PAPI counters without wallclock timing."
+    )
+    lines.append("See docs/source/developer_guide/testing.rst for details.")
+    print_yellow_block(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -372,6 +475,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args.keep_build and not args.no_build:
         run(["make", "clean"], cwd=REPO_ROOT, env=env, check=False)
 
+    papi_hardware_unavailable = False
+
     try:
         if not args.no_configure:
             configure(args, env, papi_prefix)
@@ -384,7 +489,7 @@ def main(argv: list[str] | None = None) -> int:
 
         test_env = prepare_test_environment(args, env)
 
-        if args.papi_hardware and args.papi == "local":
+        if args.test_papi_counters and args.papi == "local":
             doctor = TESTS_DIR / "tools" / "papi-local" / "doctor.sh"
             result = subprocess.run(
                 [str(doctor), "--strict"],
@@ -399,14 +504,18 @@ def main(argv: list[str] | None = None) -> int:
                     "skipping the hardware-counter test run.",
                     flush=True,
                 )
-                return 0
+                papi_hardware_unavailable = True
 
-        run(pytest_command(args, python), cwd=TESTS_DIR, env=test_env)
-
-        return 0
+        if not papi_hardware_unavailable:
+            run(pytest_command(args, python), cwd=TESTS_DIR, env=test_env)
     finally:
         if not args.keep_build and not args.no_build:
             run(["make", "clean"], cwd=REPO_ROOT, env=env, check=False)
+
+    if papi_hardware_unavailable:
+        print_papi_hardware_access_hint()
+    print_papi_enable_hint(args)
+    return 0
 
 
 if __name__ == "__main__":

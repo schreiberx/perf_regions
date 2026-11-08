@@ -69,6 +69,9 @@ struct PerfRegions
 	// array with all regions
 	struct PerfRegion *perf_regions_list;
 
+	// number of allocated region slots in perf_regions_list
+	int num_regions_allocated;
+
 	// Measure wallclock time
 	int use_wallclock_time;
 

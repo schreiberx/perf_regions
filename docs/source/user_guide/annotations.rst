@@ -81,8 +81,9 @@ Region names should be unique. The instrumentation script:
 - replaces spaces with underscores,
 - removes surrounding single or double quotes.
 
-A maximum of 128 distinct regions is supported. Reusing the same region name in
-multiple places reuses the same ID.
+There is no fixed maximum number of distinct regions. The library starts with
+``PERF_REGIONS_MIN`` slots and doubles the region table as needed. Reusing the
+same region name in multiple places reuses the same ID.
 
 The region name is stored by the library only on the first start of a region
 ID. Later starts with the same ID reuse the stored name and do not allocate or

@@ -232,6 +232,6 @@ the instrumentation output intentionally, update these fixtures together with
 the tests.
 
 Additional regression tests cover repeated starts of the same region ID
-(``tests/functional/regions/repeated_start_c``) and dynamic region-table
- growth beyond the initial allocation
- (``tests/functional/regions/dynamic_regions_c``).
+(``tests/functional/regions/repeated_start_c``) and dynamic region-table growth
+beyond the initial allocation
+(``tests/functional/regions/dynamic_regions_c``).

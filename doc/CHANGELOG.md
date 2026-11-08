@@ -23,6 +23,8 @@
   `make tests`, dependency tracking, bandwidth-monitor event parsing).
 - Added test-only local PAPI tooling under `tests/tools/papi-local/` so PAPI
   can be installed under `tests/.deps/` without touching system directories.
+- Added a GitHub Actions CI workflow covering GCC, Clang, MPI, PAPI, Fortran,
+  and an optional NVIDIA HPC SDK container job.
 
 # 2025-02-05
 

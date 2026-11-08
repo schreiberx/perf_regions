@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - master
+      # Temporary branch for testing documentation builds and deployments.
+      - martin_ai_updates
   workflow_dispatch:
 
 permissions:

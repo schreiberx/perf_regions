@@ -46,7 +46,9 @@ listed in ``docs/requirements.txt``.
 
 GitHub Actions also builds the documentation with
 ``.github/workflows/static.yml`` and publishes the generated HTML to GitHub
-Pages on pushes to the default branch. Enable GitHub Pages in the repository
+Pages on pushes to the default branch. The ``martin_ai_updates`` branch is
+currently included as well so documentation changes can be built and deployed
+for debugging before they are merged. Enable GitHub Pages in the repository
 settings and select **GitHub Actions** as the publishing source.
 
 To reproduce the documentation build locally:

@@ -129,7 +129,7 @@ export PERF_REGIONS_COUNTERS=PAPI_TOT_CYC,PAPI_L3_TCM,WALLCLOCKTIME
 export PERF_REGIONS_SKIP_N=2
 export PERF_REGIONS_OUTPUT=console,json=perf_regions.json
 
-export LD_LIBRARY_PATH="$PWD/build_papi_mpi_fort:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$PWD/build/build_papi_mpi_fort:$LD_LIBRARY_PATH"
 ./my_instrumented_application
 ```
 
@@ -157,8 +157,11 @@ python3 tests/run_tests.py
 Useful variants:
 
 ```bash
-python3 tests/run_tests.py --mpi --papi none
-python3 tests/run_tests.py --mpi --papi local
+make test                  # fast default suite
+make test_papi             # PAPI-enabled core tests
+make test_hardware         # PAPI hardware tests
+make test_all              # full compile/runtime matrix
+python3 tests/run_tests.py --matrix all --papi local
 python3 tests/run_tests.py --cc clang --no-mpi --papi none
 python3 tests/run_tests.py --fast
 ```

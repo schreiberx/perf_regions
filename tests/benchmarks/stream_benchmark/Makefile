@@ -11,7 +11,7 @@ STREAM_ARRAY_SIZE ?= 20000000
 STREAM_NTIMES ?= 50
 STREAM_DEFINES = -DSTREAM_ARRAY_SIZE=$(STREAM_ARRAY_SIZE) -DNTIMES=$(STREAM_NTIMES)
 
-include ../Makefile.common
+include ../../Makefile.common
 
 all: $(TEST_BUILD_DIR)/stream_c $(TEST_BUILD_DIR)/stream_c_perfregions
 

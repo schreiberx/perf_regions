@@ -119,7 +119,7 @@ directory:
 
 When using an uninstalled build, point the compiler at ``<repository>/src``
 and the matching variant directory, for example
-``<repository>/build_papi_mpi_fort``, instead of the installed prefix.
+``<repository>/build/build_papi_mpi_fort``, instead of the installed prefix.
 
 Runtime library path
 --------------------
@@ -130,6 +130,6 @@ to ``LD_LIBRARY_PATH``:
 
 .. code-block:: console
 
-   export LD_LIBRARY_PATH="$PWD/build_papi_mpi_fort:$LD_LIBRARY_PATH"
+   export LD_LIBRARY_PATH="$PWD/build/build_papi_mpi_fort:$LD_LIBRARY_PATH"
 
 See :doc:`running` for the runtime environment variables.

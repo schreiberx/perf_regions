@@ -160,5 +160,5 @@ directory before running:
 
 .. code-block:: console
 
-   export LD_LIBRARY_PATH="$PWD/build_papi_mpi_fort:$LD_LIBRARY_PATH"
+   export LD_LIBRARY_PATH="$PWD/build/build_papi_mpi_fort:$LD_LIBRARY_PATH"
    ./my_application

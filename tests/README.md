@@ -1,27 +1,39 @@
 # Tests for PerfRegions
 
-The canonical test entry point is:
+The canonical entry point is the Python test driver:
 
 ```bash
 python3 tests/run_tests.py
 ```
 
-The full testing documentation, including MPI/PAPI variants, the test-only
-local PAPI installation, pytest usage, and the instrumentation golden files, is
-maintained in the Sphinx documentation:
+Common make targets:
+
+```bash
+make test          # fast default suite
+make test_papi     # PAPI-enabled core tests
+make test_hardware # PAPI hardware tests
+make test_all      # complete compile/runtime matrix
+```
+
+The complete compile/runtime matrix is also available through:
+
+```bash
+python3 tests/run_tests.py --matrix all --papi local
+tests/run_tests_all.sh
+```
+
+## Layout
+
+- `tests/functional/instrumentation/`: C, Fortran, and NEMO annotation tests.
+- `tests/functional/regions/`: region skipping, repeated starts, and dynamic IDs.
+- `tests/hardware/papi/`: direct PAPI and PerfRegions PAPI counter tests.
+- `tests/benchmarks/stream_benchmark/`: the STREAM benchmark integration test.
+- `tests/tools/papi-local/`: local test-only PAPI installation helpers.
+
+The shared pytest fixtures live in `tests/conftest.py`. Build variants are kept
+under `build/build_<features>/`, for example `build/build_papi_mpi_fort/`.
+
+Full testing documentation is maintained in the Sphinx docs:
 
 - `docs/source/developer_guide/testing.rst`
 - `tests/tools/papi-local/README.md`
-
-Quick example:
-
-```bash
-python3 tests/run_tests.py --venv
-python3 tests/run_tests.py --mpi --papi local
-```
-
-Run the complete PAPI/wallclock matrix with:
-
-```bash
-tests/run_tests_all.sh
-```

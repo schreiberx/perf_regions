@@ -95,7 +95,7 @@ LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)$(LIB_SUFFIX_FORTRAN)
 # Keep one build directory per feature combination.  This prevents objects and
 # generated configuration headers from different variants from overwriting each
 # other, for example build_papi_mpi_fort.
-BUILD_DIR ?= ../build$(LIB_SUFFIX)
+BUILD_DIR ?= ../build/build$(LIB_SUFFIX)
 
 SHARED_LIBRARY = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so
 SHARED_LIBRARY_VERSION = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so.1.0.0

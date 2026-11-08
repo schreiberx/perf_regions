@@ -98,6 +98,7 @@ def test_stream_execution(base_dir, env, run_command, output_json, read_json):
 
 @pytest.mark.slow
 @pytest.mark.papi_hardware
+@pytest.mark.uncore
 def test_stream_memory_bandwidth(
     base_dir,
     env,

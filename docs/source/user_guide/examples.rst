@@ -115,12 +115,13 @@ Repository examples
 
 See the test sources for more complete programs:
 
-- ``tests/array_test_c``: C annotations and instrumentation.
-- ``tests/array_test_f``: Fortran annotations and instrumentation.
-- ``tests/nemo_test_f`` and ``tests/nemo_test_f_direct``: NEMO-style timing
+- ``tests/functional/instrumentation/array_test_c``: C annotations and instrumentation.
+- ``tests/functional/instrumentation/array_test_f``: Fortran annotations and instrumentation.
+- ``tests/functional/instrumentation/nemo_test_f`` and
+  ``tests/functional/instrumentation/nemo_test_f_direct``: NEMO-style timing
   calls.
-- ``tests/stream_benchmark``: a larger OpenMP benchmark instrumented with
-  PerfRegions.
-- ``tests/bandwidth_monitor_papi``: PAPI counter usage with multiple regions.
+- ``tests/benchmarks/stream_benchmark``: a larger OpenMP benchmark
+  instrumented with PerfRegions.
+- ``tests/hardware/papi``: direct PAPI and PerfRegions PAPI counter checks.
 
 See :doc:`../developer_guide/testing` for running the complete test suite.

@@ -1,4 +1,4 @@
-include ../Makefile.common
+include ../../../Makefile.common
 
 CFLAGS += $(PERFREGION_CFLAGS)
 LDFLAGS += $(PERFREGION_LDFLAGS)

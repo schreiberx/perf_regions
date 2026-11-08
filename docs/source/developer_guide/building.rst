@@ -45,16 +45,16 @@ Build outputs
 Each feature combination gets its own build directory. The directory name
 uses the same suffix as the library:
 
-- ``build/`` for the base C build,
-- ``build_papi/`` for PAPI,
-- ``build_mpi/`` for MPI,
-- ``build_fort/`` for Fortran,
-- ``build_papi_mpi_fort/`` for PAPI, MPI, and Fortran.
+- ``build/build/`` for the base C build,
+- ``build/build_papi/`` for PAPI,
+- ``build/build_mpi/`` for MPI,
+- ``build/build_fort/`` for Fortran,
+- ``build/build_papi_mpi_fort/`` for PAPI, MPI, and Fortran.
 
 The generated configuration header is stored in the matching build directory,
-for example ``build_papi_mpi_fort/perf_regions_config.h``, and is installed
-together with the public headers. The directory can be overridden with
-``BUILD_DIR=...``.
+for example ``build/build_papi_mpi_fort/perf_regions_config.h``, and is
+installed together with the public headers. The directory can be overridden
+with ``BUILD_DIR=...``.
 
 The library suffix depends on the enabled features:
 
@@ -62,8 +62,8 @@ The library suffix depends on the enabled features:
 - ``_mpi`` for MPI,
 - ``_fort`` for Fortran.
 
-For example, ``build_papi_mpi_fort/libperf_regions_papi_mpi_fort.so`` is a
-PAPI, MPI, and Fortran build.
+For example, ``build/build_papi_mpi_fort/libperf_regions_papi_mpi_fort.so``
+is a PAPI, MPI, and Fortran build.
 
 Useful Make targets
 -------------------
@@ -95,9 +95,10 @@ Cleaning
    make clean
    make distclean
 
-The test runner cleans only the build variants used by the current invocation.
-Running ``make clean`` removes all variant build directories. Use
-``--keep-build`` to retain builds for debugging.
+The test runner builds and cleans only the variants used by the current
+invocation and reuses one build for multiple runtime modes. Running
+``make clean`` removes the complete ``build/`` tree. Use ``--keep-build`` to
+retain builds for debugging.
 
 Documentation
 -------------

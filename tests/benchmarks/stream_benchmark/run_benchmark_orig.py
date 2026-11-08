@@ -5,7 +5,7 @@ import subprocess
 import sys
 import pandas as pd
 
-os.environ["LD_LIBRARY_PATH"] = f"../../build:{os.environ.get('LD_LIBRARY_PATH', '')}"
+os.environ["LD_LIBRARY_PATH"] = f"../../../build/build_papi_mpi_fort:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
 events_cacheblocks = "PAPI_L3_TCM".split(",")
 # events_cacheblocks = "PAPI_L1_DCM,PAPI_LST_INS".split(",")

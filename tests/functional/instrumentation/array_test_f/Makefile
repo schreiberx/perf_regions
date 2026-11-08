@@ -1,4 +1,4 @@
-include ../Makefile.common
+include ../../../Makefile.common
 
 all: $(TEST_BUILD_DIR)/array_test $(TEST_BUILD_DIR)/array_test_perf_regions
 

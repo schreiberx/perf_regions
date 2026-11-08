@@ -1,4 +1,4 @@
-include ../Makefile.common
+include ../../../Makefile.common
 
 CFLAGS += -DUSE_MPI=0 $(PERFREGION_CFLAGS)
 LDFLAGS += $(PERFREGION_LDFLAGS)

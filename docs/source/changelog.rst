@@ -4,8 +4,8 @@ Changelog
 Unreleased
 ----------
 
-- Build artifacts are now kept in feature-specific directories such as
-  ``build_papi_mpi_fort/`` instead of sharing one ``build/`` directory.
+- Build artifacts are now kept under ``build/`` in feature-specific directories such as
+  ``build/build_papi_mpi_fort/``.
 - Added memory-transfer pseudo events ``PR_BANDWIDTH_BYTES``,
   ``PR_BANDWIDTH_GB``, ``PR_MEM_TRANSFER_BYTES``, and ``PR_MEM_TRANSFER_GB``.
   They auto-detect memory-channel PAPI events, add the individual channel

@@ -5,9 +5,9 @@ import subprocess
 import sys
 import pandas as pd
 
-os.environ["LD_LIBRARY_PATH"] = f"../../build:{os.environ.get('LD_LIBRARY_PATH', '')}"
+os.environ["LD_LIBRARY_PATH"] = f"../../../build/build_papi_mpi_fort:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
-num_threads = 48
+num_threads = 18
 # num_threads = 24
 os.environ["OMP_NUM_THREADS"] = f"{num_threads}"
 os.environ["OMP_PROC_BIND"] = "close"
@@ -84,11 +84,12 @@ if 1:
 
     for imc in icms_:
         cpu = 0
-        events_cacheblocks += [f"icx_unc_imc{imc}::UNC_M_CAS_COUNT:ALL:cpu={cpu}"]
+        events_cacheblocks += [f"skx_unc_imc{imc}::UNC_M_CAS_COUNT:ALL:cpu={cpu}"]
 
-    for imc in icms_:
-        cpu = 24
-        events_cacheblocks += [f"icx_unc_imc{6+imc}::UNC_M_CAS_COUNT:ALL:cpu={cpu}"]
+    if 0:
+        for imc in icms_:
+            cpu = 24
+            events_cacheblocks += [f"skx_unc_imc{6+imc}::UNC_M_CAS_COUNT:ALL:cpu={cpu}"]
 
 else:
     events_cacheblocks = ["perf::LLC-LOAD-MISSES"]
@@ -107,10 +108,10 @@ print(f"PERF_REGIONS_COUNTERS={perf_regions_counters}")
 
 print("")
 print("*****************************************************")
-print("$ make stream_c_perfregions")
+print("$ make build/stream_c_perfregions")
 
 result = subprocess.run(
-    ["make", "stream_c_perfregions"], capture_output=True, text=True
+    ["make", "build/stream_c_perfregions"], capture_output=True, text=True
 )
 if result.returncode != 0:
     print(result.stdout)
@@ -120,11 +121,11 @@ if result.returncode != 0:
 
 print("")
 print("*****************************************************")
-print("./stream_c_perfregions")
+print("./build/stream_c_perfregions")
 
 try:
     output = subprocess.check_output(
-        ["./stream_c_perfregions"], stderr=subprocess.STDOUT, text=True
+        ["./build/stream_c_perfregions"], stderr=subprocess.STDOUT, text=True
     )
 except subprocess.CalledProcessError as e:
     output = e.output + "\nERROR"
@@ -216,6 +217,7 @@ if 1:
     bw_total = df_indexed.loc["total", "BANDWIDTH"]
 
     print("")
-    print(f"Total bandwidth: {bw_total} GB/s")
-    print(f"Avg bandwidth: {bw_avg} GB/s")
+    print("Perf region:")
+    print(f"- Total bandwidth: {bw_total} GB/s")
+    print(f"- Avg. bandwidth: {bw_avg} GB/s")
     print("")

@@ -70,7 +70,7 @@ def default_build_directory(repo_root: Path) -> Path:
     if use_mpi == "1":
         suffix += "_mpi"
 
-    return repo_root / f"build{suffix}"
+    return repo_root / "build" / f"build{suffix}"
 
 
 @pytest.fixture(scope="session")
@@ -243,21 +243,32 @@ def cpu_affinity_prefix() -> list[str]:
     return ["taskset", "-c", "0"]
 
 
-@pytest.fixture(autouse=True)
-def clean_artifact(base_dir: Path, env: dict[str, str], run_command) -> None:
-    """Start each test from a clean test-directory build state."""
+@pytest.fixture(scope="session", autouse=True)
+def clean_test_artifacts(tests_root: Path) -> None:
+    """Clean generated test binaries once per pytest session."""
 
-    run_command(["make", "clean"], cwd=base_dir, env=env)
-
-    for path in base_dir.glob("output_perf_regions*.json"):
-        path.unlink(missing_ok=True)
+    env = os.environ.copy()
+    subprocess.run(
+        ["make", "-C", str(tests_root), "clean"],
+        cwd=tests_root,
+        env=env,
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
 
     yield
 
-    run_command(["make", "clean"], cwd=base_dir, env=env)
-
-    for path in base_dir.glob("output_perf_regions*.json"):
-        path.unlink(missing_ok=True)
+    subprocess.run(
+        ["make", "-C", str(tests_root), "clean"],
+        cwd=tests_root,
+        env=env,
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        text=True,
+    )
 
 
 @pytest.fixture

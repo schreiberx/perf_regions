@@ -64,38 +64,43 @@ Common configurations
    # Exclude slow tests.
    python3 tests/run_tests.py --fast
 
-All PAPI/wallclock combinations
--------------------------------
+Compile/runtime matrix
+----------------------
 
-To run the full PAPI/wallclock matrix sequentially:
+The matrix driver builds each compile variant once and reuses it for the
+different runtime counter/timing modes:
+
+.. code-block:: console
+
+   python3 tests/run_tests.py --matrix all --papi local
+
+When MPI compilers are available, MPI compile variants run first, followed by
+no-MPI variants. For each PAPI-enabled build, the runtime modes are:
+
+- PAPI counters with wallclock timing
+- PAPI counters without wallclock timing
+- wallclock only
+
+A PAPI-disabled build runs only the wallclock mode. At the end, the driver
+prints a summary with compile options, runtime mode, pass/fail status, and
+skipped/failed test details. It exits non-zero if any combination failed.
+
+The compatibility wrapper remains available:
 
 .. code-block:: console
 
    tests/run_tests_all.sh
 
-When MPI compilers are available, the script runs MPI combinations first, then
-no-MPI combinations. Each case heading shows the PerfRegions compile options
-separately from the runtime counter/timing options. Within each group the order
-is:
-
-- PAPI counters with wallclock timing
-- PAPI counters without wallclock timing
-- PAPI built in, wallclock only
-- no PAPI, wallclock only
-
-Extra arguments are forwarded to each ``run_tests.py`` invocation, for example:
+Use ``PAPI_MODE=system tests/run_tests_all.sh`` to use a system PAPI
+installation instead of the test-local one. Use the make targets for common
+workflows:
 
 .. code-block:: console
 
-   tests/run_tests_all.sh --cc clang --cxx clang++ --fc gfortran
-
-At the end, the script prints a summary table with the status and pytest result
-for every combination. Skipped, failed, and error test details are listed below
-each affected case. It exits non-zero if any combination failed.
-
-Use ``PAPI_MODE=system tests/run_tests_all.sh`` to use a system PAPI
-installation instead of the test-local one. Do not pass MPI, PAPI, counter, or
-wallclock options directly; the script controls those.
+   make test          # fast default suite
+   make test_papi     # PAPI-enabled core tests
+   make test_hardware # PAPI hardware tests
+   make test_all      # complete compile/runtime matrix
 
 PAPI counters
 -------------
@@ -210,7 +215,7 @@ Useful options:
 
    python3 -m pytest tests -m "not slow"
    python3 -m pytest tests -m papi_hardware
-   python3 -m pytest tests/array_test_c -q
+   python3 -m pytest tests/functional/instrumentation/array_test_c -q
 
 Instrumentation golden files
 ----------------------------
@@ -218,8 +223,8 @@ Instrumentation golden files
 The tests verify both the instrumented source and the cleanup result against
 files under ``test_data/``. For example:
 
-- ``tests/array_test_c/test_data/array_test.c.expected_original``
-- ``tests/array_test_c/test_data/array_test.c.expected_instrumented``
+- ``tests/functional/instrumentation/array_test_c/test_data/array_test.c.expected_original``
+- ``tests/functional/instrumentation/array_test_c/test_data/array_test.c.expected_instrumented``
 
 ``expected_original`` is the expected original source and
 ``expected_instrumented`` is the expected instrumented source. When changing
@@ -227,5 +232,6 @@ the instrumentation output intentionally, update these fixtures together with
 the tests.
 
 Additional regression tests cover repeated starts of the same region ID
-(``tests/repeated_start_c``) and dynamic region-table growth beyond the initial
-allocation (``tests/dynamic_regions_c``).
+(``tests/functional/regions/repeated_start_c``) and dynamic region-table
+ growth beyond the initial allocation
+ (``tests/functional/regions/dynamic_regions_c``).

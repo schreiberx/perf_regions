@@ -17,7 +17,7 @@ PAPI_MODE ?= local
 PAPI_PREFIX ?=
 PAPI_COUNTERS ?= PAPI_TOT_CYC,WALLCLOCKTIME
 
-.PHONY: all build_src tests test_papi_through_perf_regions run_tests clean help install uninstall distclean
+.PHONY: all build_src tests test test_papi test_hardware test_all test-all test_papi_through_perf_regions run_tests clean help install uninstall distclean
 
 # Default target
 all: build_src
@@ -25,8 +25,19 @@ all: build_src
 build_src:
 	$(MAKE) -C ./src USE_MPI=$(USE_MPI) USE_PAPI=$(USE_PAPI) USE_FORTRAN=$(USE_FORTRAN) BUILD_SHARED_LIBS=$(BUILD_SHARED_LIBS) BUILD_STATIC_LIBS=$(BUILD_STATIC_LIBS)
 
-tests:
-	$(MAKE) -C ./tests all
+tests: test
+
+test:
+	$(PYTHON) tests/run_tests.py --fast
+
+test_papi:
+	$(PYTHON) tests/run_tests.py --papi local --test-papi-counters --fast
+
+test_hardware:
+	$(PYTHON) tests/run_tests.py --papi local --test-papi-counters --pytest-args '-m papi_hardware'
+
+test_all test-all:
+	./tests/run_tests_all.sh
 
 test_papi_through_perf_regions:
 	$(PYTHON) tests/run_tests.py \
@@ -35,7 +46,7 @@ test_papi_through_perf_regions:
 		--test-papi-counters \
 		--require-papi-hardware \
 		--counters "$(PAPI_COUNTERS)" \
-		--pytest-target skip_test_c \
+		--pytest-target hardware/papi/perf_regions_counters \
 		--pytest-args '-k test_papi_counter_through_perf_regions'
 
 run_tests:
@@ -63,8 +74,10 @@ help:
 	@echo "Targets:"
 	@echo "  all                       - Build the library"
 	@echo "  build_src                 - Build the library"
-	@echo "  tests                     - Run the test suite"
-	@echo "  run_tests                 - Run the test suite"
+	@echo "  test / tests              - Run the fast default test suite"
+	@echo "  test_papi                 - Run PAPI-enabled core tests"
+	@echo "  test_hardware             - Run PAPI hardware tests"
+	@echo "  test_all / test-all       - Run the full compile/runtime matrix"
 	@echo "  test_papi_through_perf_regions - Check PAPI access through PerfRegions"
 	@echo "  install                   - Install library and headers"
 	@echo "  uninstall                 - Uninstall library and headers"

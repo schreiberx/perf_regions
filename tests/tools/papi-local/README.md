@@ -54,6 +54,12 @@ tests/tools/papi-local/install.sh \
 source tests/tools/papi-local/env.sh
 ```
 
+The canonical test runner can also do this automatically:
+
+```bash
+python3 tests/run_tests.py --mpi --papi local
+```
+
 This exports, among others:
 
 ```text

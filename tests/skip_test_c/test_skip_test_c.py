@@ -1,76 +1,23 @@
-import pytest
-import os
-import subprocess
-import json
+def find_region(data, name):
+    return next((region for region in data if region["region"] == name), None)
 
 
-@pytest.fixture
-def base_dir():
-    return os.path.dirname(os.path.abspath(__file__))
-
-
-@pytest.fixture
-def env(request, base_dir):
-    env_vars = os.environ.copy()
-    ld_lib_path = os.path.abspath(os.path.join(base_dir, "../../build"))
-    existing_ld = env_vars.get("LD_LIBRARY_PATH", "")
-    env_vars["LD_LIBRARY_PATH"] = f"{ld_lib_path}:{existing_ld}"
-
-    # Mode
-    mode = getattr(request, "param", "papi")
-    if mode == "wallclock":
-        env_vars["PERF_REGIONS_COUNTERS"] = "WALLCLOCKTIME"
-    else:
-        # PAPI default
-        if "PERF_REGIONS_COUNTERS" not in env_vars:
-            if env_vars.get("USE_PAPI") == "0":
-                env_vars["PERF_REGIONS_COUNTERS"] = "WALLCLOCKTIME"
-            else:
-                env_vars["PERF_REGIONS_COUNTERS"] = "PAPI_L1_TCM,WALLCLOCKTIME"
-
-    return env_vars
-
-
-@pytest.fixture(autouse=True)
-def clean_up(base_dir, env):
-    subprocess.check_call(["make", "clean"], cwd=base_dir, env=env)
-    for f in ["output_perf_regions.json", "output_perf_regions_full.json"]:
-        path = os.path.join(base_dir, f)
-        if os.path.exists(path):
-            os.remove(path)
-    yield
-    subprocess.check_call(["make", "clean"], cwd=base_dir, env=env)
-    for f in ["output_perf_regions.json", "output_perf_regions_full.json"]:
-        path = os.path.join(base_dir, f)
-        if os.path.exists(path):
-            os.remove(path)
-
-
-@pytest.mark.parametrize("env", ["papi", "wallclock"], indirect=True)
-def test_skip_execution(base_dir, env):
-    subprocess.check_call(["make", "build/skip_test"], cwd=base_dir, env=env)
+def test_skip_execution(base_dir, env, run_command, output_json, read_json):
+    run_command(["make", "build/skip_test"], cwd=base_dir, env=env)
 
     run_env = env.copy()
     run_env["PERF_REGIONS_SKIP_N"] = "2"
-    run_env["PERF_REGIONS_OUTPUT"] = "json=output_perf_regions.json"
+    run_env["PERF_REGIONS_OUTPUT"] = f"json={output_json}"
 
-    # Run
-    # Using specific executable invocation
-    cmd = ["./build/skip_test"]
-    subprocess.check_call(cmd, cwd=base_dir, env=run_env)
+    run_command(["./build/skip_test"], cwd=base_dir, env=run_env)
 
-    json_path = os.path.join(base_dir, "output_perf_regions.json")
-    assert os.path.exists(json_path), "JSON output not created"
+    assert output_json.exists(), "JSON output not created"
+    data = read_json(output_json)
 
-    with open(json_path, "r") as f:
-        data = json.load(f)
-
-    outer = next((r for r in data if r["region"] == "Outer"), None)
-    inner = next((r for r in data if r["region"] == "Inner"), None)
-    independent = next((r for r in data if r["region"] == "Independent"), None)
-    independent_inner = next(
-        (r for r in data if r["region"] == "IndependentInner"), None
-    )
+    outer = find_region(data, "Outer")
+    inner = find_region(data, "Inner")
+    independent = find_region(data, "Independent")
+    independent_inner = find_region(data, "IndependentInner")
 
     assert outer is not None
     assert outer["counter"] == 3
@@ -86,25 +33,21 @@ def test_skip_execution(base_dir, env):
     assert independent_inner is not None
     assert independent_inner["counter"] == 15
     assert independent_inner["skipped"] == 10
-
     assert independent_inner["wallclock_time"] < independent["wallclock_time"]
 
 
-@pytest.mark.parametrize("env", ["papi", "wallclock"], indirect=True)
-def test_no_skip_execution(base_dir, env):
-    subprocess.check_call(["make", "build/skip_test"], cwd=base_dir, env=env)
+def test_no_skip_execution(base_dir, env, run_command, tmp_path, read_json):
+    run_command(["make", "build/skip_test"], cwd=base_dir, env=env)
 
+    output_json = tmp_path / "output_perf_regions_full.json"
     run_env = env.copy()
     run_env["PERF_REGIONS_SKIP_N"] = "0"
-    run_env["PERF_REGIONS_OUTPUT"] = "json=output_perf_regions_full.json"
+    run_env["PERF_REGIONS_OUTPUT"] = f"json={output_json}"
 
-    cmd = ["./build/skip_test"]
-    subprocess.check_call(cmd, cwd=base_dir, env=run_env)
+    run_command(["./build/skip_test"], cwd=base_dir, env=run_env)
 
-    json_path = os.path.join(base_dir, "output_perf_regions_full.json")
-    with open(json_path, "r") as f:
-        data = json.load(f)
-
-    outer = next((r for r in data if r["region"] == "Outer"), None)
+    data = read_json(output_json)
+    outer = find_region(data, "Outer")
+    assert outer is not None
     assert outer["counter"] == 5
     assert outer["skipped"] == 0

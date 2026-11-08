@@ -1,19 +1,11 @@
-FC ?= gfortran
-CC ?= gcc
-CXX ?= g++
+include ../Makefile.common
 
-include ../Makefile.setup
+all: $(TEST_BUILD_DIR)/nemo_test_perf_regions
 
-# Ensure build directory exists
-$(shell mkdir -p build)
+$(TEST_BUILD_DIR)/nemo_test_perf_regions: src/nemo_test.F90 | $(TEST_BUILD_DIR)
+	$(FC) -g -I../../src -o $@ $< $(FCFLAGS) $(LDFLAGS) $(PERFREGION_FFLAGS) $(PERFREGION_LDFLAGS_FORT)
 
-all:	build/nemo_test_perf_regions
-
-build/nemo_test_perf_regions: src/nemo_test.F90
-	${FC} -g -I../../src -o $@ $< ${FCFLAGS} ${LDFLAGS} ${PERFREGION_FFLAGS} ${PERFREGION_LDFLAGS_FORT}
-
-clean :
-	rm -rf build *.mod perf_region_list.txt
+clean:
+	rm -rf $(TEST_BUILD_DIR) *.o *.mod perf_region_list.txt
 
 .PHONY: all clean
-

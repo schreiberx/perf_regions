@@ -25,6 +25,9 @@
   can be installed under `tests/.deps/` without touching system directories.
 - Added a GitHub Actions CI workflow covering GCC, Clang, MPI, PAPI, Fortran,
   and an optional NVIDIA HPC SDK container job.
+- Simplified test execution around `tests/run_tests.py`, shared pytest
+  fixtures, common test Makefile definitions, and a single instrumentation
+  entry point. CI and local runs now use the same runner.
 
 # 2025-02-05
 

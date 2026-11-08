@@ -173,28 +173,34 @@ end SUBROUTINE test1
 
 ## Preprocessing annotated code
 
-The preprocessor is realized with a Python script.
-Example scripts can be found in the example directory, e.g.,
-```
-tests/array_test_c/perf_regions_instrumentation.py
-```
-This script instructs the preprocessor where to find the code and how to preprocess the code.
+The preprocessor is realized with the Python script
+`scripts/perf_regions.py`. It accepts source files or glob patterns.
 
+The test suite uses the same entry point through
+`tests/tools/instrument.py`.
 
 ## Preprocess
 
-To start preprocessing the code, the script is executed with `preprocess` as parameter:
+To start preprocessing the code, pass `preprocess` and the source files or
+patterns:
 
 ```
-$ ./perf_regions_instrumentation.py preprocess 
-```	
+$ python3 scripts/perf_regions.py preprocess 'src/*.F90'
+```
+
+To write the instrumented files to a separate directory:
+
+```
+$ python3 scripts/perf_regions.py preprocess --output-directory build 'src/*.F90'
+```
 
 ## Reverting to original code (if required)
 
-The preprocessing generates code which can be reverted to its original one. To revert the PerfRegion code, call the script with `cleanup` parameter:
+The preprocessing generates code which can be reverted to its original one.
+Use the `cleanup` mode:
 
 ```
-$ ./perf_regions_instrumentation.py cleanup 
+$ python3 scripts/perf_regions.py cleanup 'build/*.F90'
 ```
 
 # Executing performance measurements

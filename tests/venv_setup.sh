@@ -1,24 +1,19 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+#
+# Legacy helper. Prefer: python3 tests/run_tests.py --venv
+set -euo pipefail
 
-VENV_DIR=".venv"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$SCRIPT_DIR/.venv"
 
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment in $VENV_DIR..."
+if [[ ! -x "$VENV_DIR/bin/python" ]]; then
+    echo "Creating virtual environment in $VENV_DIR"
     python3 -m venv "$VENV_DIR"
-else
-    echo "Virtual environment already exists in $VENV_DIR."
 fi
 
-echo "Activating virtual environment..."
-source "$VENV_DIR/bin/activate"
+"$VENV_DIR/bin/python" -m pip install --upgrade pip
+"$VENV_DIR/bin/python" -m pip install -r "$SCRIPT_DIR/requirements.txt"
 
-if [ -f "requirements.txt" ]; then
-    echo "Installing requirements..."
-    pip install --upgrade pip
-    pip install -r requirements.txt
-else
-    echo "requirements.txt not found. Skipping dependency installation."
-fi
-
-echo "Setup complete. To activate run: source $VENV_DIR/bin/activate"
+echo "Setup complete."
+echo "Run: source $VENV_DIR/bin/activate"
+echo "or:  python3 tests/run_tests.py --venv"

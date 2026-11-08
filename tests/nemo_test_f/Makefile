@@ -1,27 +1,20 @@
-FC ?= gfortran
-CC ?= gcc
-CXX ?= g++
+include ../Makefile.common
 
-include ../Makefile.setup
+all: $(TEST_BUILD_DIR)/nemo_test $(TEST_BUILD_DIR)/nemo_test_perf_regions
 
-# Ensure build directory exists
-$(shell mkdir -p build)
+$(TEST_BUILD_DIR)/nemo_test: src/nemo_test.F90 | $(TEST_BUILD_DIR)
+	$(FC) -g -I../../src -o $@ $<
 
-all:	build/nemo_test build/nemo_test_perf_regions
-
-build/nemo_test: src/nemo_test.F90
-	${FC} -g -I../../src -o $@ $<
-
-build/nemo_test.F90: src/nemo_test.F90
+$(TEST_BUILD_DIR)/nemo_test.F90: src/nemo_test.F90 | $(TEST_BUILD_DIR)
 	cp $< $@
-	./bin/perf_regions_instrumentation.py preprocess
+	$(PYTHON) $(INSTRUMENT) preprocess $@
 
-build/nemo_test_perf_regions: build/nemo_test.F90
-	${FC} -g -I../../src -o $@ $< ${FCFLAGS} ${LDFLAGS} ${PERFREGION_FFLAGS} ${PERFREGION_LDFLAGS_FORT}
+$(TEST_BUILD_DIR)/nemo_test_perf_regions: $(TEST_BUILD_DIR)/nemo_test.F90
+	$(FC) -g -I../../src -o $@ $< $(FCFLAGS) $(LDFLAGS) $(PERFREGION_FFLAGS) $(PERFREGION_LDFLAGS_FORT)
 
 clean:
-	rm -rf build *.o *.mod
-	rm -f nemo_test nemo_test_perf_regions perf_regions_fortran.o *.mod
+	rm -rf $(TEST_BUILD_DIR) *.o *.mod
+	rm -f nemo_test nemo_test_perf_regions perf_regions_fortran.o
 	rm -f perf_region_list.txt
 
-.PHONY: all tests nemo_test nemo_test_perf_regions clean
+.PHONY: all clean

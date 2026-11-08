@@ -1,26 +1,18 @@
-FC ?= gfortran
-CC ?= gcc
-CXX ?= g++
+include ../Makefile.common
 
-include ../Makefile.setup
+all: $(TEST_BUILD_DIR)/array_test $(TEST_BUILD_DIR)/array_test_perf_regions
 
+$(TEST_BUILD_DIR)/array_test: src/array_test.F90 | $(TEST_BUILD_DIR)
+	$(FC) -O2 -o $@ $< $(FCFLAGS) $(LDFLAGS)
 
-# Ensure build directory exists
-$(shell mkdir -p build)
-
-all:	build/array_test build/array_test_perf_regions
-
-build/array_test: src/array_test.F90
-	${FC} -O2 -o $@ $< ${FCFLAGS} ${LDFLAGS}
-
-build/array_test.F90: src/array_test.F90
+$(TEST_BUILD_DIR)/array_test.F90: src/array_test.F90 | $(TEST_BUILD_DIR)
 	cp $< $@
-	./bin/perf_regions_instrumentation.py preprocess
+	$(PYTHON) $(INSTRUMENT) preprocess $@
 
-build/array_test_perf_regions: build/array_test.F90
-	${FC} -O2 -o $@ $< ${FCFLAGS} ${LDFLAGS} ${PERFREGION_FFLAGS} ${PERFREGION_LDFLAGS_FORT}
+$(TEST_BUILD_DIR)/array_test_perf_regions: $(TEST_BUILD_DIR)/array_test.F90
+	$(FC) -O2 -o $@ $< $(FCFLAGS) $(LDFLAGS) $(PERFREGION_FFLAGS) $(PERFREGION_LDFLAGS_FORT)
 
 clean:
-	rm -rf build *.o *.mod
+	rm -rf $(TEST_BUILD_DIR) *.o *.mod
 
 .PHONY: all clean

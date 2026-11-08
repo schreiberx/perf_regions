@@ -1,31 +1,21 @@
-FC ?= gfortran
-CC ?= gcc
-CXX ?= g++
+include ../Makefile.common
 
-include ../Makefile.setup
+CFLAGS += -DUSE_MPI=0 $(PERFREGION_CFLAGS)
+LDFLAGS += $(PERFREGION_LDFLAGS)
 
-CFLAGS+= -DUSE_MPI=0 $(PERFREGION_CFLAGS)
-LDFLAGS+= $(PERFREGION_LDFLAGS)
+all: $(TEST_BUILD_DIR)/array_test $(TEST_BUILD_DIR)/array_test_perf_regions
 
-# Ensure build directory exists
-$(shell mkdir -p build)
+$(TEST_BUILD_DIR)/array_test: src/array_test.c | $(TEST_BUILD_DIR)
+	$(CC) -O2 -std=c99 -o $@ $<
 
-all:	build/array_test build/array_test_perf_regions
-
-build/array_test: src/array_test.c
-	${CC} -O2 -std=c99 -o $@ $<
-
-# The instrumentation script reads src/* and writes to build/*
-build/array_test.c: src/array_test.c
+$(TEST_BUILD_DIR)/array_test.c: src/array_test.c | $(TEST_BUILD_DIR)
 	cp $< $@
-	./bin/perf_regions_instrumentation.py preprocess
+	$(PYTHON) $(INSTRUMENT) preprocess $@
 
-# Compile the instrumented source code from build/
-build/array_test_perf_regions: build/array_test.c
-	echo $(PAPI_LDFLAGS)
-	${CC} -O2 -std=c99 -o $@ $< ${CFLAGS} ${LDFLAGS}
+$(TEST_BUILD_DIR)/array_test_perf_regions: $(TEST_BUILD_DIR)/array_test.c
+	$(CC) -O2 -std=c99 -o $@ $< $(CFLAGS) $(LDFLAGS)
 
 clean:
-	rm -rf build *.o *.mod
+	rm -rf $(TEST_BUILD_DIR) *.o *.mod
 
 .PHONY: all clean

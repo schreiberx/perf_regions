@@ -1,27 +1,20 @@
-FC ?= gfortran
-CC ?= gcc
-CXX ?= g++
 CFLAGS ?= -O2 -fopenmp
 
+include ../Makefile.common
 
-include ../Makefile.setup
+all: $(TEST_BUILD_DIR)/stream_c $(TEST_BUILD_DIR)/stream_c_perfregions
 
-# Ensure build directory exists
-$(shell mkdir -p build)
+$(TEST_BUILD_DIR)/stream_c: src/stream.c | $(TEST_BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ src/stream.c $(LDFLAGS)
 
-all: build/stream_c build/stream_c_perfregions
-
-build/stream_c: src/stream.c
-	$(CC) $(CFLAGS) -o $@ src/stream.c ${LDFLAGS}
-
-build/stream.c: src/stream.c
+$(TEST_BUILD_DIR)/stream.c: src/stream.c | $(TEST_BUILD_DIR)
 	cp $< $@
-	./bin/perf_regions_instrumentation.py preprocess
+	$(PYTHON) $(INSTRUMENT) preprocess $@
 
-build/stream_c_perfregions: build/stream.c
-	$(CC) $(CFLAGS) -DUSE_MPI=0 -o $@ build/stream.c ${LDFLAGS} $(PERFREGION_CFLAGS) $(PERFREGION_LDFLAGS)
+$(TEST_BUILD_DIR)/stream_c_perfregions: $(TEST_BUILD_DIR)/stream.c
+	$(CC) $(CFLAGS) -DUSE_MPI=0 -o $@ $< $(LDFLAGS) $(PERFREGION_CFLAGS) $(PERFREGION_LDFLAGS)
 
 clean:
-	rm -rf build *.o *.mod
+	rm -rf $(TEST_BUILD_DIR) *.o *.mod
 
 .PHONY: all clean

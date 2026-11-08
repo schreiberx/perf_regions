@@ -33,7 +33,7 @@ jobs:
             cxx: g++
             fc: gfortran
             mpi: 1
-            papi: 1
+            papi: local
 
           - id: gcc-minimal
             name: GCC + no MPI + no PAPI + Fortran
@@ -41,15 +41,15 @@ jobs:
             cxx: g++
             fc: gfortran
             mpi: 0
-            papi: 0
+            papi: none
 
           - id: clang-minimal
-            name: Clang + no MPI + no PAPI + Fortran
-            cc: clang
-            cxx: clang++
+            name: Clang 22 + no MPI + no PAPI + Fortran
+            cc: clang-22
+            cxx: clang++-22
             fc: gfortran
             mpi: 0
-            papi: 0
+            papi: none
 
     steps:
       - name: Checkout
@@ -67,8 +67,23 @@ jobs:
             python3-pip \
             python3-venv \
             util-linux
-          if [[ "${{ matrix.cc }}" == "clang" ]]; then
-            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends clang
+          if [[ "${{ matrix.cc }}" == clang-* ]]; then
+            # Install the latest stable LLVM toolchain from the official LLVM
+            # apt repository instead of the older distro default.  Keep this
+            # version in sync with https://apt.llvm.org/llvm.sh.
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              curl \
+              gnupg \
+              lsb-release \
+              software-properties-common
+            curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+            sudo env DEBIAN_FRONTEND=noninteractive bash /tmp/llvm.sh 22
+
+            # The stream benchmark is built with -fopenmp.  Clang's OpenMP
+            # support links against libomp, which is not pulled in by Clang
+            # itself.
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+              libomp-22-dev
           fi
           if [[ "${{ matrix.mpi }}" == "1" ]]; then
             sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends mpich libmpich-dev
@@ -82,88 +97,63 @@ jobs:
           echo "$RUNNER_TEMP/ci-venv/bin" >> "$GITHUB_PATH"
 
       - name: Prepare local PAPI cache
-        if: ${{ matrix.papi == 1 }}
+        if: ${{ matrix.papi == 'local' }}
         run: mkdir -p tests/.deps/cache
 
       - name: Cache local PAPI tarball
-        if: ${{ matrix.papi == 1 }}
+        if: ${{ matrix.papi == 'local' }}
         uses: actions/cache@v4
         with:
           path: tests/.deps/cache
           key: papi-${{ runner.os }}-${{ runner.arch }}-7.2.0
 
-      - name: Install local test PAPI
-        if: ${{ matrix.papi == 1 }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          tests/tools/papi-local/install.sh --jobs "$(nproc)"
-          source tests/tools/papi-local/env.sh
-          tests/tools/papi-local/doctor.sh
-
-          {
-            echo "PAPI_PREFIX=$PAPI_PREFIX"
-            echo "PERF_REGIONS_TEST_PAPI_PREFIX=$PERF_REGIONS_TEST_PAPI_PREFIX"
-          } >> "$GITHUB_ENV"
-          echo "LD_LIBRARY_PATH=$PAPI_PREFIX/lib:$PAPI_PREFIX/lib64:${LD_LIBRARY_PATH:-}" >> "$GITHUB_ENV"
-          echo "$PAPI_PREFIX/bin" >> "$GITHUB_PATH"
-
-      - name: Configure
-        shell: bash
-        run: |
-          set -euo pipefail
-          args=(--enable-fortran)
-          if [[ "${{ matrix.mpi }}" == "1" ]]; then
-            args+=(--enable-mpi)
-          else
-            args+=(--disable-mpi)
-          fi
-          if [[ "${{ matrix.papi }}" == "1" ]]; then
-            args+=(--enable-papi --with-papi="$PAPI_PREFIX")
-          else
-            args+=(--disable-papi)
-          fi
-          ./configure "${args[@]}"
-
-      - name: Build
-        shell: bash
-        run: |
-          set -euo pipefail
-          make -j"$(nproc)" USE_FORTRAN=0 2>&1 | tee "$RUNNER_TEMP/build-nofortran.log"
-          make -j"$(nproc)" USE_FORTRAN=1 2>&1 | tee "$RUNNER_TEMP/build-fortran.log"
-
       - name: Run tests
         shell: bash
-        env:
-          # The library is still linked against PAPI in the PAPI matrix entry.
-          # Free runners normally do not permit hardware counter access, so the
-          # required test run uses wallclock timing only.
-          USE_PAPI: 0
-          USE_MPI: ${{ matrix.mpi }}
-          PERF_REGIONS_COUNTERS: WALLCLOCKTIME
         run: |
           set -euo pipefail
-          cp config.mk tests/config_tests.mk
-          cd tests
-          python3 -m pytest -q 2>&1 | tee "$RUNNER_TEMP/pytest.log"
+          args=(
+            --cc "${{ matrix.cc }}"
+            --cxx "${{ matrix.cxx }}"
+            --fc "${{ matrix.fc }}"
+            --papi "${{ matrix.papi }}"
+            --wallclock-only
+          )
+          if [[ "${{ matrix.mpi }}" == "1" ]]; then
+            args+=(--mpi)
+          else
+            args+=(--no-mpi)
+          fi
+          if [[ "${{ matrix.papi }}" == "local" ]]; then
+            args+=(--keep-build)
+          fi
+          python3 tests/run_tests.py "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/pytest.log"
 
       - name: Optional PAPI hardware-counter tests
-        if: ${{ matrix.papi == 1 }}
+        if: ${{ matrix.papi == 'local' }}
         continue-on-error: true
         shell: bash
-        env:
-          USE_PAPI: 1
-          USE_MPI: ${{ matrix.mpi }}
-          PERF_REGIONS_COUNTERS: PAPI_TOT_CYC,WALLCLOCKTIME
         run: |
           set -euo pipefail
+          source tests/tools/papi-local/env.sh
           if tests/tools/papi-local/doctor.sh --strict; then
-            cp config.mk tests/config_tests.mk
-            cd tests
-            python3 -m pytest -q \
-              array_test_c/test_array_test_c.py \
-              skip_test_c/test_skip_test_c.py \
-              2>&1 | tee "$RUNNER_TEMP/pytest-papi-hardware.log"
+            args=(
+              --cc "${{ matrix.cc }}"
+              --cxx "${{ matrix.cxx }}"
+              --fc "${{ matrix.fc }}"
+              --papi local
+              --papi-hardware
+              --no-configure
+              --no-build
+              --keep-build
+              --pytest-target array_test_c
+              --pytest-target skip_test_c
+            )
+            if [[ "${{ matrix.mpi }}" == "1" ]]; then
+              args+=(--mpi)
+            else
+              args+=(--no-mpi)
+            fi
+            python3 tests/run_tests.py "${args[@]}" 2>&1 | tee "$RUNNER_TEMP/pytest-papi-hardware.log"
           else
             echo "Hardware counters are unavailable; skipping PAPI runtime tests."
           fi
@@ -222,27 +212,18 @@ jobs:
           "$RUNNER_TEMP/ci-venv/bin/pip" install -r tests/requirements.txt
           echo "$RUNNER_TEMP/ci-venv/bin" >> "$GITHUB_PATH"
 
-      - name: Configure
-        run: ./configure --disable-mpi --disable-papi --enable-fortran
-
-      - name: Build
-        shell: bash
-        run: |
-          set -euo pipefail
-          make -j"$(nproc)" USE_FORTRAN=0 2>&1 | tee "$RUNNER_TEMP/nvhpc-build-nofortran.log"
-          make -j"$(nproc)" USE_FORTRAN=1 2>&1 | tee "$RUNNER_TEMP/nvhpc-build-fortran.log"
-
       - name: Run tests
         shell: bash
-        env:
-          USE_PAPI: 0
-          USE_MPI: 0
-          PERF_REGIONS_COUNTERS: WALLCLOCKTIME
         run: |
           set -euo pipefail
-          cp config.mk tests/config_tests.mk
-          cd tests
-          python3 -m pytest -q 2>&1 | tee "$RUNNER_TEMP/nvhpc-pytest.log"
+          python3 tests/run_tests.py \
+            --cc nvc \
+            --cxx nvc++ \
+            --fc nvfortran \
+            --no-mpi \
+            --papi none \
+            --wallclock-only \
+            2>&1 | tee "$RUNNER_TEMP/nvhpc-pytest.log"
 
       - name: Upload failure logs
         if: failure()

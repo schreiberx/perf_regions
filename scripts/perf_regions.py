@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 """
-Script to replace timing_start/end calls in all NEMO files
-with perf_region_start/end calls.
+Instrument source files with perf_region_start/perf_region_stop calls.
+
+Supports native perf_regions annotations and NEMO-style timing_start/stop
+calls.
 
 Author: Tim Graham, Martin Schreiber
 """
@@ -446,3 +448,49 @@ class PerfRegions:
             raise Exception("No pref_regions finalization found!")
 
         print("FINISHED without errors")
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Instrument or restore perf_regions annotations."
+    )
+    parser.add_argument(
+        "mode",
+        choices=("preprocess", "cleanup"),
+        help="Instrument files or restore the original source.",
+    )
+    parser.add_argument(
+        "targets",
+        nargs="*",
+        help="Files or glob patterns. Defaults to ./build/*.",
+    )
+    parser.add_argument(
+        "--output-directory",
+        default=None,
+        help="Write instrumented files to this directory.",
+    )
+    args = parser.parse_args(argv)
+
+    targets = args.targets or ["./build/*"]
+    expanded: List[str] = []
+    for target in targets:
+        matches = glob.glob(target)
+        expanded.extend(matches or [target])
+
+    preprocessor = PerfRegions(
+        expanded,
+        output_directory=args.output_directory,
+    )
+
+    if args.mode == "preprocess":
+        preprocessor.run_preprocessor()
+    else:
+        preprocessor.remove_perf_regions_annotations()
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

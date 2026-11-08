@@ -22,7 +22,7 @@ A high-performance library for measuring and profiling different code regions, s
 
 ## Building
 
-The library supports three build methods: autotools-style configure script (recommended for most users), modern CMake, and traditional Makefiles.
+The library supports the autotools-style configure script (recommended) and direct Makefiles.
 
 ### Autotools-style Configure Script (Recommended)
 
@@ -40,3 +40,23 @@ sudo make install
 ./build.sh      # Build the project
 sudo ./install.sh  # Install the project
 ```
+
+## Testing
+
+The canonical test entry point is:
+
+```bash
+python3 tests/run_tests.py
+```
+
+Useful variants:
+
+```bash
+python3 tests/run_tests.py --mpi --papi none
+python3 tests/run_tests.py --mpi --papi local
+python3 tests/run_tests.py --cc clang --no-mpi --papi none
+python3 tests/run_tests.py --fast
+```
+
+See [tests/README.md](tests/README.md) for details, including the test-only
+local PAPI installation under `tests/.deps`.

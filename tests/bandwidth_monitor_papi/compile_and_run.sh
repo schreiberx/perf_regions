@@ -1,9 +1,15 @@
-#! /bin/bash
+#!/usr/bin/env bash
+#
+# Compatibility helper. Prefer:
+#   python3 tests/run_tests.py --no-mpi --papi local --no-fortran --papi-hardware \
+#       --pytest-target bandwidth_monitor_papi
+set -euo pipefail
 
-sed -i "s/^USE_MPI=[01]/USE_MPI=0/" ../config_tests.mk
-sed -i "s/^USE_PAPI=[01]/USE_PAPI=1/" ../config_tests.mk
-sed -i "s/^USE_FORTRAN=[01]/USE_FORTRAN=0/" ../config_tests.mk
-
-make
-
-./run_bandwidth_monitor.py
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec python3 "$SCRIPT_DIR/../run_tests.py" \
+    --no-mpi \
+    --no-fortran \
+    --papi local \
+    --papi-hardware \
+    --pytest-target bandwidth_monitor_papi \
+    "$@"

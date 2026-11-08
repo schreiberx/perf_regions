@@ -24,6 +24,10 @@ The columns are:
 
 - ``Section``: the stored region name.
 - One column per requested PAPI counter.
+- ``PR_BANDWIDTH_BYTES``, ``PR_BANDWIDTH_GB``,
+  ``PR_MEM_TRANSFER_BYTES``, ``PR_MEM_TRANSFER_GB``: consolidated transfer
+  volumes for the memory-transfer pseudo events. These columns are present
+  when any of the pseudo events is requested.
 - ``SPOILED``: set when nested counter measurements may be affected.
 - ``WALLCLOCKTIME``: total accumulated wallclock time.
 - ``MIN``, ``MAX``, ``MEAN``, ``VAR``: statistics over valid wallclock
@@ -66,7 +70,10 @@ Fields:
 - ``wallclock_time``: total accumulated wallclock time.
 - ``min``, ``max``, ``mean``, ``variance``: wallclock statistics.
 - ``spoiled``: whether nested measurements may have affected the counters.
-- ``counters``: mapping from PAPI event names to accumulated values.
+- ``counters``: mapping from PAPI event names to accumulated values. When a
+  memory-transfer pseudo event is requested, this object also contains
+  ``PR_BANDWIDTH_BYTES``, ``PR_BANDWIDTH_GB``, ``PR_MEM_TRANSFER_BYTES``, and
+  ``PR_MEM_TRANSFER_GB``.
 
 Wallclock-related fields are only emitted when wallclock timing is enabled.
 The ``counters`` object is only emitted for a PAPI-enabled build with requested

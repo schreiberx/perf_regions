@@ -12,8 +12,12 @@ USE_PAPI ?= 1
 USE_FORTRAN ?= 0
 BUILD_SHARED_LIBS ?= 1
 BUILD_STATIC_LIBS ?= 0
+PYTHON ?= python3
+PAPI_MODE ?= local
+PAPI_PREFIX ?=
+PAPI_COUNTERS ?= PAPI_TOT_CYC,WALLCLOCKTIME
 
-.PHONY: all build_src tests run_tests clean help install uninstall distclean
+.PHONY: all build_src tests test_papi_through_perf_regions run_tests clean help install uninstall distclean
 
 # Default target
 all: build_src
@@ -23,6 +27,16 @@ build_src:
 
 tests:
 	$(MAKE) -C ./tests all
+
+test_papi_through_perf_regions:
+	$(PYTHON) tests/run_tests.py \
+		--papi "$(PAPI_MODE)" \
+		$(if $(PAPI_PREFIX),--papi-prefix "$(PAPI_PREFIX)") \
+		--test-papi-counters \
+		--require-papi-hardware \
+		--counters "$(PAPI_COUNTERS)" \
+		--pytest-target skip_test_c \
+		--pytest-args '-k test_papi_counter_through_perf_regions'
 
 run_tests:
 	$(MAKE) -C ./tests run_tests
@@ -36,6 +50,7 @@ uninstall:
 clean:
 	$(MAKE) -C ./src clean
 	$(MAKE) -C ./tests clean
+	rm -rf build build_*
 	rm -f *.mod
 
 help:
@@ -50,6 +65,7 @@ help:
 	@echo "  build_src                 - Build the library"
 	@echo "  tests                     - Run the test suite"
 	@echo "  run_tests                 - Run the test suite"
+	@echo "  test_papi_through_perf_regions - Check PAPI access through PerfRegions"
 	@echo "  install                   - Install library and headers"
 	@echo "  uninstall                 - Uninstall library and headers"
 	@echo "  clean                     - Clean build artifacts"

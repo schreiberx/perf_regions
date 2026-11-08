@@ -9,10 +9,16 @@ SUBDIRS = \
 	repeated_start_c \
 	dynamic_regions_c
 
-all: run_tests
+all: run_tests_all
 
 run_tests:
 	python3 run_tests.py
+
+test_papi_through_perf_regions:
+	$(MAKE) -C .. test_papi_through_perf_regions
+
+run_tests_all:
+	./run_tests_all.sh
 
 clean:
 	for dir in $(SUBDIRS); do \
@@ -20,4 +26,4 @@ clean:
 	done
 	rm -f output_clean_*.txt output_build_*.txt
 
-.PHONY: all run_tests clean
+.PHONY: all run_tests run_tests_all test_papi_through_perf_regions clean

@@ -19,21 +19,16 @@ the measured results.
 
 ## Documentation
 
-The Sphinx documentation sources live in [`docs/`](docs/). The GitHub Actions
-workflow [`.github/workflows/static.yml`](.github/workflows/static.yml) builds
-the site for pull requests and publishes it to GitHub Pages on the default
-branch.
+The documentation is available at
+[https://schreiberx.github.io/perf_regions/](https://schreiberx.github.io/perf_regions/).
 
-Build the documentation locally with:
+The Sphinx sources live in [`docs/`](docs/). To install the documentation
+dependencies and build the HTML locally, run `docs/install.sh`. The generated
+HTML is written to `docs/build/html`.
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r docs/requirements.txt
-make -C docs html
-```
-
-The generated HTML is written to `docs/build/html`.
+The GitHub Actions workflow
+[`.github/workflows/static.yml`](.github/workflows/static.yml) builds the site
+for pull requests and publishes it to GitHub Pages on the default branch.
 
 ## Dependencies
 
@@ -134,12 +129,22 @@ export PERF_REGIONS_COUNTERS=PAPI_TOT_CYC,PAPI_L3_TCM,WALLCLOCKTIME
 export PERF_REGIONS_SKIP_N=2
 export PERF_REGIONS_OUTPUT=console,json=perf_regions.json
 
-export LD_LIBRARY_PATH="$PWD/build:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$PWD/build_papi_mpi_fort:$LD_LIBRARY_PATH"
 ./my_instrumented_application
 ```
 
 Use `papi_avail` and `papi_native_avail` to discover available PAPI events on the
 current platform.
+
+To let PerfRegions detect the memory-channel events automatically:
+
+```bash
+export PERF_REGIONS_COUNTERS=PR_BANDWIDTH_BYTES,PR_BANDWIDTH_GB,PR_MEM_TRANSFER_BYTES,PR_MEM_TRANSFER_GB
+./my_instrumented_application
+```
+
+The individual detected channel counters are included in the output together
+with all four consolidated memory-transfer values.
 
 ## Testing
 

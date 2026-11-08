@@ -3,10 +3,10 @@ import pytest
 
 @pytest.mark.papi_hardware
 def test_monitor_run(
-    base_dir, env, run_command, papi_hardware_available
+    base_dir, env, run_command, papi_test_skip_reason
 ):
-    if not papi_hardware_available:
-        pytest.skip("PAPI hardware counters are not enabled")
+    if papi_test_skip_reason:
+        pytest.skip(papi_test_skip_reason)
 
     run_env = env.copy()
     counters = [

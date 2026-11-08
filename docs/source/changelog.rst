@@ -1,6 +1,20 @@
 Changelog
 =========
 
+Unreleased
+----------
+
+- Build artifacts are now kept in feature-specific directories such as
+  ``build_papi_mpi_fort/`` instead of sharing one ``build/`` directory.
+- Added memory-transfer pseudo events ``PR_BANDWIDTH_BYTES``,
+  ``PR_BANDWIDTH_GB``, ``PR_MEM_TRANSFER_BYTES``, and ``PR_MEM_TRANSFER_GB``.
+  They auto-detect memory-channel PAPI events, add the individual channel
+  counters to the output, and emit all four consolidated transfer values.
+  PAPI events are now grouped into one event set per component so core and
+  uncore events can be measured together. Added a STREAM-based hardware test
+  that checks the consolidated transfer volume and compares the measured
+  bandwidth against STREAM's reported rates.
+
 2026-03-03
 ----------
 

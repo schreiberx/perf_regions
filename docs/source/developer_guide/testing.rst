@@ -9,9 +9,12 @@ The canonical test entry point is:
 
 The runner configures the library, builds it, runs pytest, and cleans up
 afterwards. By default it uses wallclock timing, no MPI, and builds both the C
-and Fortran libraries when a Fortran compiler is available. Pytest runs with
-``-v`` so each test is listed as it runs; pass ``--pytest-args '-q'`` for
-quieter output.
+and Fortran libraries when a Fortran compiler is available. Configure, build,
+and dependency-install output is hidden unless a command fails. Successful
+PAPI doctor diagnostics are also suppressed; they are printed when validation
+fails or when ``--verbose-build`` is used. Pytest still runs with ``-v`` so each
+individual test case is listed as it runs. Pass ``--pytest-args '-q'`` for
+quieter pytest output.
 
 Quick start
 -----------
@@ -70,13 +73,15 @@ To run the full PAPI/wallclock matrix sequentially:
 
    tests/run_tests_all.sh
 
-The script runs these combinations for both no-MPI and MPI when MPI compilers
-are available:
+When MPI compilers are available, the script runs MPI combinations first, then
+no-MPI combinations. Each case heading shows the PerfRegions compile options
+separately from the runtime counter/timing options. Within each group the order
+is:
 
-- no PAPI, wallclock only
-- PAPI built in, wallclock only
 - PAPI counters with wallclock timing
 - PAPI counters without wallclock timing
+- PAPI built in, wallclock only
+- no PAPI, wallclock only
 
 Extra arguments are forwarded to each ``run_tests.py`` invocation, for example:
 
@@ -84,12 +89,41 @@ Extra arguments are forwarded to each ``run_tests.py`` invocation, for example:
 
    tests/run_tests_all.sh --cc clang --cxx clang++ --fc gfortran
 
+At the end, the script prints a summary table with the status and pytest result
+for every combination. Skipped, failed, and error test details are listed below
+each affected case. It exits non-zero if any combination failed.
+
 Use ``PAPI_MODE=system tests/run_tests_all.sh`` to use a system PAPI
 installation instead of the test-local one. Do not pass MPI, PAPI, counter, or
 wallclock options directly; the script controls those.
 
 PAPI counters
 -------------
+
+To check quickly whether PAPI counters are accessible through the PerfRegions
+library, run:
+
+.. code-block:: console
+
+   make test_papi_through_perf_regions
+
+This configures and builds a PAPI-enabled library, then runs an instrumented
+test that verifies the requested PAPI counters appear in the PerfRegions output
+and have nonzero values. It fails if PAPI hardware counters are unavailable. It
+uses the test-local PAPI installation by default.
+To use a system PAPI instead:
+
+.. code-block:: console
+
+   make test_papi_through_perf_regions \
+       PAPI_MODE=system PAPI_PREFIX=/path/to/papi
+
+The counters can be changed with ``PAPI_COUNTERS``:
+
+.. code-block:: console
+
+   make test_papi_through_perf_regions \
+       PAPI_COUNTERS=PAPI_TOT_CYC,PAPI_L3_TCM,WALLCLOCKTIME
 
 By default the tests use wallclock timing:
 
@@ -120,6 +154,10 @@ If hardware-counter access is unavailable, check the Linux permission setting:
 .. code-block:: console
 
    cat /proc/sys/kernel/perf_event_paranoid
+
+Uncore tests, including the STREAM memory-bandwidth test, require
+``perf_event_paranoid`` to be ``0`` or the process to have ``CAP_PERFMON``.
+A value of ``1`` may allow core counters while still blocking uncore events.
 
 On many systems, lowering the value allows PAPI to access the counters:
 

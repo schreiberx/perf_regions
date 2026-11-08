@@ -58,6 +58,9 @@ Testing/
 **/*.lyx~
 **/*.json
 
+# Local Python environments
+.venv/
+
 # Test-only locally installed dependencies
 tests/.deps/
 # Generated configure helpers (removed from the repository)

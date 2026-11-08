@@ -12,6 +12,7 @@
 #include "perf_regions.h"
 #include "perf_regions_internal.h"
 #include "papi_counters.h"
+#include "perf_mem_bandwidth.h"
 #include "perf_regions_defines.h"
 #include "perf_regions_output.h"
 
@@ -101,6 +102,70 @@ static void perf_regions_trim(char *s)
 		s[--len] = '\0';
 	}
 }
+
+static int perf_regions_is_mem_bandwidth_pseudo(const char *event)
+{
+	return strcmp(event, "PR_BANDWIDTH_BYTES") == 0 ||
+		strcmp(event, "PR_BANDWIDTH_GB") == 0 ||
+		strcmp(event, "PR_MEM_TRANSFER_BYTES") == 0 ||
+		strcmp(event, "PR_MEM_TRANSFER_GB") == 0;
+}
+
+#if PERF_REGIONS_USE_PAPI
+static int perf_regions_find_counter(const char *name)
+{
+	for (int i = 0; i < perf_regions.num_perf_counters; i++)
+	{
+		if (strcmp(perf_regions.perf_counter_names[i], name) == 0)
+			return i;
+	}
+	return -1;
+}
+
+static void perf_regions_add_mem_bandwidth_events(void)
+{
+	struct PerfMemBandwidthEvent events[PERF_COUNTERS_MAX];
+	int num_events = perf_mem_bandwidth_detect(
+		events, PERF_COUNTERS_MAX, perf_regions.verbosity);
+
+	if (num_events <= 0)
+	{
+		fprintf(stderr, PRINT_PREFIX"Memory bandwidth pseudo event requested, "
+			"but no supported memory events were detected\n");
+		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 0; i < num_events; i++)
+	{
+		int existing = perf_regions_find_counter(events[i].name);
+		if (existing >= 0)
+		{
+			perf_regions.perf_counter_bytes_per_count[existing] =
+				events[i].bytes_per_count;
+			perf_regions.perf_counter_is_mem_bandwidth[existing] = 1;
+			free(events[i].name);
+			continue;
+		}
+
+		if (perf_regions.num_perf_counters >= PERF_COUNTERS_MAX)
+		{
+			fprintf(stderr, PRINT_PREFIX"Too many performance counters requested (max: %i)\n",
+				PERF_COUNTERS_MAX);
+			for (int j = i; j < num_events; j++)
+				free(events[j].name);
+			exit(EXIT_FAILURE);
+		}
+
+		int index = perf_regions.num_perf_counters++;
+		perf_regions.perf_counter_names[index] = events[i].name;
+		perf_regions.perf_counter_bytes_per_count[index] =
+			events[i].bytes_per_count;
+		perf_regions.perf_counter_is_mem_bandwidth[index] = 1;
+	}
+
+	perf_regions.use_papi = 1;
+}
+#endif
 
 static void perf_regions_grow(int i_region_id)
 {
@@ -307,6 +372,9 @@ void perf_regions_init(void)
 
 	char *perf_counter_list_tokens = perf_regions_strdup(perf_counter_list);
 	perf_regions.num_perf_counters = 0;
+#if PERF_REGIONS_USE_PAPI
+	int mem_bandwidth_pseudo_requested = 0;
+#endif
 
 	char *saveptr = NULL;
 	for (char *event = strtok_r(perf_counter_list_tokens, ",", &saveptr);
@@ -320,6 +388,16 @@ void perf_regions_init(void)
 		if (strcmp("WALLCLOCKTIME", event) == 0)
 		{
 			perf_regions.use_wallclock_time = 1;
+		}
+		else if (perf_regions_is_mem_bandwidth_pseudo(event))
+		{
+#if PERF_REGIONS_USE_PAPI
+			mem_bandwidth_pseudo_requested = 1;
+#else
+			fprintf(stderr, PRINT_PREFIX"PAPI performance counters not supported in this build, "
+				"but PERF_REGIONS_COUNTERS requests '%s'\n", event);
+			exit(EXIT_FAILURE);
+#endif
 		}
 		else
 		{
@@ -347,6 +425,13 @@ void perf_regions_init(void)
 	free(perf_counter_list_tokens);
 
 #if PERF_REGIONS_USE_PAPI
+	if (mem_bandwidth_pseudo_requested)
+	{
+		perf_regions.mem_bandwidth_requested = 1;
+		papi_counters_library_init();
+		perf_regions_add_mem_bandwidth_events();
+	}
+
 	// Do not initialize PAPI for wallclock-only runs.  This keeps a
 	// PAPI-enabled build usable on systems where the PAPI runtime is missing.
 	if (perf_regions.num_perf_counters > 0)

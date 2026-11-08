@@ -42,9 +42,19 @@ with ``--with-papi=DIR``.
 Build outputs
 -------------
 
-The library is written to ``build/``. The generated configuration header is
-``build/perf_regions_config.h`` and is installed together with the public
-headers.
+Each feature combination gets its own build directory. The directory name
+uses the same suffix as the library:
+
+- ``build/`` for the base C build,
+- ``build_papi/`` for PAPI,
+- ``build_mpi/`` for MPI,
+- ``build_fort/`` for Fortran,
+- ``build_papi_mpi_fort/`` for PAPI, MPI, and Fortran.
+
+The generated configuration header is stored in the matching build directory,
+for example ``build_papi_mpi_fort/perf_regions_config.h``, and is installed
+together with the public headers. The directory can be overridden with
+``BUILD_DIR=...``.
 
 The library suffix depends on the enabled features:
 
@@ -52,8 +62,8 @@ The library suffix depends on the enabled features:
 - ``_mpi`` for MPI,
 - ``_fort`` for Fortran.
 
-For example, ``libperf_regions_papi_mpi_fort.so`` is a PAPI, MPI, and Fortran
-build.
+For example, ``build_papi_mpi_fort/libperf_regions_papi_mpi_fort.so`` is a
+PAPI, MPI, and Fortran build.
 
 Useful Make targets
 -------------------
@@ -85,19 +95,35 @@ Cleaning
    make clean
    make distclean
 
-The test runner normally cleans the build automatically before and after a run.
-Use ``--keep-build`` to retain the build for debugging.
+The test runner cleans only the build variants used by the current invocation.
+Running ``make clean`` removes all variant build directories. Use
+``--keep-build`` to retain builds for debugging.
 
 Documentation
 -------------
 
-The Sphinx documentation lives in ``docs/``:
+The Sphinx documentation lives in ``docs/``. The installer creates a local
+virtual environment, installs the documentation requirements, and builds the
+HTML:
 
 .. code-block:: console
 
-   python3 -m venv .venv
-   source .venv/bin/activate
-   python3 -m pip install -r docs/requirements.txt
-   make -C docs html
+   docs/install.sh
 
 The generated HTML is written to ``docs/build/html``.
+
+To install the dependencies without building:
+
+.. code-block:: console
+
+   docs/install.sh --no-build
+
+To clean the generated documentation before rebuilding:
+
+.. code-block:: console
+
+   docs/install.sh --clean
+
+The virtual environment directory can be changed with ``--venv DIR`` or
+``DOCS_VENV_DIR``. Additional Sphinx options can be passed through
+``SPHINXOPTS``.

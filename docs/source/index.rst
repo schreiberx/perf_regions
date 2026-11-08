@@ -88,4 +88,3 @@ Annotating a region in Fortran
    Developer Guide <developer_guide/index>
    Reference Guide <reference_guide/index>
    About <about>
-   Changelog <changelog>

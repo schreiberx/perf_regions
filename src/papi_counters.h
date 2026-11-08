@@ -5,6 +5,7 @@
 
 #if PERF_REGIONS_USE_PAPI
 
+void papi_counters_library_init(void);
 void papi_counters_init(char *const list_counters[], int i_num_counters, int i_verbosity);
 void papi_counters_finalize(void);
 

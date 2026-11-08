@@ -13,9 +13,10 @@ Environment variables
    * - Variable
      - Description
    * - ``PERF_REGIONS_COUNTERS``
-     - Comma-separated list of PAPI event names and/or ``WALLCLOCKTIME``.
-       If unset, PerfRegions measures wallclock time only. If set, wallclock
-       timing is disabled unless ``WALLCLOCKTIME`` is included explicitly.
+     - Comma-separated list of PAPI event names, memory-transfer pseudo events,
+       and/or ``WALLCLOCKTIME``. If unset, PerfRegions measures wallclock time
+       only. If set, wallclock timing is disabled unless ``WALLCLOCKTIME`` is
+       included explicitly.
    * - ``PERF_REGIONS_SKIP_N``
      - Number of initial executions of each region to skip. The default is
        ``0``. Skipped executions are counted separately.
@@ -59,6 +60,51 @@ Example: measure several PAPI counters and wallclock time:
 If the library was built without PAPI and the environment requests a PAPI
 counter, initialization fails with an error instead of silently ignoring the
 request.
+
+Memory-transfer pseudo events
+-----------------------------
+
+The pseudo events ``PR_BANDWIDTH_BYTES``, ``PR_BANDWIDTH_GB``,
+``PR_MEM_TRANSFER_BYTES``, and ``PR_MEM_TRANSFER_GB`` automatically detect the
+memory-channel events available on the system. The individual channel events
+are added to the output, together with all four consolidated values.
+
+``PR_BANDWIDTH_BYTES`` and ``PR_MEM_TRANSFER_BYTES`` report the total number of
+bytes transferred in the region. ``PR_BANDWIDTH_GB`` and ``PR_MEM_TRANSFER_GB``
+report the same volume in decimal gigabytes. These are transfer volumes, not
+throughput rates; add ``WALLCLOCKTIME`` if timing information is also needed.
+
+.. code-block:: console
+
+   export PERF_REGIONS_COUNTERS=PR_BANDWIDTH_BYTES,PR_BANDWIDTH_GB,WALLCLOCKTIME
+   ./my_application
+
+The following optional variables control auto-detection:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Variable
+     - Description
+   * - ``PERF_REGIONS_BANDWIDTH_EVENTS``
+     - Explicit comma-separated PAPI event list. Skips auto-detection.
+   * - ``PERF_REGIONS_BANDWIDTH_BYTES_PER_COUNT``
+     - Scale factor used with explicit events. The default is ``64``.
+   * - ``PERF_REGIONS_BANDWIDTH_CPU``
+     - CPU qualifier to use for uncore events instead of the detected CPUs.
+   * - ``PERF_REGIONS_BANDWIDTH_PROFILE``
+     - Force a profile such as ``intel-imc``, ``intel-qmc``, ``amd-df``,
+       ``arm-l2``, or ``power8``.
+
+For example, to use explicit events on a system where auto-detection is not
+supported:
+
+.. code-block:: console
+
+   export PERF_REGIONS_BANDWIDTH_EVENTS='skx_unc_imc0::UNC_M_CAS_COUNT:RD:cpu=0,skx_unc_imc0::UNC_M_CAS_COUNT:WR:cpu=0'
+   export PERF_REGIONS_BANDWIDTH_BYTES_PER_COUNT=64
+   export PERF_REGIONS_COUNTERS=PR_MEM_TRANSFER_BYTES,PR_MEM_TRANSFER_GB
+   ./my_application
 
 Skipping warm-up executions
 ---------------------------
@@ -109,9 +155,10 @@ See :doc:`output` for the format of the results.
 Runtime library path
 --------------------
 
-For an uninstalled build, set ``LD_LIBRARY_PATH`` before running:
+For an uninstalled build, set ``LD_LIBRARY_PATH`` to the matching variant
+directory before running:
 
 .. code-block:: console
 
-   export LD_LIBRARY_PATH="$PWD/build:$LD_LIBRARY_PATH"
+   export LD_LIBRARY_PATH="$PWD/build_papi_mpi_fort:$LD_LIBRARY_PATH"
    ./my_application

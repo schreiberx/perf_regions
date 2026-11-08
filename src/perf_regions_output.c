@@ -80,6 +80,42 @@ static void json_write_string(FILE *s, const char *str)
 	fputc('"', s);
 }
 
+#if PERF_REGIONS_USE_PAPI
+static double region_mem_transfer_bytes(const long long *counters)
+{
+	double bytes = 0.0;
+
+	if (counters == NULL)
+		return 0.0;
+
+	for (int j = 0; j < perf_regions.num_perf_counters; j++)
+	{
+		if (perf_regions.perf_counter_is_mem_bandwidth[j])
+		{
+			bytes += (double)counters[j] *
+				perf_regions.perf_counter_bytes_per_count[j];
+		}
+	}
+
+	return bytes;
+}
+
+static void json_write_counter_value(
+	FILE *s,
+	int *first,
+	const char *name,
+	double value)
+{
+	if (!*first)
+		fprintf(s, ",\n");
+	*first = 0;
+
+	fprintf(s, "\t\t\t");
+	json_write_string(s, name);
+	fprintf(s, ": %.7e", value);
+}
+#endif
+
 static void print_human_header(FILE *s)
 {
 	fprintf(s, "[MULE] perf_regions: Performance counters profiling:\n");
@@ -89,6 +125,14 @@ static void print_human_header(FILE *s)
 #if PERF_REGIONS_USE_PAPI
 	for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		fprintf(s, "\t%s", perf_regions.perf_counter_names[j]);
+
+	if (perf_regions.mem_bandwidth_requested)
+	{
+		fprintf(s, "\tPR_BANDWIDTH_BYTES");
+		fprintf(s, "\tPR_BANDWIDTH_GB");
+		fprintf(s, "\tPR_MEM_TRANSFER_BYTES");
+		fprintf(s, "\tPR_MEM_TRANSFER_GB");
+	}
 #endif
 
 #if PERF_COUNTERS_NESTED
@@ -123,6 +167,16 @@ static void print_human_region(
 	{
 		long long value = (counters != NULL) ? counters[j] : 0;
 		fprintf(s, "\t%.7e", (double)value);
+	}
+
+	if (perf_regions.mem_bandwidth_requested)
+	{
+		double bytes = region_mem_transfer_bytes(counters);
+		double gigabytes = bytes / 1e9;
+		fprintf(s, "\t%.7e", bytes);
+		fprintf(s, "\t%.7e", gigabytes);
+		fprintf(s, "\t%.7e", bytes);
+		fprintf(s, "\t%.7e", gigabytes);
 	}
 #else
 	(void)counters;
@@ -230,14 +284,28 @@ static void write_json_region(
 	if (perf_regions.num_perf_counters > 0)
 	{
 		fprintf(s, ",\n\t\t\"counters\": {\n");
+		int first_counter = 1;
 		for (int j = 0; j < perf_regions.num_perf_counters; j++)
 		{
-			if (j > 0)
-				fprintf(s, ",\n");
-			fprintf(s, "\t\t\t");
-			json_write_string(s, perf_regions.perf_counter_names[j]);
-			fprintf(s, ": %.7e", counters != NULL ? (double)counters[j] : 0.0);
+			json_write_counter_value(s, &first_counter,
+				perf_regions.perf_counter_names[j],
+				counters != NULL ? (double)counters[j] : 0.0);
 		}
+
+		if (perf_regions.mem_bandwidth_requested)
+		{
+			double bytes = region_mem_transfer_bytes(counters);
+			double gigabytes = bytes / 1e9;
+			json_write_counter_value(s, &first_counter,
+				"PR_BANDWIDTH_BYTES", bytes);
+			json_write_counter_value(s, &first_counter,
+				"PR_BANDWIDTH_GB", gigabytes);
+			json_write_counter_value(s, &first_counter,
+				"PR_MEM_TRANSFER_BYTES", bytes);
+			json_write_counter_value(s, &first_counter,
+				"PR_MEM_TRANSFER_GB", gigabytes);
+		}
+
 		fprintf(s, "\n\t\t}");
 	}
 #else

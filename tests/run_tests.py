@@ -34,10 +34,37 @@ def run(
     cwd: Path = REPO_ROOT,
     env: dict[str, str] | None = None,
     check: bool = True,
+    quiet: bool = False,
 ) -> subprocess.CompletedProcess:
     rendered = [str(part) for part in cmd]
-    print("+ " + " ".join(shlex.quote(part) for part in rendered), flush=True)
-    return subprocess.run(rendered, cwd=cwd, env=env, check=check, text=True)
+    rendered_command = "+ " + " ".join(shlex.quote(part) for part in rendered)
+
+    if not quiet:
+        print(rendered_command, flush=True)
+        return subprocess.run(rendered, cwd=cwd, env=env, check=check, text=True)
+
+    result = subprocess.run(
+        rendered,
+        cwd=cwd,
+        env=env,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+
+    if result.returncode != 0:
+        print(rendered_command, flush=True)
+        if result.stdout:
+            print(result.stdout, end="", flush=True)
+            if not result.stdout.endswith("\n"):
+                print(flush=True)
+        if check:
+            raise subprocess.CalledProcessError(
+                result.returncode, result.args, output=result.stdout
+            )
+
+    return result
 
 
 def prepend_paths(env: dict[str, str], name: str, paths: list[Path]) -> None:
@@ -87,6 +114,7 @@ def install_local_papi(args: argparse.Namespace, env: dict[str, str]) -> Path:
                 [LOCAL_PAPI_INSTALLER, "--jobs", str(args.jobs)],
                 cwd=REPO_ROOT,
                 env=env,
+                quiet=not args.verbose_build,
             )
             prefix = (TESTS_DIR / ".deps" / "papi" / "current").resolve()
 
@@ -130,7 +158,10 @@ def prepare_python(args: argparse.Namespace) -> Path:
                 shutil.rmtree(venv_dir)
             else:
                 print(f"Creating virtual environment in {venv_dir}")
-            run([sys.executable, "-m", "venv", venv_dir])
+            run(
+                [sys.executable, "-m", "venv", venv_dir],
+                quiet=not args.verbose_build,
+            )
 
         run(
             [
@@ -142,7 +173,8 @@ def prepare_python(args: argparse.Namespace) -> Path:
                 "--disable-pip-version-check",
                 "-r",
                 TESTS_DIR / "requirements.txt",
-            ]
+            ],
+            quiet=not args.verbose_build,
         )
         return python
 
@@ -193,13 +225,59 @@ def configure(args: argparse.Namespace, env: dict[str, str], papi_prefix: Path |
         else:
             cmd.append("--enable-papi")
 
-    run(cmd, cwd=REPO_ROOT, env=env)
+    run(cmd, cwd=REPO_ROOT, env=env, quiet=not args.verbose_build)
+
+
+def build_variant_suffix(args: argparse.Namespace, include_fortran: bool) -> str:
+    suffix = ""
+    if args.papi != "none":
+        suffix += "_papi"
+    if args.mpi:
+        suffix += "_mpi"
+    if include_fortran and args.fortran:
+        suffix += "_fort"
+    return suffix
+
+
+def build_directories(args: argparse.Namespace) -> list[Path]:
+    directories = [REPO_ROOT / f"build{build_variant_suffix(args, False)}"]
+    if args.fortran:
+        directories.append(REPO_ROOT / f"build{build_variant_suffix(args, True)}")
+    return directories
+
+
+def clean_build_artifacts(args: argparse.Namespace, env: dict[str, str]) -> None:
+    # Only remove the variants used by this invocation.  Other feature
+    # combinations keep their own build directories.
+    for path in build_directories(args):
+        shutil.rmtree(path, ignore_errors=True)
+
+    for module in (REPO_ROOT / "src").glob("*.mod"):
+        module.unlink(missing_ok=True)
+
+    run(
+        ["make", "-C", "tests", "clean"],
+        cwd=REPO_ROOT,
+        env=env,
+        check=False,
+        quiet=not args.verbose_build,
+    )
 
 
 def build(args: argparse.Namespace, env: dict[str, str]) -> None:
-    run(["make", "-j", str(args.jobs), "USE_FORTRAN=0"], cwd=REPO_ROOT, env=env)
+    run(
+        ["make", "-j", str(args.jobs), "USE_FORTRAN=0"],
+        cwd=REPO_ROOT,
+        env=env,
+        quiet=not args.verbose_build,
+    )
     if args.fortran:
-        run(["make", "-j", str(args.jobs), "USE_FORTRAN=1"], cwd=REPO_ROOT, env=env)
+        run(
+            ["make", "-j", str(args.jobs), "USE_FORTRAN=1"],
+            cwd=REPO_ROOT,
+            env=env,
+            quiet=not args.verbose_build,
+        )
 
 
 def pytest_command(args: argparse.Namespace, python: Path) -> list[str | Path]:
@@ -255,10 +333,17 @@ def prepare_test_environment(
 ) -> dict[str, str]:
     test_env = env.copy()
 
-    prepend_paths(test_env, "LD_LIBRARY_PATH", [REPO_ROOT / "build"])
+    build_dirs = build_directories(args)
+    prepend_paths(test_env, "LD_LIBRARY_PATH", build_dirs)
 
     test_env["USE_MPI"] = "1" if args.mpi else "0"
     test_env["USE_PAPI"] = "0" if args.papi == "none" else "1"
+    test_env["USE_FORTRAN"] = "1" if args.fortran else "0"
+    test_env["PERF_REGIONS_BUILD_DIR"] = str(build_dirs[0])
+    if args.fortran:
+        test_env["PERF_REGIONS_FORTRAN_BUILD_DIR"] = str(build_dirs[1])
+    else:
+        test_env.pop("PERF_REGIONS_FORTRAN_BUILD_DIR", None)
     test_env["PERF_REGIONS_COUNTERS"] = test_counters(args)
 
     if args.test_papi_counters:
@@ -346,6 +431,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Exclude tests marked as slow.",
     )
     parser.add_argument(
+        "--verbose-build",
+        action="store_true",
+        help="Show configure, build, and dependency-install output.",
+    )
+    parser.add_argument(
+        "--require-papi-hardware",
+        action="store_true",
+        help="Fail instead of skipping when PAPI hardware counters are unavailable.",
+    )
+    parser.add_argument(
         "--pytest-args",
         default="",
         help="Additional arguments passed to pytest.",
@@ -379,6 +474,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         parser.error("--test-papi-counters requires --papi system or --papi local")
     if not args.test_wallclock and not args.test_papi_counters:
         parser.error("--test-no-wallclock requires --test-papi-counters")
+    if args.require_papi_hardware and not args.test_papi_counters:
+        parser.error("--require-papi-hardware requires --test-papi-counters")
 
     return args
 
@@ -473,9 +570,10 @@ def main(argv: list[str] | None = None) -> int:
     env, papi_prefix = build_environment(args)
 
     if not args.keep_build and not args.no_build:
-        run(["make", "clean"], cwd=REPO_ROOT, env=env, check=False)
+        clean_build_artifacts(args, env)
 
     papi_hardware_unavailable = False
+    required_papi_hardware_failed = False
 
     try:
         if not args.no_configure:
@@ -491,30 +589,51 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.test_papi_counters and args.papi == "local":
             doctor = TESTS_DIR / "tools" / "papi-local" / "doctor.sh"
+            doctor_env = test_env.copy()
+            doctor_env["PERF_REGIONS_TEST_PAPI_QUIET"] = "1"
             result = subprocess.run(
                 [str(doctor), "--strict"],
                 cwd=REPO_ROOT,
-                env=test_env,
+                env=doctor_env,
                 text=True,
                 check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
             if result.returncode != 0:
-                print(
-                    "PAPI hardware counters are unavailable; "
-                    "skipping the hardware-counter test run.",
-                    flush=True,
-                )
-                papi_hardware_unavailable = True
+                if result.stdout:
+                    print(result.stdout, end="", flush=True)
+                    if not result.stdout.endswith("\n"):
+                        print(flush=True)
+                if args.require_papi_hardware:
+                    print(
+                        "ERROR: PAPI hardware counters are required but unavailable.",
+                        flush=True,
+                    )
+                    required_papi_hardware_failed = True
+                else:
+                    print(
+                        "PAPI hardware counters are unavailable; "
+                        "skipping the hardware-counter test run.",
+                        flush=True,
+                    )
+                    papi_hardware_unavailable = True
+            elif args.verbose_build and result.stdout:
+                print(result.stdout, end="", flush=True)
+                if not result.stdout.endswith("\n"):
+                    print(flush=True)
 
         if not papi_hardware_unavailable:
             run(pytest_command(args, python), cwd=TESTS_DIR, env=test_env)
     finally:
         if not args.keep_build and not args.no_build:
-            run(["make", "clean"], cwd=REPO_ROOT, env=env, check=False)
+            clean_build_artifacts(args, env)
 
-    if papi_hardware_unavailable:
+    if papi_hardware_unavailable or required_papi_hardware_failed:
         print_papi_hardware_access_hint()
     print_papi_enable_hint(args)
+    if required_papi_hardware_failed:
+        return 1
     return 0
 
 

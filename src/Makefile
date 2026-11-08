@@ -53,7 +53,6 @@ DESTDIR ?=
 LIBDIR = $(PREFIX)/lib
 INCLUDEDIR = $(PREFIX)/include
 BINDIR = $(PREFIX)/bin
-BUILD_DIR ?= ../build
 
 INSTALL_LIBDIR = $(DESTDIR)$(LIBDIR)
 INSTALL_INCLUDEDIR = $(DESTDIR)$(INCLUDEDIR)
@@ -62,7 +61,7 @@ INSTALL_BINDIR = $(DESTDIR)$(BINDIR)
 CONFIG_HEADER = $(BUILD_DIR)/perf_regions_config.h
 
 # Object files
-C_SOURCES = perf_regions.c perf_regions_output.c posix_clock.c papi_counters.c
+C_SOURCES = perf_regions.c perf_regions_output.c posix_clock.c papi_counters.c perf_mem_bandwidth.c
 F_SOURCES = perf_regions_fortran.F90
 
 C_OBJECTS = $(addprefix $(BUILD_DIR)/, $(C_SOURCES:.c=.o))
@@ -92,6 +91,11 @@ LIB_SUFFIX_FORTRAN =
 endif
 
 LIB_SUFFIX = $(LIB_SUFFIX_PAPI)$(LIB_SUFFIX_MPI)$(LIB_SUFFIX_FORTRAN)
+
+# Keep one build directory per feature combination.  This prevents objects and
+# generated configuration headers from different variants from overwriting each
+# other, for example build_papi_mpi_fort.
+BUILD_DIR ?= ../build$(LIB_SUFFIX)
 
 SHARED_LIBRARY = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so
 SHARED_LIBRARY_VERSION = $(BUILD_DIR)/libperf_regions$(LIB_SUFFIX).so.1.0.0

@@ -86,6 +86,16 @@ struct PerfRegions
 
 	// names of performance counters
 	char *perf_counter_names[PERF_COUNTERS_MAX];
+
+	// Scale factors for events that contribute to the consolidated memory
+	// transfer volume.  A scale of zero marks an ordinary counter.
+	double perf_counter_bytes_per_count[PERF_COUNTERS_MAX];
+
+	// Set to one for events that are part of the memory bandwidth pseudo event.
+	int perf_counter_is_mem_bandwidth[PERF_COUNTERS_MAX];
+
+	// Set when any PR_BANDWIDTH_* or PR_MEM_TRANSFER_* pseudo event is requested.
+	int mem_bandwidth_requested;
 #endif
 
 	// number of performance counters

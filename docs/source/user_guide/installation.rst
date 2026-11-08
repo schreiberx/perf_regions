@@ -117,18 +117,19 @@ directory:
 
    -L<prefix>/lib -lperf_regions_papi -lpapi
 
-When using the uninstalled build directory, point the compiler at
-``<repository>/src`` and ``<repository>/build`` instead of the installed prefix.
+When using an uninstalled build, point the compiler at ``<repository>/src``
+and the matching variant directory, for example
+``<repository>/build_papi_mpi_fort``, instead of the installed prefix.
 
 Runtime library path
 --------------------
 
 Installed libraries use an RPATH pointing to the configured library directory.
-For an uninstalled development build, add the build directory to
-``LD_LIBRARY_PATH``:
+For an uninstalled development build, add the matching variant build directory
+to ``LD_LIBRARY_PATH``:
 
 .. code-block:: console
 
-   export LD_LIBRARY_PATH="$PWD/build:$LD_LIBRARY_PATH"
+   export LD_LIBRARY_PATH="$PWD/build_papi_mpi_fort:$LD_LIBRARY_PATH"
 
 See :doc:`running` for the runtime environment variables.

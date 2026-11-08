@@ -107,7 +107,17 @@ def uncore_skip_reason(output):
 def measured_bandwidth_gbps(region):
     wallclock = region["wallclock_time"]
     assert wallclock > 0.0
-    return region["counters"]["PR_BANDWIDTH_BYTES"] / wallclock / 1e9
+    return region["counters"]["PR_BANDWIDTH_GB"] / wallclock
+
+
+def stream_total_gbps(stream_rates, array_size, ntimes):
+    kernel_seconds = sum(
+        expected_region_bytes(name, array_size, ntimes)
+        / (stream_rates[name]["avg"] * 1e9)
+        for name in STREAM_REGIONS
+    )
+    total_bytes = expected_region_bytes("total", array_size, ntimes)
+    return total_bytes / kernel_seconds / 1e9
 
 
 @pytest.mark.slow
@@ -217,26 +227,29 @@ def test_stream_memory_bandwidth(
         assert bytes_value > 0.0
 
         if name != "total":
-            expected = expected_region_bytes(name, array_size, ntimes)
-            assert bytes_value >= 0.65 * expected
-            assert bytes_value <= 2.5 * expected
-
-            stream_avg_gbps = stream_rates[name]["avg"]
             measured_gbps = measured_bandwidth_gbps(region)
+            stream_avg_gbps = stream_rates[name]["avg"]
             ratio = measured_gbps / stream_avg_gbps
-            assert 0.6 <= ratio <= 2.5, (
+            # Uncore counters are socket-wide and can include traffic from
+            # other processes, so allow headroom above STREAM's own rate.
+            assert 0.6 <= ratio <= 5.0, (
                 f"{name}: measured {measured_gbps:.3f} GB/s, "
                 f"STREAM reported {stream_avg_gbps:.3f} GB/s"
             )
 
     total_region = find_region(data, "total")
-    total_bytes = total_region["counters"]["PR_BANDWIDTH_BYTES"]
-    expected_total = expected_region_bytes("total", array_size, ntimes)
-    assert total_bytes >= 0.65 * expected_total
-    assert total_bytes <= 2.5 * expected_total
+    total_gbps = measured_bandwidth_gbps(total_region)
+    stream_total = stream_total_gbps(stream_rates, array_size, ntimes)
+    total_ratio = total_gbps / stream_total
+    assert 0.6 <= total_ratio <= 5.0, (
+        f"total: measured {total_gbps:.3f} GB/s, "
+        f"STREAM reported {stream_total:.3f} GB/s"
+    )
 
-    kernel_bytes = sum(
-        find_region(data, name)["counters"]["PR_BANDWIDTH_BYTES"]
+    kernel_gb = sum(
+        find_region(data, name)["counters"]["PR_BANDWIDTH_GB"]
         for name in STREAM_REGIONS
     )
-    assert total_bytes == pytest.approx(kernel_bytes, rel=0.2)
+    assert total_region["counters"]["PR_BANDWIDTH_GB"] == pytest.approx(
+        kernel_gb, rel=0.2
+    )

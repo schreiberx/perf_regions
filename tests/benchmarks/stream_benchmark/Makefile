@@ -13,16 +13,28 @@ STREAM_DEFINES = -DSTREAM_ARRAY_SIZE=$(STREAM_ARRAY_SIZE) -DNTIMES=$(STREAM_NTIM
 
 include ../../Makefile.common
 
+# The STREAM size is compiled in, so rebuild when the requested configuration
+# changes instead of silently reusing a binary built with different parameters.
+STREAM_CONFIG := $(TEST_BUILD_DIR)/.stream-config
+STREAM_CONFIG_VALUE := $(STREAM_ARRAY_SIZE):$(STREAM_NTIMES)
+
+.PHONY: FORCE
+FORCE:
+
+$(STREAM_CONFIG): FORCE | $(TEST_BUILD_DIR)
+	@printf '%s\n' '$(STREAM_CONFIG_VALUE)' > $@.tmp
+	@if cmp -s $@.tmp $@; then rm -f $@.tmp; else mv $@.tmp $@; fi
+
 all: $(TEST_BUILD_DIR)/stream_c $(TEST_BUILD_DIR)/stream_c_perfregions
 
-$(TEST_BUILD_DIR)/stream_c: src/stream.c | $(TEST_BUILD_DIR)
+$(TEST_BUILD_DIR)/stream_c: src/stream.c $(STREAM_CONFIG) | $(TEST_BUILD_DIR)
 	$(CC) $(CFLAGS) $(STREAM_DEFINES) -o $@ src/stream.c $(LDFLAGS)
 
-$(TEST_BUILD_DIR)/stream.c: src/stream.c | $(TEST_BUILD_DIR)
+$(TEST_BUILD_DIR)/stream.c: src/stream.c $(STREAM_CONFIG) | $(TEST_BUILD_DIR)
 	cp $< $@
 	$(PYTHON) $(INSTRUMENT) preprocess $@
 
-$(TEST_BUILD_DIR)/stream_c_perfregions: $(TEST_BUILD_DIR)/stream.c
+$(TEST_BUILD_DIR)/stream_c_perfregions: $(TEST_BUILD_DIR)/stream.c $(STREAM_CONFIG)
 	$(CC) $(CFLAGS) $(STREAM_DEFINES) -DUSE_MPI=0 -o $@ $< $(LDFLAGS) $(PERFREGION_CFLAGS) $(PERFREGION_LDFLAGS)
 
 clean:

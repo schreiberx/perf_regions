@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +39,7 @@ struct PapiCounters {
 };
 
 static struct PapiCounters papi_counters;
+static int papi_counters_initialized = 0;
 
 
 /**
@@ -61,15 +61,14 @@ to\n\
     /etc/sysctl.conf\n\
 \n\
 ");
-	assert(0);
 }
 
 
 
 void handle_error(const char *i_error_msg, int retval)
 {
-	fprintf(stderr, PRINT_PREFIX"%s", i_error_msg);
-	fprintf(stderr, ": retval=%i", retval);
+	fprintf(stderr, PRINT_PREFIX"%s: retval=%i (%s)\n",
+		i_error_msg, retval, PAPI_strerror(retval));
 	exit(EXIT_FAILURE);
 }
 
@@ -87,6 +86,9 @@ void papi_counters_init(
 	papi_counters.verbosity = i_verbosity;
 	papi_counters.event_list_len = i_num_counters;
 	papi_counters.event_list = list_counters;
+
+	if (i_num_counters <= 0)
+		return;
 
 	int retval;
 
@@ -110,14 +112,16 @@ void papi_counters_init(
 	{
 		if (papi_counters.verbosity > 0)
 			printf(PRINT_PREFIX"Adding event '%s'\n", papi_counters.event_list[i]);
-			
+
 		if ((retval = PAPI_add_named_event(papi_counters.event_set, papi_counters.event_list[i])) != PAPI_OK)
 		{
 			fprintf(stderr, PRINT_PREFIX"PAPI_add_named_event failed for '%s'! retval: %d\n", papi_counters.event_list[i], retval);
 			print_access_right_problems();
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 	}
+
+	papi_counters_initialized = 1;
 }
 
 
@@ -127,8 +131,11 @@ void papi_counters_init(
  * 
  * We undo everything inclulding shutting down the PAPI library
  */
-void papi_counters_finalize()
+void papi_counters_finalize(void)
 {
+	if (!papi_counters_initialized)
+		return;
+
 	int retval;
 	for (int i = 0; i < papi_counters.event_list_len; i++)
 	{
@@ -137,18 +144,17 @@ void papi_counters_finalize()
 
 		if ((retval = PAPI_remove_named_event(papi_counters.event_set, papi_counters.event_list[i])) != PAPI_OK)
 		{
-			fprintf(stderr, PRINT_PREFIX"PAPI_remove_named_event failed for '%s'! retval: %d\n", papi_counters.event_list[i], retval);
-			print_access_right_problems();
-			exit(-1);
+			fprintf(stderr, PRINT_PREFIX"PAPI_remove_named_event failed for '%s'! retval: %d\n",
+				papi_counters.event_list[i], retval);
 		}
 	}
 
 	retval = PAPI_destroy_eventset(&papi_counters.event_set);
 	if (retval != PAPI_OK)
-		handle_error(PRINT_PREFIX"Creation of eventset failed", retval);
+		fprintf(stderr, PRINT_PREFIX"PAPI_destroy_eventset failed: retval: %d\n", retval);
 
-	papi_counters.event_set = 0;
-
+	papi_counters.event_set = PAPI_NULL;
+	papi_counters_initialized = 0;
 	PAPI_shutdown();
 }
 
@@ -156,8 +162,11 @@ void papi_counters_finalize()
 /**
  * start performance counting. Existing performance counters are overwritten!
  */
-void papi_counters_start()
+void papi_counters_start(void)
 {
+	if (!papi_counters_initialized)
+		return;
+
 	// start the event, use default (1st) branch as return branch
 	if (PAPI_start(papi_counters.event_set) == PAPI_OK)
 		return;
@@ -167,7 +176,7 @@ void papi_counters_start()
 	{
 		PAPI_perror("PAPI_start_counters");
 		print_access_right_problems();
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -178,6 +187,9 @@ void papi_counters_start()
 void papi_counters_stop_and_accum(
 	long long *o_count_values_accum
 ) {
+	if (!papi_counters_initialized)
+		return;
+
 	// stop event and accumulate counters
 	if (PAPI_accum(papi_counters.event_set, o_count_values_accum) == PAPI_OK)
 		return;
@@ -186,7 +198,7 @@ void papi_counters_stop_and_accum(
 	{
 		PAPI_perror("PAPI_accum_counters: ");
 		print_access_right_problems();
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -197,6 +209,9 @@ void papi_counters_stop_and_accum(
 void papi_counters_stop(
 	long long *o_count_values_stop
 ) {
+	if (!papi_counters_initialized)
+		return;
+
 	// stop event and accumulate counters
 	if (PAPI_stop(papi_counters.event_set, o_count_values_stop) == PAPI_OK)
 		return;
@@ -205,7 +220,7 @@ void papi_counters_stop(
 	{
 		PAPI_perror("PAPI_stop_counters: ");
 		print_access_right_problems();
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 }
 
@@ -216,6 +231,9 @@ void papi_counters_stop(
 void papi_counters_read_and_reset(
 		long long *o_count_values_read
 ) {
+	if (!papi_counters_initialized)
+		return;
+
 	// read the counters
 	if (PAPI_read(papi_counters.event_set, o_count_values_read) == PAPI_OK)
 	{
@@ -227,7 +245,7 @@ void papi_counters_read_and_reset(
 		{
 			PAPI_perror("PAPI_reset_counters: ");
 			print_access_right_problems();
-			exit(-1);
+			exit(EXIT_FAILURE);
 		}
 	}
 
@@ -235,7 +253,7 @@ void papi_counters_read_and_reset(
 	{
 		PAPI_perror("PAPI_read_counters: ");
 		print_access_right_problems();
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 }
 

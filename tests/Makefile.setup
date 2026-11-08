@@ -41,8 +41,8 @@ BUILD_DIR_REL := ../../build
 BUILD_DIR := $(abspath $(BUILD_DIR_REL))
 
 # Define PERFREGION flags
-PERFREGION_CFLAGS := -I../../src
-PERFREGION_FFLAGS := -I../../src
+PERFREGION_CFLAGS := -I../../src -I$(BUILD_DIR)
+PERFREGION_FFLAGS := -I../../src -I$(BUILD_DIR)
 
 PERFREGION_LDFLAGS := -L../../build -lperf_regions$(LIB_SUFFIX)
 PERFREGION_LDFLAGS_FORT := -L../../build -lperf_regions$(LIB_SUFFIX_FORT)

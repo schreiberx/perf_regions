@@ -33,8 +33,6 @@ if option == "preprocess":
 elif option == "cleanup":
     print("CLEANUP")
     pr.remove_perf_regions_annotations()
-    print("CLEANUP")
-    pr.remove_perf_regions_annotations()
 
 else:
     print("Unsupported argument " + sys.argv[1])

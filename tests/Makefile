@@ -13,11 +13,3 @@ clean:
 	rm -f output_build_*.txt
 
 .PHONY: all run_tests clean
-	$(MAKE) -C array_test_c clean
-	$(MAKE) -C array_test_f clean
-	$(MAKE) -C stream_benchmark clean
-	$(MAKE) -C nemo_test_f_direct clean
-	$(MAKE) -C nemo_test_f clean
-	$(MAKE) -C bandwidth_monitor_papi clean
-
-.PHONY: all run_tests clean

@@ -13,7 +13,7 @@ ENABLE_PAPI="auto"
 ENABLE_FORTRAN="auto"
 ENABLE_TESTS="no"
 ENABLE_SHARED="yes"
-ENABLE_STATIC="yes"
+ENABLE_STATIC="no"
 BUILD_DIR="build"
 VERBOSE="no"
 HELP="no"
@@ -303,51 +303,111 @@ check_dependencies() {
 
 # Function to auto-detect MPI
 check_mpi() {
+    if [[ "$ENABLE_MPI" == "OFF" ]]; then
+        return
+    fi
+
+    if [[ -n "${MPI_ROOT:-}" ]]; then
+        if [[ -x "$MPI_ROOT/bin/mpicc" ]]; then
+            MPI_CC="$MPI_ROOT/bin/mpicc"
+            if [[ -x "$MPI_ROOT/bin/mpif90" ]]; then
+                MPI_FC="$MPI_ROOT/bin/mpif90"
+            fi
+        else
+            print_error "mpicc not found below --with-mpi=$MPI_ROOT"
+            exit 1
+        fi
+        ENABLE_MPI="ON"
+        return
+    fi
+
     if [[ "$ENABLE_MPI" == "auto" ]]; then
         print_info "Auto-detecting MPI..."
-        if command_exists mpicc && command_exists mpif90; then
+        if command_exists mpicc && { [[ "$ENABLE_FORTRAN" == "OFF" ]] || command_exists mpif90; }; then
             print_info "MPI compilers found, enabling MPI support"
             ENABLE_MPI="ON"
         else
             print_info "MPI compilers not found, disabling MPI support"
             ENABLE_MPI="OFF"
         fi
+    elif [[ "$ENABLE_MPI" == "ON" ]]; then
+        if ! command_exists "${MPI_CC:-mpicc}"; then
+            print_error "MPI requested but mpicc was not found"
+            exit 1
+        fi
+        if [[ "$ENABLE_FORTRAN" != "OFF" ]] && ! command_exists "${MPI_FC:-mpif90}"; then
+            print_error "MPI requested but mpif90 was not found"
+            exit 1
+        fi
     fi
 }
 
 # Function to auto-detect PAPI
 check_papi() {
-    if [[ "$ENABLE_PAPI" == "auto" ]]; then
-        print_info "Auto-detecting PAPI..."
-        
-        # Check for PAPI headers and libraries in common locations
-        local papi_found=false
+    if [[ "$ENABLE_PAPI" == "OFF" ]]; then
+        return
+    fi
 
-        # Check via pkg-config
-        if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists papi; then
-            print_info "PAPI found via pkg-config, enabling PAPI support"
-            ENABLE_PAPI="ON"
-            papi_found=true
-            PAPI_CFLAGS=$(pkg-config --cflags papi)
-            PAPI_LDFLAGS=$(pkg-config --libs papi)
+    local papi_found=false
+
+    if [[ -n "${PAPI_ROOT:-}" ]]; then
+        PAPI_CFLAGS="-I$PAPI_ROOT/include"
+        if [[ -d "$PAPI_ROOT/lib64" ]]; then
+            PAPI_LDFLAGS="-L$PAPI_ROOT/lib64 -lpapi"
+        else
+            PAPI_LDFLAGS="-L$PAPI_ROOT/lib -lpapi"
         fi
-        
-        if [[ "$papi_found" == "false" ]]; then
-            for dir in /usr /usr/local /opt/papi; do
-                if [[ -f "$dir/include/papi.h" && -f "$dir/lib/libpapi.so" ]]; then
-                    print_info "PAPI found in $dir, enabling PAPI support"
-                    ENABLE_PAPI="ON"
-                    papi_found=true
-                    PAPI_CFLAGS="-I$dir/include"
-                    PAPI_LDFLAGS="-L$dir/lib -lpapi"
-                    break
-                fi
-            done
+
+        if [[ ! -f "$PAPI_ROOT/include/papi.h" ]]; then
+            print_error "papi.h not found below --with-papi=$PAPI_ROOT"
+            exit 1
         fi
-        
-        if [[ "$papi_found" == "false" ]]; then
+
+        ENABLE_PAPI="ON"
+        return
+    fi
+
+    if [[ -n "$PAPI_CFLAGS$PAPI_LDFLAGS" ]]; then
+        ENABLE_PAPI="ON"
+        return
+    fi
+
+    # Check via pkg-config
+    if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists papi; then
+        print_info "PAPI found via pkg-config, enabling PAPI support"
+        ENABLE_PAPI="ON"
+        papi_found=true
+        PAPI_CFLAGS=$(pkg-config --cflags papi)
+        PAPI_LDFLAGS=$(pkg-config --libs papi)
+    fi
+
+    if [[ "$papi_found" == "false" ]]; then
+        for dir in /usr /usr/local /opt/papi; do
+            local libdir=""
+            if [[ -d "$dir/lib64" ]]; then
+                libdir="$dir/lib64"
+            elif [[ -d "$dir/lib" ]]; then
+                libdir="$dir/lib"
+            fi
+
+            if [[ -f "$dir/include/papi.h" && -n "$libdir" ]] &&                { [[ -f "$libdir/libpapi.so" ]] || [[ -f "$libdir/libpapi.a" ]]; }; then
+                print_info "PAPI found in $dir, enabling PAPI support"
+                ENABLE_PAPI="ON"
+                papi_found=true
+                PAPI_CFLAGS="-I$dir/include"
+                PAPI_LDFLAGS="-L$libdir -lpapi"
+                break
+            fi
+        done
+    fi
+
+    if [[ "$papi_found" == "false" ]]; then
+        if [[ "$ENABLE_PAPI" == "auto" ]]; then
             print_info "PAPI not found, disabling PAPI support"
             ENABLE_PAPI="OFF"
+        else
+            print_error "PAPI requested but not found"
+            exit 1
         fi
     fi
 }
@@ -363,6 +423,10 @@ create_config() {
 PREFIX=$PREFIX
 BUILD_TYPE=$BUILD_TYPE
 
+# MPI compilers (may be overridden by the user)
+MPI_CC=${MPI_CC:-mpicc}
+MPI_FC=${MPI_FC:-mpif90}
+
 # Feature flags
 USE_MPI=$(if [[ "$ENABLE_MPI" == "ON" ]]; then echo 1; else echo 0; fi)
 USE_PAPI=$(if [[ "$ENABLE_PAPI" == "ON" ]]; then echo 1; else echo 0; fi)
@@ -374,13 +438,15 @@ PAPI_LDFLAGS=$PAPI_LDFLAGS
 BUILD_SHARED_LIBS=$(if [[ "$ENABLE_SHARED" == "yes" ]]; then echo 1; else echo 0; fi)
 BUILD_STATIC_LIBS=$(if [[ "$ENABLE_STATIC" == "yes" ]]; then echo 1; else echo 0; fi)
 
-# Compiler flags based on build type
+# Debug flag used both by the compiler and the generated config header
 ifeq (\$(BUILD_TYPE),Debug)
-    CFLAGS += -fPIC -Wall -g -O0 -DPERF_DEBUG=1
-    FCFLAGS += -fPIC -Wall -g -O0 -DPERF_DEBUG=1
+    PERF_DEBUG = 1
+    CFLAGS += -fPIC -Wall -g -O0 -DPERF_DEBUG=\$(PERF_DEBUG)
+    FCFLAGS += -fPIC -Wall -g -O0 -DPERF_DEBUG=\$(PERF_DEBUG)
 else
-    CFLAGS += -fPIC -Wall -O2 -DPERF_DEBUG=0
-    FCFLAGS += -fPIC -Wall -O2 -DPERF_DEBUG=0
+    PERF_DEBUG = 0
+    CFLAGS += -fPIC -Wall -O2 -DPERF_DEBUG=\$(PERF_DEBUG)
+    FCFLAGS += -fPIC -Wall -O2 -DPERF_DEBUG=\$(PERF_DEBUG)
 endif
 
 # Environment-specific settings
@@ -388,7 +454,7 @@ $(if [[ -n "$PAPI_ROOT" ]]; then echo "PAPI_ROOT=$PAPI_ROOT"; fi)
 $(if [[ -n "$MPI_ROOT" ]]; then echo "MPI_ROOT=$MPI_ROOT"; fi)
 
 # Export variables for use in sub-makefiles
-export PREFIX USE_MPI USE_PAPI USE_FORTRAN PAPI_CFLAGS PAPI_LDFLAGS BUILD_SHARED_LIBS BUILD_STATIC_LIBS
+export PREFIX USE_MPI USE_PAPI USE_FORTRAN PAPI_CFLAGS PAPI_LDFLAGS BUILD_SHARED_LIBS BUILD_STATIC_LIBS MPI_CC MPI_FC PERF_DEBUG
 EOF
 }
 

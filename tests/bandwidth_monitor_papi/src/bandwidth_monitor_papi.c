@@ -71,40 +71,26 @@ int main(int argc, char *argv[])
     if (timeout > 0.0) {
         clock_gettime(CLOCK_MONOTONIC, &start_tp);
     }
-    while ((opt = getopt(argc, argv, "i:e:")) != -1) {
-        switch (opt) {
-        case 'i':
-            interval = atof(optarg);
-            if (interval <= 0.0) {
-                 fprintf(stderr, "Warning: Invalid interval %.2f, defaulting to 1.0s\n", interval);
-                 interval = 1.0;
-            }
-            break;
-        case 'e':
-            if (num_events >= MAX_EVENTS) {
-                fprintf(stderr, "Error: Too many events (max %d)\n", MAX_EVENTS);
-                return 1;
-            }
-            events[num_events++] = strdup(optarg);
-            break;
-        default:
-            fprintf(stderr, "Usage: %s [-i interval] [-e event]...\n", argv[0]);
-            return 1;
-        }
-    }
-
     if (num_events == 0) {
         fprintf(stderr, "Error: No events found. Set PERF_REGIONS_COUNTERS or use -e.\n");
         return 1;
     }
 
-    // Determine if we can run in IMC bandwidth mode
-    // We expect pairs of RD, WR events
+    // Determine if we can run in IMC bandwidth mode.
+    // This requires paired UNC_M_CAS_COUNT read/write events.  An arbitrary
+    // even number of PAPI events must not be interpreted as IMC pairs.
     int imc_mode = 0;
     int num_imc = 0;
-    if (num_events % 2 == 0) {
+    if (num_events > 0 && num_events % 2 == 0) {
         imc_mode = 1;
-        num_imc = num_events / 2;
+        for (int i = 0; i < num_events; i++) {
+            if (strstr(events[i], "UNC_M_CAS_COUNT") == NULL) {
+                imc_mode = 0;
+                break;
+            }
+        }
+        if (imc_mode)
+            num_imc = num_events / 2;
     }
 
     // Initialize PAPI
@@ -219,7 +205,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    PAPI_stop(EventSet, NULL);
+    PAPI_stop(EventSet, values);
     PAPI_shutdown();
     
     // Cleanup

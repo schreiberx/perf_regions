@@ -76,7 +76,8 @@ def test_skip_execution(base_dir, env):
     assert outer["counter"] == 3
     assert outer["skipped"] == 2
 
-    inner["wallclock_time"] < outer["wallclock_time"]
+    assert inner is not None
+    assert inner["wallclock_time"] < outer["wallclock_time"]
 
     assert independent is not None
     assert independent["counter"] == 3
@@ -86,7 +87,7 @@ def test_skip_execution(base_dir, env):
     assert independent_inner["counter"] == 15
     assert independent_inner["skipped"] == 10
 
-    independent_inner["wallclock_time"] < independent["wallclock_time"]
+    assert independent_inner["wallclock_time"] < independent["wallclock_time"]
 
 
 @pytest.mark.parametrize("env", ["papi", "wallclock"], indirect=True)

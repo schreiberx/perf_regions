@@ -12,18 +12,12 @@ if [ ! -f ../config.mk ]; then
     (cd .. && ./configure)
 fi
 
-# Check if MPI and PAPI are enabled in config.mk
-if ! grep -q "^USE_MPI=1" ../config.mk; then
-    echo "Error: MPI is not enabled in config.mk (USE_MPI=1 not found)."
-    echo "Please ensure MPI is available and configured by running ./configure in the root directory."
-    exit 1
-fi
-
-if ! grep -q "^USE_PAPI=1" ../config.mk; then
-    echo "Error: PAPI is not enabled in config.mk (USE_PAPI=1 not found)."
-    echo "Please ensure PAPI is available and configured by running ./configure in the root directory."
-    exit 1
-fi
+# The test matrix can be run without MPI or PAPI; unavailable configurations
+# are simply skipped.
+HAVE_MPI=0
+HAVE_PAPI=0
+grep -q "^USE_MPI=1" ../config.mk && HAVE_MPI=1
+grep -q "^USE_PAPI=1" ../config.mk && HAVE_PAPI=1
 
 cp ../config.mk ./config_tests.mk
 
@@ -44,12 +38,15 @@ make_clean() {
 
 make_build() {
     echo "Building with MPI=${1} PAPI=${2} FORTRAN=${3}"
-    make -C .. USE_MPI=${1} USE_PAPI=${2} USE_FORTRAN=${3} > output_build_mpi_${1}_papi_${2}_fortran_${3}.txt 2>&1 || cat output_build_mpi_${1}_papi_${2}_fortran_${3}.txt
+    if ! make -C .. USE_MPI=${1} USE_PAPI=${2} USE_FORTRAN=${3} > output_build_mpi_${1}_papi_${2}_fortran_${3}.txt 2>&1; then
+        cat output_build_mpi_${1}_papi_${2}_fortran_${3}.txt
+        exit 1
+    fi
 }
 
 make_run_tests() {
     echo "Running tests with MPI=${1} PAPI=${2}"
-    make_clean ${1} ${2} -1
+    make_clean ${1} ${2}
 
     update_config ${1} ${2} 0
     make_build ${1} ${2} 0
@@ -62,9 +59,15 @@ make_run_tests() {
     python3 -m pytest -vvv # -s
 }
 
-make_run_tests 1 1
-make_run_tests 1 0
-make_run_tests 0 1
+if [[ "$HAVE_MPI" == "1" && "$HAVE_PAPI" == "1" ]]; then
+    make_run_tests 1 1
+fi
+if [[ "$HAVE_MPI" == "1" ]]; then
+    make_run_tests 1 0
+fi
+if [[ "$HAVE_PAPI" == "1" ]]; then
+    make_run_tests 0 1
+fi
 make_run_tests 0 0
 
 rm ./config_tests.mk
